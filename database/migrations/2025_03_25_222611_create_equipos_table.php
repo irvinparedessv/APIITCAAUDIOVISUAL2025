@@ -13,9 +13,14 @@ return new class extends Migration
     {
         Schema::create('equipos', function (Blueprint $table) {
             $table->id();
+            $table->string('nombre');
+            $table->text('descripcion')->nullable();
+            $table->boolean('estado')->default(true); 
+            $table->integer('cantidad')->default(0);
             $table->timestamps();
         });
     }
+
 
     /**
      * Reverse the migrations.
