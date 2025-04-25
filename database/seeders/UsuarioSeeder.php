@@ -18,7 +18,7 @@ class UsuarioSeeder extends Seeder
             'name' => 'Admin Principal',
             'email' => 'admin@example.com',
             'email_verified_at' => now(),
-            'password' => 'adminpassword',  // Contraseña sin hash para prueba
+            'password' => '123',  // Contraseña sin hash para prueba
             'estado' => true,
             'is_deleted' => false,
             'remember_token' => null,
@@ -30,7 +30,7 @@ class UsuarioSeeder extends Seeder
             'name' => 'Encargado Ejemplo',
             'email' => 'encargado@example.com',
             'email_verified_at' => now(),
-            'password' => 'encargadopassword',  // Contraseña sin hash para prueba
+            'password' => '123',  // Contraseña sin hash para prueba
             'estado' => true,
             'is_deleted' => false,
             'remember_token' => null,
@@ -42,7 +42,7 @@ class UsuarioSeeder extends Seeder
             'name' => 'Prestamista Ejemplo',
             'email' => 'prestamista@example.com',
             'email_verified_at' => now(),
-            'password' => 'prestamistapassword',  // Contraseña sin hash para prueba
+            'password' => '123',  // Contraseña sin hash para prueba
             'estado' => true,
             'is_deleted' => false,
             'remember_token' => null,
