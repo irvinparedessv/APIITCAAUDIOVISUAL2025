@@ -10,6 +10,11 @@ class Equipo extends Model
     /** @use HasFactory<\Database\Factories\EquipoFactory> */
     use HasFactory;
 
-    protected $fillable = ['nombre', 'descripcion', 'estado', 'cantidad'];
+    protected $fillable = ['nombre', 'descripcion', 'estado', 'cantidad', 'tipo_equipo_id'];
 
+    // Relación con TipoEquipo
+    public function tipoEquipo()
+    {
+        return $this->belongsTo(TipoEquipo::class);
+    }
 }

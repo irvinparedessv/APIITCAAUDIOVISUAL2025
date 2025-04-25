@@ -28,9 +28,20 @@ class EquipoController extends Controller
             'descripcion' => 'nullable|string',
             'estado' => 'required|boolean',
             'cantidad' => 'required|integer',
+            'is_deleted' => 'required|boolean', // Validar el campo is_deleted
+            'tipo_equipo_id' => 'required|exists:tipo_equipos,id', // Validar tipo_equipo_id (debe existir en la tabla tipo_equipos)
         ]);
 
-        $equipo = Equipo::create($request->all());
+        // Crear el nuevo equipo
+        $equipo = Equipo::create([
+            'nombre' => $request->input('nombre'),
+            'descripcion' => $request->input('descripcion'),
+            'estado' => $request->input('estado'),
+            'cantidad' => $request->input('cantidad'),
+            'is_deleted' => $request->input('is_deleted'),
+            'tipo_equipo_id' => $request->input('tipo_equipo_id'),
+        ]);
+
         return response()->json($equipo, 201);
     }
 
@@ -57,9 +68,19 @@ class EquipoController extends Controller
             'descripcion' => 'nullable|string',
             'estado' => 'sometimes|required|boolean',
             'cantidad' => 'sometimes|required|integer',
+            'is_deleted' => 'sometimes|required|boolean', // Validar el campo is_deleted
+            'tipo_equipo_id' => 'sometimes|required|exists:tipo_equipos,id', // Validar tipo_equipo_id (debe existir en la tabla tipo_equipos)
         ]);
 
-        $equipo->update($request->all());
+        $equipo->update($request->only([
+            'nombre', 
+            'descripcion', 
+            'estado', 
+            'cantidad', 
+            'is_deleted', 
+            'tipo_equipo_id'
+        ]));
+
         return response()->json($equipo);
     }
 
