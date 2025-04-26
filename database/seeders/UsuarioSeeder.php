@@ -16,9 +16,9 @@ class UsuarioSeeder extends Seeder
         // Crear un usuario administrador
         User::create([
             'name' => 'Admin Principal',
-            'email' => 'admin@example.com',
+            'email' => 'admin@correo.com',
             'email_verified_at' => now(),
-            'password' => '123',  // Contraseña sin hash para prueba
+            'password' => '123', 
             'estado' => true,
             'is_deleted' => false,
             'remember_token' => null,
@@ -28,9 +28,9 @@ class UsuarioSeeder extends Seeder
         // Crear un usuario encargado
         User::create([
             'name' => 'Encargado Ejemplo',
-            'email' => 'encargado@example.com',
+            'email' => 'encargado@correo.com',
             'email_verified_at' => now(),
-            'password' => '123',  // Contraseña sin hash para prueba
+            'password' => '123',  
             'estado' => true,
             'is_deleted' => false,
             'remember_token' => null,
@@ -40,9 +40,9 @@ class UsuarioSeeder extends Seeder
         // Crear un usuario prestamista
         User::create([
             'name' => 'Prestamista Ejemplo',
-            'email' => 'prestamista@example.com',
+            'email' => 'prestamista@correo.com',
             'email_verified_at' => now(),
-            'password' => '123',  // Contraseña sin hash para prueba
+            'password' => '123', 
             'estado' => true,
             'is_deleted' => false,
             'remember_token' => null,
