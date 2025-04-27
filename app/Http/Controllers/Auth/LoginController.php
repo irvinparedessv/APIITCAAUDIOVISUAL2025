@@ -10,31 +10,39 @@ use App\Models\User;
 class LoginController extends Controller
 {
     public function login(Request $request)
-    {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
+{
+    $request->validate([
+        'email' => 'required|email',
+        'password' => 'required',
+    ]);
 
-        if (!Auth::attempt($request->only('email', 'password'))) {
-            return response()->json(['message' => 'Credenciales incorrectas'], 401);
-        }
-
-        $user = User::where('email', $request->email)->first();
-
-        // Eliminar todos los tokens anteriores del usuario
-        $user->tokens->each(function ($token) {
-            $token->delete();
-        });
-
-        // Crear un nuevo token
-        $token = $user->createToken('api-token')->plainTextToken;
-
-        return response()->json([
-            'token' => $token,
-            'user' => $user,
-        ]);
+    if (!Auth::attempt($request->only('email', 'password'))) {
+        return response()->json(['message' => 'Credenciales incorrectas'], 401);
     }
+
+    $user = User::where('email', $request->email)->first();
+
+    // Eliminar todos los tokens anteriores del usuario
+    $user->tokens->each(function ($token) {
+        $token->delete();
+    });
+
+    // Crear un nuevo token
+    $token = $user->createToken('api-token')->plainTextToken;
+
+    // Cargar relación 'role' (esto es lo nuevo)
+    $user->load('role');
+
+    return response()->json([
+        'token' => $token,
+        'user' => [
+            'id'    => $user->id,
+            'name'  => $user->name,
+            'email' => $user->email,
+            'role'  => $user->role->nombre, // Aquí aseguramos enviar el nombre del rol
+        ],
+    ]);
+}
 
     public function logout(Request $request)
     {
