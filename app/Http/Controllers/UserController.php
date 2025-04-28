@@ -24,7 +24,7 @@ class UserController extends Controller
             'role_id' => 'required|exists:roles,id',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:255',
-            'estado' => 'nullable|boolean', // o string dependiendo de tu definición
+            'estado' => 'nullable|boolean', // o string 
         ]);
 
         $usuario = User::create([
@@ -34,7 +34,7 @@ class UserController extends Controller
             'role_id' => $request->input('role_id'),
             'phone' => $request->input('phone'),
             'address' => $request->input('address'),
-            'estado' => $request->input('estado', true), // puedes poner true por defecto si quieres
+            'estado' => $request->input('estado', true), // por defecto se puede usar true
         ]);
 
         return response()->json($usuario, 201);
