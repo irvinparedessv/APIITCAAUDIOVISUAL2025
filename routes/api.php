@@ -6,7 +6,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
-
+use App\Http\Controllers\EquipoController;
+use App\Http\Controllers\TipoEquipoController;
 
 
 // Rutas públicas
@@ -19,6 +20,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/usuarios', function () {
         return User::with('role')->get();
     });
+use App\Http\Controllers\EquipoController;
+use App\Http\Controllers\TipoEquipoController;
 
     Route::get('/user', function (Request $request) {
         return $request->user();
@@ -54,4 +57,8 @@ Route::middleware('auth:sanctum')->group(function () {
 // Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //     return $request->user();
 // });
+
+
+Route::apiResource('equipos', EquipoController::class);
+Route::apiResource('tipoEquipos', TipoEquipoController::class);
 
