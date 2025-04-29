@@ -7,8 +7,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\EquipoController;
+use App\Http\Controllers\ReservaEquipoController;
 use App\Http\Controllers\TipoEquipoController;
 use App\Http\Controllers\UserController;
+use App\Models\ReservaEquipo;
 
 
 // Rutas públicas
@@ -17,7 +19,7 @@ Route::post('/login', [LoginController::class, 'login']);
 // Rutas protegidas
 Route::middleware('auth:sanctum')->group(function () {
     Route::resource('roles', RoleController::class);
-    
+
     Route::get('/usuarios', function () {
         return User::with('role')->get();
     });
@@ -67,3 +69,8 @@ Route::apiResource('tipoEquipos', TipoEquipoController::class);
 Route::apiResource('users', UserController::class);
 
 
+//RESERVAS EQUIPO
+Route::get('/Obtenerequipos', [EquipoController::class, 'obtenerEquipos']);
+Route::post('/reservas', [ReservaEquipoController::class, 'store']);
+Route::get('/reservas/{id}', [ReservaEquipoController::class, 'getByUser']);
+Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']);
