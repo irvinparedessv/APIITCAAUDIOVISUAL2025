@@ -33,6 +33,9 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::post('/logout', [LoginController::class, 'logout']);
+
+    Route::apiResource('equipos', EquipoController::class);
+    Route::apiResource('tipoEquipos', TipoEquipoController::class);
 });
 
 
