@@ -39,7 +39,7 @@ class LoginController extends Controller
             'id'    => $user->id,
             'name'  => $user->name,
             'email' => $user->email,
-            'role'  => $user->role->nombre, // Aquí aseguramos enviar el nombre del rol
+            'role'  => $user->role->id, // Aquí aseguramos enviar el nombre del rol
         ],
     ]);
 }
