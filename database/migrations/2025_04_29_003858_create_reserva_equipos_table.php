@@ -11,9 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('codigo_q_r_equipos', function (Blueprint $table) {
+        Schema::create('equipo_reserva', function (Blueprint $table) {
             $table->id();
-            $table->timestamps();
+            $table->foreignId('reserva_equipo_id')->constrained('reserva_equipos')->onDelete('cascade');
+            $table->foreignId('equipo_id')->constrained('equipos')->onDelete('cascade');
         });
     }
 
@@ -22,6 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('codigo_q_r_equipos');
+        Schema::dropIfExists('equipo_reserva');
     }
 };

@@ -13,7 +13,10 @@ class EquipoController extends Controller
         $equipos = Equipo::all();
         return response()->json($equipos);
     }
-
+    public function obtenerEquipos()
+    {
+        return Equipo::select('id', 'nombre')->get();
+    }
     // Mostrar el formulario para crear (solo si usas Blade, si es API puedes ignorar)
     public function create()
     {
@@ -73,11 +76,11 @@ class EquipoController extends Controller
         ]);
 
         $equipo->update($request->only([
-            'nombre', 
-            'descripcion', 
-            'estado', 
-            'cantidad', 
-            'is_deleted', 
+            'nombre',
+            'descripcion',
+            'estado',
+            'cantidad',
+            'is_deleted',
             'tipo_equipo_id'
         ]));
 
