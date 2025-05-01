@@ -88,27 +88,32 @@ class EquipoController extends Controller
     public function update(Request $request, string $id)
     {
         $equipo = Equipo::findOrFail($id);
-    
+        
         $request->validate([
             'nombre' => 'sometimes|required|string|max:255',
             'descripcion' => 'nullable|string',
             'estado' => 'sometimes|required|boolean',
             'cantidad' => 'sometimes|required|integer',
-            'is_deleted' => 'sometimes|required|boolean',
+            'is_deleted' => 'sometimes|required|boolean', 
             'tipo_equipo_id' => 'sometimes|required|exists:tipo_equipos,id',
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
-    
+
         $data = $request->only([
             'nombre', 'descripcion', 'estado', 'cantidad', 'tipo_equipo_id'
         ]);
-    
+
+        
+        if ($request->has('is_deleted')) {
+            $data['is_deleted'] = $request->input('is_deleted');
+        }
+
         if ($request->hasFile('imagen')) {
             // Eliminar imagen anterior si no es la default
             if ($equipo->imagen && $equipo->imagen !== 'default.png') {
                 Storage::disk('public')->delete('equipos/' . $equipo->imagen);
             }
-    
+
             $image = $request->file('imagen');
             
             // Registra información sobre la imagen para depuración
@@ -124,11 +129,13 @@ class EquipoController extends Controller
             // Guarda el nombre de la imagen en la base de datos
             $data['imagen'] = $imageName;
         }
-    
+
+        // Actualizar los datos del equipo
         $equipo->update($data);
-    
+
         return response()->json($equipo);
     }
+
     
 
     // Borrado lógico
