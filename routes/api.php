@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\EmailController;
 use App\Http\Controllers\RoleController;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -10,6 +11,7 @@ use App\Http\Controllers\EquipoController;
 use App\Http\Controllers\ReservaEquipoController;
 use App\Http\Controllers\TipoEquipoController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Models\ReservaEquipo;
 
 
@@ -37,35 +39,15 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 
-// // CSRF cookie
-// Route::get('/csrf-token', function () {
-//     return response()->json(['token' => csrf_token()]);
-// });
-
-// // Login
-// Route::post('/login', function (Request $request) {
-//     $credentials = $request->only('email', 'password');
-
-//     if (!Auth::attempt($credentials)) {
-//         return response()->json(['message' => 'Invalid credentials'], 401);
-//     }
-
-//     return response()->json(['message' => 'Login successful']);
-// });
-
-// // Logout
-// Route::post('/logout', function () {
-//     Auth::logout();
-//     return response()->json(['message' => 'Logged out']);
-// });
-
-// // Obtener usuario autenticado
-// Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-//     return $request->user();
-// });
-
-
 Route::put('/equipos/{id}', [EquipoController::class, 'destroy']);
+Route::get('/enviar-correo', [EmailController::class, 'enviarCorreo']);
+
+
+
+
+Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLinkEmail']);
+Route::post('/reset-password', [PasswordResetController::class, 'reset']);
+
 
 //RESERVAS EQUIPO
 Route::get('/Obtenerequipos', [EquipoController::class, 'obtenerEquipos']);
