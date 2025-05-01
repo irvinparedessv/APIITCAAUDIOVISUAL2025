@@ -25,7 +25,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/usuarios', function () {
         return User::with('role')->get();
     });
-
+    Route::apiResource('equipos', EquipoController::class);
+    Route::apiResource('tipoEquipos', TipoEquipoController::class);
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
@@ -63,8 +64,7 @@ Route::middleware('auth:sanctum')->group(function () {
 //     return $request->user();
 // });
 
-Route::apiResource('equipos', EquipoController::class);
-Route::apiResource('tipoEquipos', TipoEquipoController::class);
+
 Route::put('/equipos/{id}', [EquipoController::class, 'destroy']);
 
 //RESERVAS EQUIPO
