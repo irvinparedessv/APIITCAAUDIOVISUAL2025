@@ -18,8 +18,10 @@ Route::post('/login', [LoginController::class, 'login']);
 
 // Rutas protegidas
 Route::middleware('auth:sanctum')->group(function () {
+   
     Route::resource('roles', RoleController::class);
-
+    Route::apiResource('users', UserController::class);
+    Route::get('/obtener-equipos', [EquipoController::class, 'obtenerEquipos']);
     Route::get('/usuarios', function () {
         return User::with('role')->get();
     });
@@ -28,14 +30,9 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
 
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
-
     Route::post('/logout', [LoginController::class, 'logout']);
 
-    Route::apiResource('equipos', EquipoController::class);
-    Route::apiResource('tipoEquipos', TipoEquipoController::class);
+    
 });
 
 
@@ -66,11 +63,9 @@ Route::middleware('auth:sanctum')->group(function () {
 //     return $request->user();
 // });
 
-
 Route::apiResource('equipos', EquipoController::class);
 Route::apiResource('tipoEquipos', TipoEquipoController::class);
-Route::apiResource('users', UserController::class);
-
+Route::put('/equipos/{id}', [EquipoController::class, 'destroy']);
 
 //RESERVAS EQUIPO
 Route::get('/Obtenerequipos', [EquipoController::class, 'obtenerEquipos']);
