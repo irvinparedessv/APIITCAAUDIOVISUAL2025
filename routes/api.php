@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\EquipoController;
 use App\Http\Controllers\TipoEquipoController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ProfileController;  // ✅ Para Perfil Usuario    
+
 
 
 // Rutas públicas
@@ -26,9 +28,9 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
 
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
+    // 👉 Ahora usamos el nuevo ProfileController
+    Route::put('/user/profile', [ProfileController::class, 'update']);  
+    Route::get('/user/profile', [ProfileController::class, 'show']); 
 
     Route::post('/logout', [LoginController::class, 'logout']);
 });

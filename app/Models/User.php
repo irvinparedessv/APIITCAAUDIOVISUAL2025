@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -13,13 +12,16 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
-        'name',
+        'first_name',
+        'last_name',
         'email',
         'password',
-        'role_id', // Agrega role_id si no estaba
-        'phone',   
-        'address', 
-        'estado',
+        'role_id',
+        'phone',
+        'address',
+        'estado',      // Campo para el estado (activo/inactivo)
+        'image', // Campo para la foto
+        'is_deleted',  // Campo para eliminar lógicamente
     ];
 
     protected $hidden = [
@@ -27,7 +29,7 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    protected $with = ['role']; // 👈 Cargar 'role' automáticamente
+    protected $with = ['role']; // Cargar 'role' automáticamente
 
     protected function casts(): array
     {
@@ -42,4 +44,3 @@ class User extends Authenticatable
         return $this->belongsTo(Role::class);
     }
 }
-

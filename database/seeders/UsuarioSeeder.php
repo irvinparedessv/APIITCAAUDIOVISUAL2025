@@ -15,7 +15,8 @@ class UsuarioSeeder extends Seeder
     {
         // Crear un usuario administrador
         User::create([
-            'name' => 'Admin Principal',
+            'first_name' => 'Admin',
+            'last_name' => 'Principal',
             'email' => 'admin@correo.com',
             'email_verified_at' => now(),
             'password' => '123', 
@@ -23,11 +24,15 @@ class UsuarioSeeder extends Seeder
             'is_deleted' => false,
             'remember_token' => null,
             'role_id' => 1, // ID de 'Administrador'
+            'phone' => null,
+            'address' => null,
+            'image' => null,
         ]);
 
         // Crear un usuario encargado
         User::create([
-            'name' => 'Encargado Ejemplo',
+            'first_name' => 'Encargado',
+            'last_name' => 'Ejemplo',
             'email' => 'encargado@correo.com',
             'email_verified_at' => now(),
             'password' => '123',  
@@ -35,11 +40,15 @@ class UsuarioSeeder extends Seeder
             'is_deleted' => false,
             'remember_token' => null,
             'role_id' => 2, // ID de 'Encargado'
+            'phone' => null,
+            'address' => null,
+            'image' => null,
         ]);
 
         // Crear un usuario prestamista
         User::create([
-            'name' => 'Prestamista Ejemplo',
+            'first_name' => 'Prestamista',
+            'last_name' => 'Ejemplo',
             'email' => 'prestamista@correo.com',
             'email_verified_at' => now(),
             'password' => '123', 
@@ -47,6 +56,9 @@ class UsuarioSeeder extends Seeder
             'is_deleted' => false,
             'remember_token' => null,
             'role_id' => 3, // ID de 'Prestamista'
+            'phone' => null,
+            'address' => null,
+            'image' => null,
         ]);
     }
 }
