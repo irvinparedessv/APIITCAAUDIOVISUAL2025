@@ -12,45 +12,49 @@ use App\Http\Controllers\ReservaEquipoController;
 use App\Http\Controllers\TipoEquipoController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Auth\PasswordResetController;
-use App\Models\ReservaEquipo;
-
 
 // Rutas públicas
 Route::post('/login', [LoginController::class, 'login']);
-
-// Rutas protegidas
-Route::middleware('auth:sanctum')->group(function () {
-   
-    Route::resource('roles', RoleController::class);
-    Route::apiResource('users', UserController::class);
-    Route::get('/obtener-equipos', [EquipoController::class, 'obtenerEquipos']);
-    Route::get('/usuarios', function () {
-        return User::with('role')->get();
-    });
-    Route::apiResource('equipos', EquipoController::class);
-    Route::apiResource('tipoEquipos', TipoEquipoController::class);
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
-
-    Route::post('/logout', [LoginController::class, 'logout']);
-
-    
-});
-
-
-Route::put('/equipos/{id}', [EquipoController::class, 'destroy']);
+Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLinkEmail']);
+Route::post('/reset-password', [PasswordResetController::class, 'reset']);
 Route::get('/enviar-correo', [EmailController::class, 'enviarCorreo']);
 
 
+// Rutas protegidas
+Route::middleware(['auth:sanctum', 'checkrole:Administrador'])->group(function () {
+    Route::get('/usuarios', function () {
+        return User::with('role')->get();
+    });
+    Route::resource('roles', RoleController::class);
+    Route::apiResource('users', UserController::class);
+    Route::apiResource('equipos', EquipoController::class);
+    Route::apiResource('tipoEquipos', TipoEquipoController::class);
+});
 
+Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador'])->group(function () {
+    Route::get('/Obtenerequipos', [EquipoController::class, 'obtenerEquipos']);
+    Route::apiResource('equipos', EquipoController::class);
+    Route::apiResource('tipoEquipos', TipoEquipoController::class);
+    Route::get('/reservas', [ReservaEquipoController::class, 'index']); // Ver todas las reservas
+    Route::post('/reservas', [ReservaEquipoController::class, 'store']);
+});
 
-Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLinkEmail']);
-Route::post('/reset-password', [PasswordResetController::class, 'reset']);
+Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->group(function () {
+    Route::apiResource('Obtenerequipos', EquipoController::class);
+    Route::get('/reservas/{id}', [ReservaEquipoController::class, 'getByUser']); // Ver reservas de un usuario
+    Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']); // Ver reserva por QR
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+   
+    Route::post('/logout', [LoginController::class, 'logout']);
+});
 
 
 //RESERVAS EQUIPO
-Route::get('/Obtenerequipos', [EquipoController::class, 'obtenerEquipos']);
-Route::post('/reservas', [ReservaEquipoController::class, 'store']);
-Route::get('/reservas/{id}', [ReservaEquipoController::class, 'getByUser']);
-Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']);
+// Route::get('/Obtenerequipos', [EquipoController::class, 'obtenerEquipos']);
+// Route::post('/reservas', [ReservaEquipoController::class, 'store']);
+// Route::get('/reservas/{id}', [ReservaEquipoController::class, 'getByUser']);
+// Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']); 
+
+
