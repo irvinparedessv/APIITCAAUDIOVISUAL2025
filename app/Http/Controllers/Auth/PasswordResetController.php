@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Notifications\ResetPasswordNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
@@ -15,12 +16,17 @@ class PasswordResetController extends Controller
         $request->validate([
             'email' => 'required|email',
         ]);
-
-        $status = Password::sendResetLink($request->only('email'));
-
-        return response()->json([
-            'message' => __($status),
-        ], $status === Password::RESET_LINK_SENT ? 200 : 400);
+    
+        $user = \App\Models\User::where('email', $request->email)->first();
+    
+        if (!$user) {
+            return response()->json(['message' => 'Usuario no encontrado'], 404);
+        }
+    
+        $token = Password::getRepository()->create($user);
+        $user->notify(new ResetPasswordNotification($token));
+    
+        return response()->json(['message' => 'Enlace enviado al correo.']);
     }
 
     // Cambiar la contraseña con el token
