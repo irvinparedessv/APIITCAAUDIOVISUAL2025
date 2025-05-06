@@ -18,15 +18,15 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->string('phone')->nullable();      
-            $table->string('address')->nullable(); 
-            $table->boolean('estado')->default(true);
-            $table->string('image')->nullable(); // Nuevo campo para imagen
+            $table->string('phone')->nullable();
+            $table->string('address')->nullable();
+            $table->integer('estado')->default(3); // Cambiado a integer para manejar 1, 0, 3
+            $table->string('image')->nullable();
             $table->boolean('is_deleted')->default(false);
             $table->rememberToken();
             $table->timestamps();
         });
-        
+
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
             $table->string('token');

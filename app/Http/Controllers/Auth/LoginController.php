@@ -22,6 +22,11 @@ class LoginController extends Controller
 
     $user = User::where('email', $request->email)->first();
 
+    // 🚫 Validación del estado del usuario
+    if ($user->estado == 0 || $user->is_deleted) {
+        return response()->json(['message' => 'Este usuario está inactivo o eliminado.'], 403);
+    }
+
     // Eliminar todos los tokens anteriores del usuario
     $user->tokens->each(function ($token) {
         $token->delete();
@@ -37,9 +42,11 @@ class LoginController extends Controller
         'token' => $token,
         'user' => [
             'id'    => $user->id,
-            'name'  => $user->name,
+            'first_name' => explode(' ', $user->first_name)[0], // Solo el primer nombre
+            'last_name'  => explode(' ', $user->last_name)[0],  // Solo el primer apellido
             'email' => $user->email,
             'role'  => $user->role->nombre, // Aquí aseguramos enviar el nombre del rol
+            'image' => $user->image // Asegúrate de que la imagen esté disponible
         ],
     ]);
 }

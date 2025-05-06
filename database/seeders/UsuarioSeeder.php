@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 
 class UsuarioSeeder extends Seeder
 {
@@ -13,52 +13,52 @@ class UsuarioSeeder extends Seeder
      */
     public function run()
     {
-        // Crear un usuario administrador
+        // Usuario administrador
         User::create([
-            'first_name' => 'Admin',
-            'last_name' => 'Principal',
-            'email' => 'admin@correo.com',
+            'first_name'        => 'Admin',
+            'last_name'         => 'Principal',
+            'email'             => 'admin@correo.com',
             'email_verified_at' => now(),
-            'password' => '123', 
-            'estado' => true,
-            'is_deleted' => false,
-            'remember_token' => null,
-            'role_id' => 1, // ID de 'Administrador'
-            'phone' => null,
-            'address' => null,
-            'image' => null,
+            'password'          => Hash::make('123'), // Siempre encriptar contraseñas
+            'estado'            => 1, // Activo
+            'is_deleted'        => false,
+            'remember_token'    => null,
+            'role_id'           => 1, // Administrador
+            'phone'             => null,
+            'address'           => null,
+            'image'             => null,
         ]);
 
-        // Crear un usuario encargado
+        // Usuario encargado
         User::create([
-            'first_name' => 'Encargado',
-            'last_name' => 'Ejemplo',
-            'email' => 'encargado@correo.com',
+            'first_name'        => 'Encargado',
+            'last_name'         => 'Ejemplo',
+            'email'             => 'encargado@correo.com',
             'email_verified_at' => now(),
-            'password' => '123',  
-            'estado' => true,
-            'is_deleted' => false,
-            'remember_token' => null,
-            'role_id' => 2, // ID de 'Encargado'
-            'phone' => null,
-            'address' => null,
-            'image' => null,
+            'password'          => Hash::make('123'),
+            'estado'            => 1,
+            'is_deleted'        => false,
+            'remember_token'    => null,
+            'role_id'           => 2, // Encargado
+            'phone'             => null,
+            'address'           => null,
+            'image'             => null,
         ]);
 
-        // Crear un usuario prestamista
+        // Usuario prestamista
         User::create([
-            'first_name' => 'Prestamista',
-            'last_name' => 'Ejemplo',
-            'email' => 'prestamista@correo.com',
+            'first_name'        => 'Prestamista',
+            'last_name'         => 'Ejemplo',
+            'email'             => 'prestamista@correo.com',
             'email_verified_at' => now(),
-            'password' => '123', 
-            'estado' => true,
-            'is_deleted' => false,
-            'remember_token' => null,
-            'role_id' => 3, // ID de 'Prestamista'
-            'phone' => null,
-            'address' => null,
-            'image' => null,
+            'password'          => Hash::make('123'),
+            'estado'            => 1,
+            'is_deleted'        => false,
+            'remember_token'    => null,
+            'role_id'           => 3, // Prestamista
+            'phone'             => null,
+            'address'           => null,
+            'image'             => null,
         ]);
     }
 }
