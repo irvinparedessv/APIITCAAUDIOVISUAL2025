@@ -11,18 +11,22 @@ class TipoEquipoSeeder extends Seeder
     {
         TipoEquipo::create([
             'nombre' => 'Servidor',
+            'is_deleted' => false
         ]);
 
         TipoEquipo::create([
             'nombre' => 'Router',
+            'is_deleted' => false
         ]);
 
         TipoEquipo::create([
             'nombre' => 'Laptop',
+            'is_deleted' => false
         ]);
 
         TipoEquipo::create([
             'nombre' => 'Switch',
+            'is_deleted' => false
         ]);
     }
 }

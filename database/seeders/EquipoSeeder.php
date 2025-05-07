@@ -17,7 +17,8 @@ class EquipoSeeder extends Seeder
             'estado' => true,
             'cantidad' => 3,
             'is_deleted' => false,
-            'tipo_equipo_id' => 1
+            'tipo_equipo_id' => 1,
+            'imagen' => 'default.png'
         ]);
 
         Equipo::create([
@@ -26,7 +27,8 @@ class EquipoSeeder extends Seeder
             'estado' => false,
             'cantidad' => 2,
             'is_deleted' => false,
-            'tipo_equipo_id' => 2
+            'tipo_equipo_id' => 2,
+            'imagen' => 'default.png'
         ]);
 
         Equipo::create([
@@ -35,7 +37,8 @@ class EquipoSeeder extends Seeder
             'estado' => true,
             'cantidad' => 10,
             'is_deleted' => false,
-            'tipo_equipo_id' => 3
+            'tipo_equipo_id' => 3,
+            'imagen' => 'default.png'
         ]);
     }
 }

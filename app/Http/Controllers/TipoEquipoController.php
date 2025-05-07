@@ -12,18 +12,9 @@ class TipoEquipoController extends Controller
      */
     public function index()
     {
-        // Obtener todos los tipos de equipo
-        $tiposEquipos = TipoEquipo::all();
+        // Obtener todos los tipos de equipo que no han sido eliminados
+        $tiposEquipos = TipoEquipo::where('is_deleted', false)->get();
         return response()->json($tiposEquipos);
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        // Este método puede ser útil si estás usando vistas y deseas mostrar un formulario de creación
-        // Pero en una API generalmente no se necesita este método
     }
 
     /**
@@ -31,18 +22,16 @@ class TipoEquipoController extends Controller
      */
     public function store(Request $request)
     {
-        // Validar los datos recibidos
         $request->validate([
             'nombre' => 'required|string|max:255',
         ]);
 
-        // Crear un nuevo tipo de equipo
         $tipoEquipo = TipoEquipo::create([
             'nombre' => $request->input('nombre'),
+            'is_deleted' => false, // Asegurarse de que no esté marcado como eliminado
         ]);
 
-        // Retornar el tipo de equipo creado
-        return response()->json($tipoEquipo, 201); // Código HTTP 201 indica que se creó con éxito
+        return response()->json($tipoEquipo, 201);
     }
 
     /**
@@ -50,25 +39,13 @@ class TipoEquipoController extends Controller
      */
     public function show(string $id)
     {
-        // Buscar el tipo de equipo por ID
-        $tipoEquipo = TipoEquipo::find($id);
+        $tipoEquipo = TipoEquipo::where('id', $id)->where('is_deleted', false)->first();
 
-        // Si no se encuentra, retornar un error
         if (!$tipoEquipo) {
             return response()->json(['error' => 'Tipo de equipo no encontrado'], 404);
         }
 
-        // Retornar el tipo de equipo encontrado
         return response()->json($tipoEquipo);
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        // Similar al método `create()`, este método puede ser útil si estás usando vistas y deseas mostrar un formulario de edición.
-        // En una API, no se necesita este método.
     }
 
     /**
@@ -76,44 +53,36 @@ class TipoEquipoController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        // Validar los datos recibidos
         $request->validate([
             'nombre' => 'required|string|max:255',
         ]);
 
-        // Buscar el tipo de equipo por ID
-        $tipoEquipo = TipoEquipo::find($id);
+        $tipoEquipo = TipoEquipo::where('id', $id)->where('is_deleted', false)->first();
 
-        // Si no se encuentra, retornar un error
         if (!$tipoEquipo) {
             return response()->json(['error' => 'Tipo de equipo no encontrado'], 404);
         }
 
-        // Actualizar el tipo de equipo
         $tipoEquipo->nombre = $request->input('nombre');
         $tipoEquipo->save();
 
-        // Retornar el tipo de equipo actualizado
         return response()->json($tipoEquipo);
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Remove the specified resource from storage (eliminado lógico).
      */
     public function destroy(string $id)
     {
-        // Buscar el tipo de equipo por ID
-        $tipoEquipo = TipoEquipo::find($id);
+        $tipoEquipo = TipoEquipo::where('id', $id)->where('is_deleted', false)->first();
 
-        // Si no se encuentra, retornar un error
         if (!$tipoEquipo) {
             return response()->json(['error' => 'Tipo de equipo no encontrado'], 404);
         }
 
-        // Eliminar el tipo de equipo
-        $tipoEquipo->delete();
+        $tipoEquipo->is_deleted = true;
+        $tipoEquipo->save();
 
-        // Retornar una respuesta exitosa
         return response()->json(['message' => 'Tipo de equipo eliminado con éxito'], 200);
     }
 }
