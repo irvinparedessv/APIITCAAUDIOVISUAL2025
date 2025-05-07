@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AulaController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\RoleController;
 use App\Models\User;
@@ -73,3 +74,4 @@ Route::get('/Obtenerequipos', [EquipoController::class, 'obtenerEquipos']);
 Route::post('/reservas', [ReservaEquipoController::class, 'store']);
 Route::get('/reservas/{id}', [ReservaEquipoController::class, 'getByUser']);
 Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']);
+Route::post('/aulas', [AulaController::class, 'store']);
