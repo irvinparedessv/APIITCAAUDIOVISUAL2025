@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('tipo_equipos', function (Blueprint $table) {
             $table->id();
             $table->string('nombre');
+            $table->boolean('is_deleted')->default(false); 
             $table->timestamps();
         });
     }

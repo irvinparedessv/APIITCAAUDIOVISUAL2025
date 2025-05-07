@@ -2,85 +2,116 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Validation\Rule;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-    // Listar todos los usuarios
+    // Listar todos los usuarios con su rol
     public function index()
     {
-        $usuarios = User::with('role')->get(); // Trae usuarios con su rol
+        $usuarios = User::with('role')->get();
         return response()->json($usuarios);
     }
 
-    // Guardar un nuevo usuario
+    // Crear un nuevo usuario
     public function store(Request $request)
     {
+        // Si no se envía estado, se asigna 'pendiente' (3) por defecto
+        $request->merge([
+            'estado' => $request->estado ?? 3,
+        ]);
+
         $request->validate([
-            'name' => 'required|string|max:255',
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6',
             'role_id' => 'required|exists:roles,id',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:255',
-            'estado' => 'nullable|boolean', // o string 
+            'estado' => 'required|in:0,1,3', // Solo permite 0, 1 o 3
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('user_images', 'public');
+        }
+
         $usuario = User::create([
-            'name' => $request->input('name'),
-            'email' => $request->input('email'),
-            'password' => bcrypt($request->input('password')),
-            'role_id' => $request->input('role_id'),
-            'phone' => $request->input('phone'),
-            'address' => $request->input('address'),
-            'estado' => $request->input('estado', true), // por defecto se puede usar true
+            'first_name' => $request->first_name,
+            'last_name' => $request->last_name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role_id' => $request->role_id,
+            'phone' => $request->phone,
+            'address' => $request->address,
+            'estado' => $request->estado, // Se asigna el estado recibido
+            'image' => $imagePath,
+            'is_deleted' => false,
         ]);
 
         return response()->json($usuario, 201);
     }
 
-    // Mostrar un solo usuario
+    // Mostrar un usuario específico
     public function show(string $id)
     {
         $usuario = User::with('role')->findOrFail($id);
         return response()->json($usuario);
     }
 
-    // Actualizar un usuario
+    // Actualizar datos de un usuario
     public function update(Request $request, string $id)
     {
         $usuario = User::findOrFail($id);
 
-        $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'email' => 'sometimes|required|string|email|max:255|unique:users,email,' . $usuario->id,
+        // Validación de los campos permitidos
+        $validated = $request->validate([
+            'first_name' => 'sometimes|required|string|max:255',
+            'last_name' => 'sometimes|required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $usuario->id,
             'password' => 'nullable|string|min:6',
             'role_id' => 'sometimes|required|exists:roles,id',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:255',
-            'estado' => 'nullable|boolean', 
+            'estado' => ['required', Rule::in([0, 1, 3])], // <-- VALIDACIÓN CORRECTA
         ]);
 
-        $usuario->update([
-            'name' => $request->input('name', $usuario->name),
-            'email' => $request->input('email', $usuario->email),
-            'password' => $request->filled('password') ? bcrypt($request->input('password')) : $usuario->password,
-            'role_id' => $request->input('role_id', $usuario->role_id),
-            'phone' => $request->input('phone', $usuario->phone),
-            'address' => $request->input('address', $usuario->address),
-            'estado' => $request->input('estado', $usuario->estado),
-        ]);
+        // Si se incluye el campo 'estado', actualizar también 'is_deleted'
+        if (isset($validated['estado'])) {
+            $usuario->estado = $validated['estado'];
+            $usuario->is_deleted = $validated['estado'] == 0;
+        }
+
+        // Actualizar contraseña si viene en la solicitud
+        if (!empty($validated['password'])) {
+            $usuario->password = Hash::make($validated['password']);
+            unset($validated['password']); // Evita que se vuelva a asignar sin encriptar abajo
+        }
+
+        // Actualizar otros campos
+        $usuario->fill($validated);
+        $usuario->save();
 
         return response()->json($usuario);
     }
 
-    // Eliminar un usuario
+
+    // Eliminar usuario (solo si está desactivado)
     public function destroy(string $id)
     {
         $usuario = User::findOrFail($id);
-        $usuario->delete();
 
-        return response()->json(['message' => 'Usuario eliminado correctamente.']);
+        // En lugar de eliminar físicamente, se marca como inactivo y eliminado
+        $usuario->estado = 0; // Inactivo
+        $usuario->is_deleted = true;
+        $usuario->save();
+
+        return response()->json(['message' => 'Usuario desactivado correctamente.']);
     }
 }
