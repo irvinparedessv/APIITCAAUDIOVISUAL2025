@@ -9,11 +9,12 @@ class TipoEquipo extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['nombre'];
+    protected $fillable = ['nombre','is_deleted'];
 
     // Relación con equipos
     public function equipos()
     {
         return $this->hasMany(Equipo::class);
     }
+    
 }

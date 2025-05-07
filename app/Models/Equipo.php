@@ -10,7 +10,21 @@ class Equipo extends Model
     /** @use HasFactory<\Database\Factories\EquipoFactory> */
     use HasFactory;
 
-    protected $fillable = ['nombre', 'descripcion', 'estado', 'cantidad','is_deleted', 'tipo_equipo_id'];
+    protected $fillable = [
+        'nombre',
+        'descripcion',
+        'estado',
+        'cantidad',
+        'is_deleted',
+        'tipo_equipo_id',
+        'imagen' 
+    ];
+    public function getImagenUrlAttribute()
+    {
+        return $this->imagen
+            ? asset('storage/equipos/' . $this->imagen)
+            : asset('storage/equipos/default.png');
+    }
 
     // Relación con TipoEquipo
     public function tipoEquipo()
