@@ -13,6 +13,7 @@ use App\Http\Controllers\TipoEquipoController;
 use App\Http\Controllers\UserController;
 use App\Models\ReservaEquipo;
 
+
 // Rutas públicas
 Route::post('/login', [LoginController::class, 'login']);
 
