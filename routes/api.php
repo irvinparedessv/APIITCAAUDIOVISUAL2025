@@ -12,6 +12,9 @@ use App\Http\Controllers\ReservaEquipoController;
 use App\Http\Controllers\TipoEquipoController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Auth\PasswordResetController;
+use App\Http\Controllers\ProfileController;  // ✅ Para Perfil Usuario    
+
+
 
 // Rutas públicas
 Route::post('/login', [LoginController::class, 'login']);
@@ -37,6 +40,9 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador'])->group(
     Route::apiResource('tipoEquipos', TipoEquipoController::class);
     Route::get('/reservas', [ReservaEquipoController::class, 'index']); // Ver todas las reservas
     Route::post('/reservas', [ReservaEquipoController::class, 'store']);
+    // 👉 Ahora usamos el nuevo ProfileController
+    Route::put('/user/profile', [ProfileController::class, 'update']);
+    Route::get('/user/profile', [ProfileController::class, 'show']);
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->group(function () {
@@ -44,10 +50,13 @@ Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->grou
     Route::post('/reservas', [ReservaEquipoController::class, 'store']);
     Route::get('/reservas/{id}', [ReservaEquipoController::class, 'getByUser']); // Ver reservas de un usuario
     Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']); // Ver reserva por QR
+    // 👉 Ahora usamos el nuevo ProfileController
+    Route::put('/user/profile', [ProfileController::class, 'update']);
+    Route::get('/user/profile', [ProfileController::class, 'show']);
 });
 
 Route::middleware('auth:sanctum')->group(function () {
-   
+
     Route::post('/logout', [LoginController::class, 'logout']);
 });
 
@@ -57,5 +66,3 @@ Route::middleware('auth:sanctum')->group(function () {
 // Route::post('/reservas', [ReservaEquipoController::class, 'store']);
 // Route::get('/reservas/{id}', [ReservaEquipoController::class, 'getByUser']);
 // Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']); 
-
-
