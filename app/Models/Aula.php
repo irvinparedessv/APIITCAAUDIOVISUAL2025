@@ -9,4 +9,15 @@ class Aula extends Model
 {
     /** @use HasFactory<\Database\Factories\AulaFactory> */
     use HasFactory;
+    protected $fillable = ['name'];
+
+    public function imagenes()
+    {
+        return $this->hasMany(ImagenesAula::class);
+    }
+
+    public function horarios()
+    {
+        return $this->hasMany(HorarioAulas::class);
+    }
 }
