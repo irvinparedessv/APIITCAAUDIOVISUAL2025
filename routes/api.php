@@ -26,6 +26,14 @@ Route::post('/confirm-account/{token}', [UserController::class, 'confirmAccount'
 Route::post('/change-password', [UserController::class, 'changePassword']);
 
 
+// Ruta para validar el token (puede ir en el grupo público o protegido)
+Route::middleware('auth:sanctum')->get('/validate-token', function (Request $request) {
+    return response()->json([
+        'valid' => true,
+        'user' => $request->user()->load('role') // Carga la relación 'role' si existe
+    ]);
+});
+
 
 // Rutas protegidas
 Route::middleware(['auth:sanctum', 'checkrole:Administrador'])->group(function () {
