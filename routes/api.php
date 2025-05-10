@@ -22,6 +22,9 @@ Route::post('/login', [LoginController::class, 'login']);
 Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLinkEmail']);
 Route::post('/reset-password', [PasswordResetController::class, 'reset']);
 Route::get('/enviar-correo', [EmailController::class, 'enviarCorreo']);
+Route::post('/confirm-account/{token}', [UserController::class, 'confirmAccount']);
+Route::post('/change-password', [UserController::class, 'changePassword']);
+
 
 
 // Rutas protegidas

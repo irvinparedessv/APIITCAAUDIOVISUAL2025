@@ -26,6 +26,8 @@ class User extends Authenticatable
         'change_password',
         'image',
         'is_deleted',
+        'confirmation_token',
+        'email_verified_at',
     ];
 
     protected $hidden = [

@@ -2,11 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\ConfirmAccountMail;
 use Illuminate\Validation\Rule;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class UserController extends Controller
 {
@@ -17,7 +22,7 @@ class UserController extends Controller
         return response()->json($usuarios);
     }
 
-    // Crear un nuevo usuario
+
     public function store(Request $request)
     {
         // Si no se envía estado, se asigna 'pendiente' (3) por defecto
@@ -29,11 +34,10 @@ class UserController extends Controller
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:6',
             'role_id' => 'required|exists:roles,id',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:255',
-            'estado' => 'required|in:0,1,3', // Solo permite 0, 1 o 3
+            'estado' => 'required|in:0,1,3',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
@@ -42,21 +46,33 @@ class UserController extends Controller
             $imagePath = $request->file('image')->store('user_images', 'public');
         }
 
+        $tempPassword = Str::random(10);
+        $confirmationToken = str()->uuid();
+        Log::info("Token generado para {$request->email}: {$confirmationToken}"); 
         $usuario = User::create([
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
             'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'password' => Hash::make($tempPassword),
             'role_id' => $request->role_id,
             'phone' => $request->phone,
             'address' => $request->address,
             'estado' => $request->estado, // Se asigna el estado recibido
+            'confirmation_token' => $confirmationToken,
             'image' => $imagePath,
             'is_deleted' => false,
+            'change_password' => true,
         ]);
 
-        return response()->json($usuario, 201);
+         // Generar URL de confirmación que coincida con tu frontend
+    $confirmationUrl = "http://localhost:5173/confirm-account/{$confirmationToken}";
+    Log::info("URL de confirmación: {$confirmationUrl}"); // Debug
+
+    Mail::to($usuario->email)->send(new ConfirmAccountMail($usuario, $tempPassword, $confirmationUrl));
+
+    return response()->json(['message' => 'Usuario creado y correo enviado.'], 201);
     }
+
 
     // Mostrar un usuario específico
     public function show(string $id)
@@ -114,4 +130,73 @@ class UserController extends Controller
 
         return response()->json(['message' => 'Usuario desactivado correctamente.']);
     }
+
+
+    public function confirmAccount($token)
+    {
+        DB::beginTransaction();
+        
+        try {
+            Log::info('Confirmación iniciada', ['token' => $token]);
+
+            $user = User::where('confirmation_token', $token)->lockForUpdate()->first();
+
+            if (!$user) {
+                Log::error('Token no encontrado', ['token' => $token]);
+                return response()->json([
+                    'message' => 'Token inválido o expirado',
+                    'debug' => 'Token no existe en la BD'
+                ], 404);
+            }
+
+            // Guarda el email antes de actualizar
+            $userEmail = $user->email;
+            
+            $user->update([
+                'estado' => 1,
+                'confirmation_token' => null,
+                'email_verified_at' => now()
+            ]);
+
+            DB::commit();
+
+            Log::info('Confirmación exitosa', ['email' => $userEmail]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cuenta confirmada exitosamente',
+                'email' => $userEmail,
+                'redirect' => '/change-password?email='.urlencode($userEmail)
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error en confirmación', [
+                'error' => $e->getMessage(),
+                'token' => $token
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno al confirmar la cuenta'
+            ], 500);
+        }
+    }
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+            'password' => 'required|min:6|confirmed',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+        $user->password = Hash::make($request->password);
+        $user->change_password = false;
+        $user->save();
+
+        return response()->json(['message' => 'Contraseña actualizada correctamente']);
+    }
+
+
 }
