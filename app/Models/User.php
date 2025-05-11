@@ -63,7 +63,7 @@ class User extends Authenticatable
             1 => 'activo',
             0 => 'inactivo',
             3 => 'pendiente',
-            default => 'pendiente',
+            default => 'inactivo',
         };
     }
 }

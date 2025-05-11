@@ -24,10 +24,11 @@ class UserController extends Controller
 
 
     public function store(Request $request)
-    {
-        // Si no se envía estado, se asigna 'pendiente' (3) por defecto
+{
+    try {
+        // Si no se envía estado, se asigna 'inactivo' (0) por defecto
         $request->merge([
-            'estado' => $request->estado ?? 3,
+            'estado' => $request->estado ?? 0,
         ]);
 
         $request->validate([
@@ -47,8 +48,9 @@ class UserController extends Controller
         }
 
         $tempPassword = Str::random(10);
-        $confirmationToken = str()->uuid();
-        Log::info("Token generado para {$request->email}: {$confirmationToken}"); 
+        $confirmationToken = Str::uuid();
+        Log::info("Token generado para {$request->email}: {$confirmationToken}");
+
         $usuario = User::create([
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
@@ -57,21 +59,41 @@ class UserController extends Controller
             'role_id' => $request->role_id,
             'phone' => $request->phone,
             'address' => $request->address,
-            'estado' => $request->estado, // Se asigna el estado recibido
+            'estado' => $request->estado,
             'confirmation_token' => $confirmationToken,
             'image' => $imagePath,
             'is_deleted' => false,
             'change_password' => true,
         ]);
 
-         // Generar URL de confirmación que coincida con tu frontend
-    $confirmationUrl = "http://localhost:5173/confirm-account/{$confirmationToken}";
-    Log::info("URL de confirmación: {$confirmationUrl}"); // Debug
+        // Generar URL de confirmación
+        $confirmationUrl = "http://localhost:5173/confirm-account/{$confirmationToken}";
+        Log::info("URL de confirmación: {$confirmationUrl}");
 
-    Mail::to($usuario->email)->send(new ConfirmAccountMail($usuario, $tempPassword, $confirmationUrl));
+        // Intentar enviar el correo
+        try {
+            Mail::to($usuario->email)->send(new ConfirmAccountMail($usuario, $tempPassword, $confirmationUrl));
+        } catch (\Throwable $e) {
+            Log::error("Error al enviar el correo a {$usuario->email}: " . $e->getMessage());
+            // O puedes notificar que se creó el usuario, pero no se envió el correo
+            return response()->json([
+                'message' => 'Usuario creado, pero no se pudo enviar el correo.',
+                'usuario' => $usuario,
+                'error_correo' => true,
+            ], 201);
+        }
 
-    return response()->json(['message' => 'Usuario creado y correo enviado.'], 201);
+        return response()->json([
+            'message' => 'Usuario creado y correo enviado correctamente.',
+            'usuario' => $usuario
+        ], 201);
+
+    } catch (\Throwable $e) {
+        Log::error("Error en el proceso de creación de usuario: " . $e->getMessage());
+        return response()->json(['error' => 'Error interno al crear el usuario.'], 500);
     }
+}
+
 
 
     // Mostrar un usuario específico
@@ -132,71 +154,61 @@ class UserController extends Controller
     }
 
 
+    // Modifica el método confirmAccount para cambiar a estado 3 (pendiente)
     public function confirmAccount($token)
     {
         DB::beginTransaction();
         
         try {
-            Log::info('Confirmación iniciada', ['token' => $token]);
-
-            $user = User::where('confirmation_token', $token)->lockForUpdate()->first();
+            $user = User::where('confirmation_token', $token)->first();
 
             if (!$user) {
-                Log::error('Token no encontrado', ['token' => $token]);
-                return response()->json([
-                    'message' => 'Token inválido o expirado',
-                    'debug' => 'Token no existe en la BD'
-                ], 404);
+                return response()->json(['message' => 'Token inválido'], 404);
             }
 
-            // Guarda el email antes de actualizar
-            $userEmail = $user->email;
-            
             $user->update([
-                'estado' => 1,
+                'estado' => 3, // Cambia a pendiente (esperando cambio de contraseña)
                 'confirmation_token' => null,
                 'email_verified_at' => now()
             ]);
 
             DB::commit();
 
-            Log::info('Confirmación exitosa', ['email' => $userEmail]);
-
             return response()->json([
                 'success' => true,
-                'message' => 'Cuenta confirmada exitosamente',
-                'email' => $userEmail,
-                'redirect' => '/change-password?email='.urlencode($userEmail)
+                'message' => 'Cuenta confirmada. Ahora puede iniciar sesión.',
+                'email' => $user->email
             ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error en confirmación', [
-                'error' => $e->getMessage(),
-                'token' => $token
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Error interno al confirmar la cuenta'
-            ], 500);
+            return response()->json(['message' => 'Error al confirmar la cuenta'], 500);
         }
     }
 
+    // Modifica el método changePassword para activar la cuenta
     public function changePassword(Request $request)
     {
         $request->validate([
             'email' => 'required|email|exists:users,email',
-            'password' => 'required|min:6|confirmed',
+            'current_password' => 'required',
+            'new_password' => 'required|min:6|confirmed'
         ]);
 
         $user = User::where('email', $request->email)->first();
-        $user->password = Hash::make($request->password);
-        $user->change_password = false;
-        $user->save();
 
-        return response()->json(['message' => 'Contraseña actualizada correctamente']);
+        // Verificar contraseña actual
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json(['message' => 'Contraseña actual incorrecta'], 401);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->new_password),
+            'change_password' => false,
+            'estado' => 1 // Cambia a activo
+        ]);
+
+        return response()->json(['message' => 'Contraseña actualizada y cuenta activada']);
     }
-
 
 }

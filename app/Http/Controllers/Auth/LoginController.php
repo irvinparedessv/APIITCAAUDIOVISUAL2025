@@ -47,7 +47,8 @@ class LoginController extends Controller
                 'email' => $user->email,
                 'role'  => $user->role->id, // Aquí aseguramos enviar el nombre del rol
                 'roleName'  => $user->role->nombre, // Aquí aseguramos enviar el nombre del rol
-                'image' => $user->image // Asegúrate de que la imagen esté disponible
+                'image' => $user->image, // Asegúrate de que la imagen esté disponible
+                'estado' => $user->estado, 
             ],
         ]);
     }
