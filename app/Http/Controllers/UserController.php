@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Validation\Rule;
 use App\Models\User;
 use Illuminate\Http\Request;
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
 
@@ -18,7 +20,7 @@ class UserController extends Controller
     }
 
     // Crear un nuevo usuario
-    public function store(Request $request)
+    public function store(StoreUserRequest $request)
     {
         // Si no se envía estado, se asigna 'pendiente' (3) por defecto
         $request->merge([
@@ -66,7 +68,7 @@ class UserController extends Controller
     }
 
     // Actualizar datos de un usuario
-    public function update(Request $request, string $id)
+    public function update(UpdateUserRequest $request, string $id)
     {
         $usuario = User::findOrFail($id);
 

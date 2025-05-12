@@ -10,46 +10,53 @@ use App\Models\User;
 class LoginController extends Controller
 {
     public function login(Request $request)
-    {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
+{
+    $request->validate([
+        'email' => 'required|email',
+        'password' => 'required',
+    ]);
 
-        if (!Auth::attempt($request->only('email', 'password'))) {
-            return response()->json(['message' => 'Credenciales incorrectas'], 401);
-        }
+    // Verificar si el usuario existe primero
+    $user = User::where('email', $request->email)->first();
 
-        $user = User::where('email', $request->email)->first();
-
-        // 🚫 Validación del estado del usuario
-        if ($user->estado == 0 || $user->is_deleted) {
-            return response()->json(['message' => 'Este usuario está inactivo o eliminado.'], 403);
-        }
-
-        // Eliminar todos los tokens anteriores del usuario
-        $user->tokens->each(function ($token) {
-            $token->delete();
-        });
-
-        // Crear un nuevo token
-        $token = $user->createToken('api-token')->plainTextToken;
-
-        // Cargar relación 'role' (esto es lo nuevo)
-        $user->load('role');
-
-        return response()->json([
-            'token' => $token,
-            'user' => [
-                'id'    => $user->id,
-                'name'  => $user->name,
-                'email' => $user->email,
-                'role'  => $user->role->id, // Aquí aseguramos enviar el nombre del rol
-                'roleName'  => $user->role->nombre, // Aquí aseguramos enviar el nombre del rol
-                'image' => $user->image // Asegúrate de que la imagen esté disponible
-            ],
-        ]);
+    if (!$user) {
+        return response()->json(['message' => 'Credenciales incorrectas'], 401);
     }
+
+    // 🚫 Validación de estado del usuario antes de intentar login
+    if ($user->estado == 0 || $user->is_deleted) {
+        return response()->json(['message' => 'Este usuario está inactivo o eliminado.'], 403);
+    }
+
+    // Solo si está activo, se intenta autenticar
+    if (!Auth::attempt($request->only('email', 'password'))) {
+        return response()->json(['message' => 'Credenciales incorrectas'], 401);
+    }
+
+    // Eliminar todos los tokens anteriores del usuario
+    $user->tokens->each(function ($token) {
+        $token->delete();
+    });
+
+    // Crear nuevo token
+    $token = $user->createToken('api-token')->plainTextToken;
+
+    $user->load('role');
+
+    return response()->json([
+        'token' => $token,
+        'user' => [
+            'id' => $user->id,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'email' => $user->email,
+            'role' => $user->role->id,
+            'roleName' => $user->role->nombre,
+            'image' => $user->image
+        ],
+    ]);
+}
+
 
     public function logout(Request $request)
     {
