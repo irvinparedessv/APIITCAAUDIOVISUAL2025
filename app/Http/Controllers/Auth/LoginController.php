@@ -32,10 +32,9 @@ class LoginController extends Controller
             $token->delete();
         });
 
-        // Crear un nuevo token
+        // Crear nuevo token
         $token = $user->createToken('api-token')->plainTextToken;
 
-        // Cargar relación 'role' (esto es lo nuevo)
         $user->load('role');
 
         return response()->json([
@@ -48,7 +47,7 @@ class LoginController extends Controller
                 'role'  => $user->role->id, // Aquí aseguramos enviar el nombre del rol
                 'roleName'  => $user->role->nombre, // Aquí aseguramos enviar el nombre del rol
                 'image' => $user->image, // Asegúrate de que la imagen esté disponible
-                'estado' => $user->estado, 
+                'estado' => $user->estado,
             ],
         ]);
     }

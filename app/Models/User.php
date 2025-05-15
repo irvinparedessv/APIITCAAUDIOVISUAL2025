@@ -47,6 +47,9 @@ class User extends Authenticatable
 
     protected $with = ['role']; // Carga automática de la relación con Role
 
+    // Agregar image_url como campo adicional en la respuesta JSON
+    protected $appends = ['image_url'];
+
     // Relación con Role
     public function role()
     {
@@ -65,5 +68,11 @@ class User extends Authenticatable
             3 => 'pendiente',
             default => 'inactivo',
         };
+    }
+
+    // Accesor para obtener la URL pública de la imagen
+    public function getImageUrlAttribute()
+    {
+        return $this->image ? asset('storage/' . $this->image) : null;
     }
 }
