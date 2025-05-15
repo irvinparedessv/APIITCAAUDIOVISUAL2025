@@ -40,8 +40,18 @@ class ReservaAulaController extends Controller
             'reserva' => $reserva
         ], 201);
     }
-    public function reservas()
+
+    public function reservas(Request $request)
     {
-        return response()->json(ReservaAula::all());
+        $from = $request->query('from');
+        $to = $request->query('to');
+
+        $query = ReservaAula::with(['aula', 'user']);
+
+        if ($from && $to) {
+            $query->whereBetween('fecha', [$from, $to]);
+        }
+
+        return response()->json($query->get());
     }
 }

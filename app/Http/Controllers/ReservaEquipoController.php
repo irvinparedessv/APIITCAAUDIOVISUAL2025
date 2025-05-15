@@ -51,7 +51,7 @@ class ReservaEquipoController extends Controller
         $reserva = $codigoQr->reserva;
 
         return response()->json([
-            'usuario' => $reserva->user->name, // O como tengas la relación
+            'usuario' => $reserva->user->first_name . ' ' . $reserva->user->last_name,
             'equipo' => $reserva->equipos->pluck('nombre')->toArray(), // Relación equipos
             'aula' => $reserva->aula, // Relación aula
             'dia' => $reserva->dia,
@@ -95,7 +95,7 @@ class ReservaEquipoController extends Controller
 
         ]);
 
-      // ✅ CARGAR LA RELACIÓN USER ANTES DE NOTIFICAR
+        // ✅ CARGAR LA RELACIÓN USER ANTES DE NOTIFICAR
         $reserva->load('user');
 
         // Notificar encargados
@@ -104,9 +104,9 @@ class ReservaEquipoController extends Controller
 
         foreach ($encargados as $encargado) {
             Log::info('Verificando reserva antes de notificar', [
-    'user' => $reserva->user,
-    'nombre_completo' => $reserva->user->first_name . ' ' . $reserva->user->last_name,
-]);
+                'user' => $reserva->user,
+                'nombre_completo' => $reserva->user->first_name . ' ' . $reserva->user->last_name,
+            ]);
             $encargado->notify(new NuevaReservaNotification($reserva));
             Log::info("Notificando al encargado: " . $encargado->email);
         }
@@ -114,5 +114,19 @@ class ReservaEquipoController extends Controller
             'message' => 'Reserva creada exitosamente',
             'reserva' => $reserva->load('equipos'),
         ], 201);
+    }
+    public function actualizarEstado(Request $request, $id)
+    {
+        $request->validate([
+            'estado' => 'required|in:approved,rejected',
+            'comentario' => 'nullable|string',
+        ]);
+
+        $reserva = ReservaEquipo::findOrFail($id);
+        $reserva->estado = $request->estado;
+        $reserva->comentario = $request->comentario;
+        $reserva->save();
+
+        return response()->json(['message' => 'Estado actualizado correctamente']);
     }
 }

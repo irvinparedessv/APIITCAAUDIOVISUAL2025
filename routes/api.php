@@ -16,6 +16,7 @@ use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\ProfileController;  // ✅ Para Perfil Usuario    
 use App\Http\Controllers\ReservaAulaController;
 
+
 // Rutas públicas
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLinkEmail']);
@@ -42,6 +43,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador'])->group(function (
     Route::resource('roles', RoleController::class);
     Route::apiResource('users', UserController::class);
     Route::apiResource('equipos', EquipoController::class);
+
     Route::apiResource('tipoEquipos', TipoEquipoController::class);
 });
 
@@ -55,6 +57,8 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador'])->group(
     Route::put('/user/profile', [ProfileController::class, 'update']);
     Route::get('/user/profile', [ProfileController::class, 'show']);
     Route::post('/aulas', [AulaController::class, 'store']);
+    Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']); // Ver reserva por QR
+
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->group(function () {
@@ -65,16 +69,19 @@ Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->grou
     // 👉 Ahora usamos el nuevo ProfileController
     Route::put('/user/profile', [ProfileController::class, 'update']);
     Route::get('/user/profile', [ProfileController::class, 'show']);
-    Route::post('/reservas', [ReservaAulaController::class, 'store']);
+    Route::post('/reservasAula', [ReservaAulaController::class, 'store']);
+    Route::get('/aulasEquipos', [AulaController::class, 'index']);
     Route::get('/aulas', [ReservaAulaController::class, 'aulas']);
-    Route::get('/reservas-aulas', [ReservaAulaController::class, 'reservas']);
+    Route::get('/reservas-aula', [ReservaAulaController::class, 'reservas']);
 });
 
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/logout', [LoginController::class, 'logout']);
 });
-
+Route::get('/verificar-rol', function () {
+    return Auth::user();
+});
 
 //RESERVAS EQUIPO
 // Route::get('/Obtenerequipos', [EquipoController::class, 'obtenerEquipos']);
