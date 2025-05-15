@@ -7,6 +7,25 @@ use Illuminate\Database\Eloquent\Model;
 
 class ReservaAula extends Model
 {
-    /** @use HasFactory<\Database\Factories\ReservaAulaFactory> */
     use HasFactory;
+
+    protected $table = 'reserva_aulas';
+
+    protected $fillable = [
+        'aula_id',
+        'fecha',
+        'horario',
+        'user_id',
+        'estado',
+    ];
+
+    public function aula()
+    {
+        return $this->belongsTo(Aula::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

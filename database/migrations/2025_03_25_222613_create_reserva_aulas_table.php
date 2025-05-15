@@ -13,6 +13,17 @@ return new class extends Migration
     {
         Schema::create('reserva_aulas', function (Blueprint $table) {
             $table->id();
+
+            $table->foreignId('aula_id')->constrained('aulas')->onDelete('cascade');
+            $table->date('fecha');
+            $table->string('horario');
+
+            // Opcional: si usas autenticación y quieres guardar quién hizo la reserva
+            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
+
+            // Opcional: puedes incluir estado (pendiente, confirmada, cancelada)
+            $table->string('estado')->default('pendiente');
+
             $table->timestamps();
         });
     }

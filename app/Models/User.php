@@ -26,6 +26,8 @@ class User extends Authenticatable
         'change_password',
         'image',
         'is_deleted',
+        'confirmation_token',
+        'email_verified_at',
     ];
 
     protected $hidden = [
@@ -64,7 +66,7 @@ class User extends Authenticatable
             1 => 'activo',
             0 => 'inactivo',
             3 => 'pendiente',
-            default => 'pendiente',
+            default => 'inactivo',
         };
     }
 
