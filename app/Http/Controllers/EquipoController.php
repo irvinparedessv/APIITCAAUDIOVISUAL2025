@@ -14,7 +14,9 @@ class EquipoController extends Controller
     // Listar todos los equipos
     public function index()
     {
-        $equipos = Equipo::where('is_deleted', false)->get()->map(function ($equipo) {
+        // Usamos el scope 'activos()' para obtener solo los registros activos
+        $equipos = Equipo::activos()->get()->map(function ($equipo) {
+            // Agregar el campo 'imagen_url' dinámicamente
             $equipo->imagen_url = $equipo->imagen_url;
 
             return $equipo;
@@ -22,6 +24,7 @@ class EquipoController extends Controller
 
         return response()->json($equipos);
     }
+
 
     public function obtenerEquipos()
     {
