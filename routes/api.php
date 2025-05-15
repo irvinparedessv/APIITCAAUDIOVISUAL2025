@@ -14,8 +14,7 @@ use App\Http\Controllers\TipoEquipoController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\ProfileController;  // ✅ Para Perfil Usuario    
-
-
+use App\Http\Controllers\ReservaAulaController;
 
 // Rutas públicas
 Route::post('/login', [LoginController::class, 'login']);
@@ -55,6 +54,9 @@ Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->grou
     // 👉 Ahora usamos el nuevo ProfileController
     Route::put('/user/profile', [ProfileController::class, 'update']);
     Route::get('/user/profile', [ProfileController::class, 'show']);
+    Route::post('/reservas', [ReservaAulaController::class, 'store']);
+    Route::get('/aulas', [ReservaAulaController::class, 'aulas']);
+    Route::get('/reservas-aulas', [ReservaAulaController::class, 'reservas']);
 });
 
 Route::middleware('auth:sanctum')->group(function () {
