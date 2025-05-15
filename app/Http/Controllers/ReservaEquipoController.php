@@ -6,8 +6,12 @@ use App\Models\CodigoQrReserva;
 use App\Models\CodigoQrReservaEquipo;
 use App\Models\EquipmentReservation;
 use App\Models\ReservaEquipo;
+use App\Models\Role;
+use App\Models\User;
+use App\Notifications\NuevaReservaNotification;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 
@@ -90,6 +94,22 @@ class ReservaEquipoController extends Controller
             'reserva_id' => $reserva->id, // vinculamos a la reserva
 
         ]);
+
+      // ✅ CARGAR LA RELACIÓN USER ANTES DE NOTIFICAR
+        $reserva->load('user');
+
+        // Notificar encargados
+        $encargadoRoleId = Role::where('nombre', 'encargado')->value('id');
+        $encargados = User::where('role_id', $encargadoRoleId)->get();
+
+        foreach ($encargados as $encargado) {
+            Log::info('Verificando reserva antes de notificar', [
+    'user' => $reserva->user,
+    'nombre_completo' => $reserva->user->first_name . ' ' . $reserva->user->last_name,
+]);
+            $encargado->notify(new NuevaReservaNotification($reserva));
+            Log::info("Notificando al encargado: " . $encargado->email);
+        }
         return response()->json([
             'message' => 'Reserva creada exitosamente',
             'reserva' => $reserva->load('equipos'),

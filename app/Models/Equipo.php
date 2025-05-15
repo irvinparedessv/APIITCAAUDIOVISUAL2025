@@ -31,4 +31,12 @@ class Equipo extends Model
     {
         return $this->belongsTo(TipoEquipo::class);
     }
+
+    public function scopeActivos($query)
+    {
+        return $query->where('is_deleted', false)
+                     ->whereHas('tipoEquipo', function ($q) {
+                         $q->where('is_deleted', false);
+                     });
+    }
 }
