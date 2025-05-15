@@ -8,6 +8,7 @@ use App\Models\ImagenesAula;
 use App\Models\HorarioAulas;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Http\JsonResponse;
 
 class AulaController extends Controller
 {
@@ -60,5 +61,12 @@ class AulaController extends Controller
             DB::rollBack();
             return response()->json(['error' => 'Error al crear el aula', 'details' => $e->getMessage()], 500);
         }
+    }
+
+    public function index(): JsonResponse
+    {
+        return response()->json(
+            Aula::select('id', 'name')->get()
+        );
     }
 }
