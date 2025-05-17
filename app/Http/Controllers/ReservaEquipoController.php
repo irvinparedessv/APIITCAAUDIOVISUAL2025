@@ -9,6 +9,7 @@ use App\Models\ReservaEquipo;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\ConfirmarReservaUsuario;
+use App\Notifications\EstadoReservaNotification;
 use App\Notifications\NotificarResponsableReserva;
 use App\Notifications\NuevaReservaNotification;
 use Illuminate\Http\Request;
