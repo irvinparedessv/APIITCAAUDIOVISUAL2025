@@ -33,4 +33,10 @@ class ReservaEquipo extends Model
     {
         return $this->hasOne(CodigoQrReservaEquipo::class, 'reserva_id');
     }
+
+    public function aula()
+    {
+        return $this->belongsTo(Aula::class, 'aula_id'); // o el nombre correcto del campo
+    }
+
 }

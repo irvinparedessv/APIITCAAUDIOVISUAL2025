@@ -8,6 +8,8 @@ use App\Models\EquipmentReservation;
 use App\Models\ReservaEquipo;
 use App\Models\Role;
 use App\Models\User;
+use App\Notifications\ConfirmarReservaUsuario;
+use App\Notifications\NotificarResponsableReserva;
 use App\Notifications\NuevaReservaNotification;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -95,26 +97,39 @@ class ReservaEquipoController extends Controller
 
         ]);
 
-        // ✅ CARGAR LA RELACIÓN USER ANTES DE NOTIFICAR
-        $reserva->load('user');
+        // ✅ CARGA las relaciones necesarias antes de notificar
+        $reserva->load(['user', 'equipos', 'aula']); // Asegúrate de tener definida la relación 'aula' en el modelo
 
-        // Notificar encargados
-        $encargadoRoleId = Role::where('nombre', 'encargado')->value('id');
-        $encargados = User::where('role_id', $encargadoRoleId)->get();
+        $userId = $reserva->user->id;
 
-        foreach ($encargados as $encargado) {
-            Log::info('Verificando reserva antes de notificar', [
-                'user' => $reserva->user,
-                'nombre_completo' => $reserva->user->first_name . ' ' . $reserva->user->last_name,
-            ]);
-            $encargado->notify(new NuevaReservaNotification($reserva));
-            Log::info("Notificando al encargado: " . $encargado->email);
+        // Obtener responsables (encargados y administradores), excluyendo al usuario que hizo la reserva
+        $responsableRoleIds = Role::whereIn('nombre', ['encargado', 'administrador'])->pluck('id');
+        $responsables = User::whereIn('role_id', $responsableRoleIds)
+                            ->where('id', '!=', $userId) // Excluye al usuario que hizo la reserva
+                            ->get();
+Log::info('Responsables encontrados:', $responsables->pluck('id')->toArray());
+
+        foreach ($responsables as $responsable) {
+        // Evitar duplicar notificación si el responsable es quien hizo la reserva
+        if ($responsable->id === $reserva->user->id) {
+            continue;
         }
-        return response()->json([
-            'message' => 'Reserva creada exitosamente',
-            'reserva' => $reserva->load('equipos'),
-        ], 201);
+
+        // Enviar notificación real-time (broadcast + db)
+        $responsable->notify(new NuevaReservaNotification($reserva));
+
+        // Enviar correo personalizado
+//$responsable->notify(new NotificarResponsableReserva($reserva));
     }
+        // Notificación por correo al usuario
+ //       $reserva->user->notify(new ConfirmarReservaUsuario($reserva));
+
+        return response()->json([
+                'message' => 'Reserva creada exitosamente',
+                'reserva' => $reserva->load('equipos'),
+            ], 201);
+    }
+
     public function actualizarEstado(Request $request, $id)
     {
         $request->validate([
