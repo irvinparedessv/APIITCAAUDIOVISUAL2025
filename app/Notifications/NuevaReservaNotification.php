@@ -36,6 +36,7 @@ class NuevaReservaNotification extends Notification implements ShouldQueue
     'last_name' => $this->reserva->user ? $this->reserva->user->last_name : null,
 ]);
         return new BroadcastMessage([
+            
             'reserva' => [
                 'id' => $this->reserva->id,
                 'user' => $this->reserva->user ? $this->reserva->user->first_name . ' ' . $this->reserva->user->last_name : null, // Concatenamos el nombre
@@ -51,10 +52,10 @@ class NuevaReservaNotification extends Notification implements ShouldQueue
     public function toDatabase($notifiable)
     {
         Log::info('User Details: ', [
-    'user' => $this->reserva->user,
-    'first_name' => $this->reserva->user ? $this->reserva->user->first_name : null,
-    'last_name' => $this->reserva->user ? $this->reserva->user->last_name : null,
-]);
+            'user' => $this->reserva->user,
+            'first_name' => $this->reserva->user ? $this->reserva->user->first_name : null,
+            'last_name' => $this->reserva->user ? $this->reserva->user->last_name : null,
+        ]);
         return [
             'reserva_id' => $this->reserva->id,
             'user' => $this->reserva->user ? $this->reserva->user->first_name . ' ' . $this->reserva->user->last_name : null, // Concatenamos el nombre
@@ -64,11 +65,13 @@ class NuevaReservaNotification extends Notification implements ShouldQueue
         ];
     }
 
-   public function broadcastOn()
+    public function broadcastOn()
     {
-        // Cambia a Channel (público) en lugar de PrivateChannel
-        return new Channel('notifications');
+        // Canal compartido para admin y encargado
+        return new Channel('notifications.rol.admin-encargado');
     }
+
+
 
     public function broadcastAs()
     {
