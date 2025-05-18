@@ -28,7 +28,7 @@ class NotificarResponsableReserva extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject('Nueva Reserva Recibida')
-            ->view('emails.reserva_encargado', [
+            ->markdown('emails.reserva_encargado', [
                 'reserva' => $this->reserva
             ]);
     }

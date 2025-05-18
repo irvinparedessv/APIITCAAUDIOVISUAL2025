@@ -28,8 +28,9 @@ class ConfirmarReservaUsuario extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject('Confirmación de tu Reserva')
-            ->view('emails.reserva_usuario', [
+            ->markdown('emails.reserva_usuario', [
                 'reserva' => $this->reserva
             ]);
     }
+
 }
