@@ -118,14 +118,24 @@ class ReservaEquipoController extends Controller
     public function actualizarEstado(Request $request, $id)
     {
         $request->validate([
-            'estado' => 'required|in:approved,rejected',
+            'estado' => 'required|in:approved,rejected,returned',
             'comentario' => 'nullable|string',
         ]);
 
-        $reserva = ReservaEquipo::findOrFail($id);
-        $reserva->estado = $request->estado;
-        $reserva->comentario = $request->comentario;
-        $reserva->save();
+         $reserva = ReservaEquipo::findOrFail($id);
+         $reserva->estado = $request->estado;
+         $reserva->comentario = $request->comentario;
+         $reserva->save();
+
+    if ($reserva->user) {
+        if ($reserva->estado == 'approved') {
+            $reserva->user->notify(new ReservaAprobadaNotification($reserva));
+        } elseif ($reserva->estado == 'rejected') {
+            $reserva->user->notify(new ReservaRechazadaNotification($reserva));
+        } elseif ($reserva->estado == 'returned') {
+            $reserva->user->notify(new ReservaDevueltaNotification($reserva));
+        }
+    }
 
         return response()->json(['message' => 'Estado actualizado correctamente']);
     }
