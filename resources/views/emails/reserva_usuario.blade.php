@@ -16,4 +16,5 @@ Gracias por realizar tu solicitud. Estos son los detalles:
 @slot('subcopy')
 Este mensaje ha sido generado automáticamente. Por favor, no respondas a este correo.
 @endslot
+
 @endcomponent
