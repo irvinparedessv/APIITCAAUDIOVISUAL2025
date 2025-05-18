@@ -7,22 +7,23 @@ use App\Models\ReservaEquipo;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Support\Facades\Log;
 
-class NuevaReservaNotification extends Notification implements ShouldQueue
+class NuevaReservaNotification extends Notification implements ShouldQueue, ShouldBroadcast
 {
     use Queueable;
 
     public $reserva;
     public $notifiableId;
 
-    public function __construct(ReservaEquipo $reserva)
+    public function __construct(ReservaEquipo $reserva, $notifiableId)
     {
         $this->reserva = $reserva->load('user'); // <-- aseguramos que el user esté cargado
-        $this->notifiableId = $reserva->responsable_id ?? null;
+         $this->notifiableId = $notifiableId; 
     }
 
     public function via($notifiable)
@@ -80,6 +81,19 @@ class NuevaReservaNotification extends Notification implements ShouldQueue
     {
         // Define un nombre de evento personalizado
         return 'nueva.reserva';
+    }
+
+      public function broadcastWith()
+    {
+        return [
+            'reserva' => [
+                'id' => $this->reserva->id,
+                'user' => $this->reserva->user ? $this->reserva->user->first_name . ' ' . $this->reserva->user->last_name : null,
+                'aula' => $this->reserva->aula,
+                'fecha_reserva' => $this->reserva->fecha_reserva,
+                'fecha_entrega' => $this->reserva->fecha_entrega,
+            ]
+        ];
     }
 
 }
