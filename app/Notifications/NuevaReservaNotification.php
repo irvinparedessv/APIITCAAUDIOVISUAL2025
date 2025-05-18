@@ -5,6 +5,7 @@ namespace App\Notifications;
 
 use App\Models\ReservaEquipo;
 use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -16,10 +17,12 @@ class NuevaReservaNotification extends Notification implements ShouldQueue
     use Queueable;
 
     public $reserva;
+    public $notifiableId;
 
     public function __construct(ReservaEquipo $reserva)
     {
         $this->reserva = $reserva->load('user'); // <-- aseguramos que el user esté cargado
+        $this->notifiableId = $reserva->responsable_id ?? null;
     }
 
     public function via($notifiable)
@@ -67,8 +70,8 @@ class NuevaReservaNotification extends Notification implements ShouldQueue
 
     public function broadcastOn()
     {
-        // Canal compartido para admin y encargado
-        return new Channel('notifications.rol.admin-encargado');
+         // Canal privado para el usuario específico responsable
+        return [new PrivateChannel('notifications.user.' . $this->notifiableId)];
     }
 
 
