@@ -120,7 +120,7 @@ Log::info('Responsables encontrados:', $responsables->pluck('id')->toArray());
         $responsable->notify(new NuevaReservaNotification($reserva, $responsable->id));
         Log::info("Notificación enviada");
         // Enviar correo personalizado
-        $responsable->notify(new NotificarResponsableReserva($reserva));
+        //$responsable->notify(new NotificarResponsableReserva($reserva));
     }
         // Notificación por correo al usuario
        $reserva->user->notify(new ConfirmarReservaUsuario($reserva));
