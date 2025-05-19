@@ -126,16 +126,11 @@ class ReservaEquipoController extends Controller
          $reserva->estado = $request->estado;
          $reserva->comentario = $request->comentario;
          $reserva->save();
-
-    if ($reserva->user) {
-        if ($reserva->estado == 'approved') {
-            $reserva->user->notify(new ReservaAprobadaNotification($reserva));
-        } elseif ($reserva->estado == 'rejected') {
-            $reserva->user->notify(new ReservaRechazadaNotification($reserva));
-        } elseif ($reserva->estado == 'returned') {
-            $reserva->user->notify(new ReservaDevueltaNotification($reserva));
+         
+        // Ver estado de las reservas de los equipos 
+         if ($reserva->user) {
+        $reserva->user->notify(new EstadoReservaNotification($reserva));
         }
-    }
 
         return response()->json(['message' => 'Estado actualizado correctamente']);
     }
