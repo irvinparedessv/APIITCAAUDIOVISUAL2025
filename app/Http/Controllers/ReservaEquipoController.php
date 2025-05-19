@@ -111,7 +111,7 @@ class ReservaEquipoController extends Controller
         $responsables = User::whereIn('role_id', $responsableRoleIds)
                             ->where('id', '!=', $userId) // Excluye al usuario que hizo la reserva
                             ->get();
-Log::info('Responsables encontrados:', $responsables->pluck('id')->toArray());
+        Log::info('Responsables encontrados:', $responsables->pluck('id')->toArray());
 
         foreach ($responsables as $responsable) {
         // Evitar duplicar notificación si el responsable es quien hizo la reserva
