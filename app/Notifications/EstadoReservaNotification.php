@@ -10,6 +10,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class EstadoReservaNotification extends Notification implements ShouldQueue, ShouldBroadcast
@@ -17,8 +18,6 @@ class EstadoReservaNotification extends Notification implements ShouldQueue, Sho
     use Queueable;
 
     protected $reserva;
-
-     // ✅ sin tipo
     public $id;
 
     public function __construct(ReservaEquipo $reserva)
@@ -29,7 +28,7 @@ class EstadoReservaNotification extends Notification implements ShouldQueue, Sho
 
     public function via($notifiable)
     {
-        return ['database', 'mail', 'broadcast'];
+        return ['database', 'broadcast'];
     }
 
     public function toDatabase($notifiable)
@@ -48,6 +47,7 @@ class EstadoReservaNotification extends Notification implements ShouldQueue, Sho
         ];
     }
 
+   
     public function toBroadcast($notifiable)
     {
         return new BroadcastMessage($this->toDatabase($notifiable));
@@ -61,10 +61,5 @@ class EstadoReservaNotification extends Notification implements ShouldQueue, Sho
     public function broadcastAs()
     {
         return 'reserva.estado.actualizado';
-    }
-
-    public function toMail($notifiable)
-    {
-
     }
 }
