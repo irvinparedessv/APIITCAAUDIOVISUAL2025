@@ -35,10 +35,10 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
     public function toBroadcast($notifiable)
     {
         Log::info('User Details: ', [
-    'user' => $this->reserva->user,
-    'first_name' => $this->reserva->user ? $this->reserva->user->first_name : null,
-    'last_name' => $this->reserva->user ? $this->reserva->user->last_name : null,
-]);
+            'user' => $this->reserva->user,
+            'first_name' => $this->reserva->user ? $this->reserva->user->first_name : null,
+            'last_name' => $this->reserva->user ? $this->reserva->user->last_name : null,
+        ]);
         return new BroadcastMessage([
             
             'reserva' => [
@@ -47,7 +47,7 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
                 'aula' => $this->reserva->aula,
                 'fecha_reserva' => $this->reserva->fecha_reserva,
                 'fecha_entrega' => $this->reserva->fecha_entrega,
-                
+                'estado' => $this->reserva->estado,
             ]
             
         ]);
@@ -66,6 +66,7 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
             'aula' => $this->reserva->aula,
             'fecha_reserva' => $this->reserva->fecha_reserva,
             'fecha_entrega' => $this->reserva->fecha_entrega,
+            'estado' => $this->reserva->estado,
         ];
     }
 
@@ -92,6 +93,7 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
                 'aula' => $this->reserva->aula,
                 'fecha_reserva' => $this->reserva->fecha_reserva,
                 'fecha_entrega' => $this->reserva->fecha_entrega,
+                'estado' => $this->reserva->estado,
             ]
         ];
     }
