@@ -12,9 +12,6 @@ use App\Notifications\ConfirmarReservaUsuario;
 use App\Notifications\EstadoReservaNotification;
 use App\Notifications\NotificarResponsableReserva;
 use App\Notifications\NuevaReservaNotification;
-use App\Notifications\ReservaAprobacionNotification;
-use App\Notifications\ReservaDevolucionNotification;
-use App\Notifications\ReservaRechazoNotification;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -134,23 +131,26 @@ class ReservaEquipoController extends Controller
             ], 201);
     }
 
-    public function actualizarEstado(Request $request, $id)
-    {
-        $request->validate([
-            'estado' => 'required|in:approved,rejected,returned',
-            'comentario' => 'nullable|string',
-        ]);
+ public function actualizarEstado(Request $request, $id)
+{
+    $request->validate([
+        'estado' => 'required|in:approved,rejected,returned',
+        'comentario' => 'nullable|string',
+    ]);
 
-         $reserva = ReservaEquipo::findOrFail($id);
-         $reserva->estado = $request->estado;
-         $reserva->comentario = $request->comentario;
-         $reserva->save();
-         
-        // Ver estado de las reservas de los equipos 
-         if ($reserva->user) {
-        $reserva->user->notify(new EstadoReservaNotification($reserva));
-        }
+    $reserva = ReservaEquipo::findOrFail($id);
+    $reserva->estado = $request->estado;
+    $reserva->comentario = $request->comentario;
+    $reserva->save();
 
-        return response()->json(['message' => 'Estado actualizado correctamente']);
-    }
+    $reserva->load('user.role');
+Log::info('Rol del usuario al notificar:', ['rol' => $reserva->user->role->nombre]);
+if (strtolower($reserva->user->role->nombre) === 'prestamista') {
+    Log::info('Notificando al prestamista...');
+    $reserva->user->notify(new EstadoReservaNotification($reserva));
+}
+
+    return response()->json(['message' => 'Estado actualizado correctamente']);
+}
+
 }

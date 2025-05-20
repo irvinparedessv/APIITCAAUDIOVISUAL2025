@@ -83,7 +83,7 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
         return 'nueva.reserva';
     }
 
-      public function broadcastWith()
+    public function broadcastWith()
     {
         return [
             'reserva' => [
