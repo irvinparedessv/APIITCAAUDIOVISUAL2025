@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\EstadoReservaMailable;
 use App\Models\CodigoQrReserva;
 use App\Models\CodigoQrReservaEquipo;
 use App\Models\EquipmentReservation;
@@ -15,6 +16,7 @@ use App\Notifications\NuevaReservaNotification;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 
@@ -131,7 +133,9 @@ class ReservaEquipoController extends Controller
             ], 201);
     }
 
- public function actualizarEstado(Request $request, $id)
+
+
+public function actualizarEstado(Request $request, $id)
 {
     $request->validate([
         'estado' => 'required|in:approved,rejected,returned',
@@ -144,13 +148,24 @@ class ReservaEquipoController extends Controller
     $reserva->save();
 
     $reserva->load('user.role');
-Log::info('Rol del usuario al notificar:', ['rol' => $reserva->user->role->nombre]);
-if (strtolower($reserva->user->role->nombre) === 'prestamista') {
-    Log::info('Notificando al prestamista...');
-    $reserva->user->notify(new EstadoReservaNotification($reserva));
-}
 
-    return response()->json(['message' => 'Estado actualizado correctamente']);
+    Log::info('Rol del usuario al notificar:', ['rol' => $reserva->user->role->nombre]);
+
+    // 🔔 Enviar notificación (base de datos + broadcast) al solicitante
+    $reserva->user->notify(new EstadoReservaNotification($reserva));
+
+    // 📬 Obtener todos los usuarios con rol 'prestamista'
+    $prestamistas = User::whereHas('role', function ($query) {
+        $query->where('nombre', 'prestamista');
+    })->get();
+
+    // 📬 Enviar correo Markdown personalizado a cada prestamista
+    foreach ($prestamistas as $prestamista) {
+        Log::info("Enviando correo a prestamista: {$prestamista->email}");
+        Mail::to($prestamista->email)->queue(new EstadoReservaMailable($reserva));
+    }
+
+    return response()->json(['message' => 'Estado actualizado, notificaciones y correos enviados correctamente']);
 }
 
 }

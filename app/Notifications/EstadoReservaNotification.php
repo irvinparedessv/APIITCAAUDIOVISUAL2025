@@ -65,21 +65,6 @@ class EstadoReservaNotification extends Notification implements ShouldQueue, Sho
 
     public function toMail($notifiable)
     {
-        $estadoTraducido = match($this->reserva->estado) {
-            'approved' => 'aprobada',
-            'rejected' => 'rechazada',
-            'returned' => 'devuelta',
-            default => $this->reserva->estado
-        };
 
-        return (new MailMessage)
-            ->subject('Estado de tu reserva')
-            ->greeting('Hola ' . $this->reserva->user->first_name)
-            ->line("Tu reserva ha sido {$estadoTraducido}.")
-            ->line('Detalles:')
-            ->line('Aula: ' . $this->reserva->aula)
-            ->line('Fecha de reserva: ' . $this->reserva->fecha_reserva)
-            ->line('Fecha de entrega: ' . $this->reserva->fecha_entrega)
-            ->action('Ver reserva', url('/reservas/' . $this->reserva->id));
     }
 }
