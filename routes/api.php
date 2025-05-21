@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\AulaController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\EmailController;
@@ -27,6 +28,7 @@ Route::get('/enviar-correo', [EmailController::class, 'enviarCorreo']);
 Route::post('/confirm-account/{token}', [UserController::class, 'confirmAccount']);
 Route::post('/change-password', [UserController::class, 'changePassword']);
 Route::post('/chatGPT', [ChatGPTController::class, 'chatWithGpt']);
+
 
 
 // Ruta para validar el token (puede ir en el grupo público o protegido)
@@ -84,6 +86,8 @@ Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->grou
 Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamista'])->group(function () {
     Route::put('/user/profile', [ProfileController::class, 'update']);
     Route::get('/user/profile', [ProfileController::class, 'show']);
+    Route::get('/notifications', [NotificationController::class, 'index']); // todas
+    Route::get('/notifications/{id}', [NotificationController::class, 'show']); // detalle
 });
 
 

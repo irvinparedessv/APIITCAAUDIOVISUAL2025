@@ -9,7 +9,6 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\BroadcastMessage;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -22,8 +21,8 @@ class EstadoReservaNotification extends Notification implements ShouldQueue, Sho
 
     public function __construct(ReservaEquipo $reserva)
     {
-        $this->reserva = $reserva->load('user');
-        $this->id = Str::uuid()->toString(); // <- Laravel lo requiere para broadcasting
+        $this->reserva = $reserva->load(['user', 'equipos.tipoEquipo']);
+        $this->id = (string) Str::uuid();
     }
 
     public function via($notifiable)
@@ -39,6 +38,12 @@ class EstadoReservaNotification extends Notification implements ShouldQueue, Sho
             'reserva' => [
                 'id' => $this->reserva->id,
                 'aula' => $this->reserva->aula,
+                'equipos' => $this->reserva->equipos->map(function($equipo) {
+                    return [
+                        'nombre' => $equipo->nombre,
+                        'tipo' => $equipo->tipoEquipo ? $equipo->tipoEquipo->nombre : null,
+                    ];
+                }),
                 'fecha_reserva' => $this->reserva->fecha_reserva,
                 'fecha_entrega' => $this->reserva->fecha_entrega,
             ],
@@ -47,7 +52,6 @@ class EstadoReservaNotification extends Notification implements ShouldQueue, Sho
         ];
     }
 
-   
     public function toBroadcast($notifiable)
     {
         return new BroadcastMessage($this->toDatabase($notifiable));
@@ -63,3 +67,4 @@ class EstadoReservaNotification extends Notification implements ShouldQueue, Sho
         return 'reserva.estado.actualizado';
     }
 }
+

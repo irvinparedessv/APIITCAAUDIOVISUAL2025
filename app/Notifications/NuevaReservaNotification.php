@@ -22,9 +22,11 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
 
     public function __construct(ReservaEquipo $reserva, $notifiableId)
     {
-        $this->reserva = $reserva->load('user'); // <-- aseguramos que el user esté cargado
-         $this->notifiableId = $notifiableId; 
+        $this->reserva = $reserva;
+        $this->reserva->load(['user', 'equipos.tipoEquipo', 'aula']); // cargamos relaciones necesarias
+        $this->notifiableId = $notifiableId;
     }
+
 
     public function via($notifiable)
     {
@@ -55,20 +57,30 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
 
     public function toDatabase($notifiable)
     {
-        Log::info('User Details: ', [
-            'user' => $this->reserva->user,
-            'first_name' => $this->reserva->user ? $this->reserva->user->first_name : null,
-            'last_name' => $this->reserva->user ? $this->reserva->user->last_name : null,
-        ]);
+        $usuarioNombre = $this->reserva->user
+            ? $this->reserva->user->first_name . ' ' . $this->reserva->user->last_name
+            : 'Usuario desconocido';
+
         return [
+            'title' => 'Nueva reserva recibida',
+            'message' => "Nueva reserva recibida del usuario {$usuarioNombre}.",
             'reserva_id' => $this->reserva->id,
-            'user' => $this->reserva->user ? $this->reserva->user->first_name . ' ' . $this->reserva->user->last_name : null, // Concatenamos el nombre
-            'aula' => $this->reserva->aula,
+            'user' => $usuarioNombre,
+            'aula' => $this->reserva->aula?->nombre ?? $this->reserva->aula, // si aula es relación
             'fecha_reserva' => $this->reserva->fecha_reserva,
             'fecha_entrega' => $this->reserva->fecha_entrega,
             'estado' => $this->reserva->estado,
+            'equipos' => $this->reserva->equipos->map(function($equipo) {
+                return [
+                    'nombre' => $equipo->nombre,
+                    'tipo' => $equipo->tipoEquipo ? $equipo->tipoEquipo->nombre : null,
+                ];
+            }),
+
         ];
     }
+
+
 
     public function broadcastOn()
     {
@@ -86,16 +98,28 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
 
     public function broadcastWith()
     {
+        $usuarioNombre = $this->reserva->user
+            ? $this->reserva->user->first_name . ' ' . $this->reserva->user->last_name
+            : 'Usuario desconocido';
+
         return [
             'reserva' => [
                 'id' => $this->reserva->id,
-                'user' => $this->reserva->user ? $this->reserva->user->first_name . ' ' . $this->reserva->user->last_name : null,
-                'aula' => $this->reserva->aula,
+                'user' => $usuarioNombre,
+                'aula' => $this->reserva->aula?->nombre ?? $this->reserva->aula,
                 'fecha_reserva' => $this->reserva->fecha_reserva,
                 'fecha_entrega' => $this->reserva->fecha_entrega,
                 'estado' => $this->reserva->estado,
+                'equipos' => $this->reserva->equipos->map(function($equipo) {
+                    return [
+                        'nombre' => $equipo->nombre,
+                        'tipo' => $equipo->tipoEquipo ? $equipo->tipoEquipo->nombre : null,
+                    ];
+                }),
+
             ]
         ];
     }
+
 
 }
