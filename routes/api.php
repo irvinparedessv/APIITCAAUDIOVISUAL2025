@@ -37,9 +37,8 @@ Route::middleware('auth:sanctum')->get('/validate-token', function (Request $req
 
 // Rutas protegidas
 Route::middleware(['auth:sanctum', 'checkrole:Administrador'])->group(function () {
-    Route::get('/usuarios', function () {
-        return User::with('role')->get();
-    });
+    Route::get('/usuarios', [UserController::class, 'index']);
+
     Route::resource('roles', RoleController::class);
     Route::apiResource('users', UserController::class);
     Route::apiResource('equipos', EquipoController::class);
