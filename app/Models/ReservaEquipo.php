@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\BitacoraHelper;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -38,5 +39,22 @@ class ReservaEquipo extends Model
     {
         return $this->belongsTo(Aula::class, 'aula_id'); // o el nombre correcto del campo
     }
+
+    protected static function booted()
+    {
+        static::updating(function ($reserva) {
+            if ($reserva->isDirty('estado')) {
+                $original = $reserva->getOriginal('estado');
+                $nuevo = $reserva->estado;
+
+                BitacoraHelper::registrar(
+                    'Cambio de estado',
+                    'Reserva Equipo',
+                    "Estado cambiado de '{$original}' a '{$nuevo}' en la reserva con ID {$reserva->id}"
+                );
+            }
+        });
+    }
+
 
 }
