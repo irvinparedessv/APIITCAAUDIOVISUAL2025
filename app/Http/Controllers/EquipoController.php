@@ -12,18 +12,31 @@ use Illuminate\Support\Facades\File;
 class EquipoController extends Controller
 {
     // Listar todos los equipos
-    public function index()
-    {
-        // Usamos el scope 'activos()' para obtener solo los registros activos
-        $equipos = Equipo::activos()->get()->map(function ($equipo) {
-            // Agregar el campo 'imagen_url' dinámicamente
-            $equipo->imagen_url = $equipo->imagen_url;
+   public function index(Request $request)
+{
+    // Usamos el scope 'activos()' para obtener solo los registros activos
+    $query = Equipo::activos();
 
-            return $equipo;
+    // Filtro de búsqueda
+    if ($request->has('search')) {
+        $search = $request->input('search');
+        $query->where(function ($q) use ($search) {
+            $q->where('nombre', 'like', "%$search%")
+              ->orWhere('descripcion', 'like', "%$search%");
         });
-
-        return response()->json($equipos);
     }
+
+    // Paginación
+    $equipos = $query->paginate(10); // Devuelve LengthAwarePaginator
+
+    // Agregar el campo imagen_url a cada equipo (sin perder la paginación)
+    $equipos->getCollection()->transform(function ($equipo) {
+        $equipo->imagen_url = $equipo->imagen_url;
+        return $equipo;
+    });
+
+    return response()->json($equipos);
+}
 
 
     public function obtenerEquipos()
