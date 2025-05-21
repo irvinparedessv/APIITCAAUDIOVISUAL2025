@@ -13,6 +13,7 @@ use App\Http\Controllers\ReservaEquipoController;
 use App\Http\Controllers\TipoEquipoController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Auth\PasswordResetController;
+use App\Http\Controllers\ChatGPTController;
 use App\Http\Controllers\ProfileController;  // ✅ Para Perfil Usuario    
 use App\Http\Controllers\ReservaAulaController;
 
@@ -24,6 +25,7 @@ Route::post('/reset-password', [PasswordResetController::class, 'reset']);
 Route::get('/enviar-correo', [EmailController::class, 'enviarCorreo']);
 Route::post('/confirm-account/{token}', [UserController::class, 'confirmAccount']);
 Route::post('/change-password', [UserController::class, 'changePassword']);
+Route::post('/chatGPT', [ChatGPTController::class, 'chatWithGpt']);
 
 
 // Ruta para validar el token (puede ir en el grupo público o protegido)
