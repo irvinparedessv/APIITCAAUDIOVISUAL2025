@@ -49,17 +49,20 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador'])->group(function (
     Route::apiResource('tipoEquipos', TipoEquipoController::class);
 });
 
+// Route::middleware(['auth:sanctum', 'checkrole:Encargado'])->group(function () {
+//     Route::put('/reservas-equipo/{id}/estado', [ReservaEquipoController::class, 'actualizarEstado']);
+// });
+
+
 Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador'])->group(function () {
     Route::get('/Obtenerequipos', [EquipoController::class, 'obtenerEquipos']);
     Route::apiResource('equipos', EquipoController::class);
     Route::apiResource('tipoEquipos', TipoEquipoController::class);
     Route::get('/reservas', [ReservaEquipoController::class, 'index']); // Ver todas las reservas
     Route::post('/reservas', [ReservaEquipoController::class, 'store']);
-    // 👉 Ahora usamos el nuevo ProfileController
-    Route::put('/user/profile', [ProfileController::class, 'update']);
-    Route::get('/user/profile', [ProfileController::class, 'show']);
     Route::post('/aulas', [AulaController::class, 'store']);
     Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']); // Ver reserva por QR
+    Route::put('/reservas-equipo/{id}/estado', [ReservaEquipoController::class, 'actualizarEstado']);
 
 });
 
@@ -68,14 +71,19 @@ Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->grou
     Route::post('/reservas', [ReservaEquipoController::class, 'store']);
     Route::get('/reservas/{id}', [ReservaEquipoController::class, 'getByUser']); // Ver reservas de un usuario
     Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']); // Ver reserva por QR
-    // 👉 Ahora usamos el nuevo ProfileController
-    Route::put('/user/profile', [ProfileController::class, 'update']);
-    Route::get('/user/profile', [ProfileController::class, 'show']);
     Route::post('/reservasAula', [ReservaAulaController::class, 'store']);
     Route::get('/aulasEquipos', [AulaController::class, 'index']);
+    //Route::post('/reservas', [ReservaAulaController::class, 'store']);
     Route::get('/aulas', [ReservaAulaController::class, 'aulas']);
     Route::get('/reservas-aula', [ReservaAulaController::class, 'reservas']);
 });
+
+//👉Aqui podemos ver el perfil de los usuarios de acuerdo a roles
+Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamista'])->group(function () {
+    Route::put('/user/profile', [ProfileController::class, 'update']);
+    Route::get('/user/profile', [ProfileController::class, 'show']);
+});
+
 
 Route::middleware('auth:sanctum')->group(function () {
 
