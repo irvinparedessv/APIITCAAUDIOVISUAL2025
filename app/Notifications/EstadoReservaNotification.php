@@ -3,56 +3,63 @@
 namespace App\Notifications;
 
 use App\Models\ReservaEquipo;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
-use Illuminate\Notifications\Messages\DatabaseMessage;
+use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
-class EstadoReservaNotification extends Notification implements ShouldQueue
+class EstadoReservaNotification extends Notification implements ShouldQueue, ShouldBroadcast
 {
     use Queueable;
 
     protected $reserva;
+    public $id;
 
     public function __construct(ReservaEquipo $reserva)
     {
         $this->reserva = $reserva->load('user');
+        $this->id = Str::uuid()->toString(); // <- Laravel lo requiere para broadcasting
     }
 
     public function via($notifiable)
     {
-        return ['database', 'mail'];
+        return ['database', 'broadcast'];
     }
 
     public function toDatabase($notifiable)
     {
-        return new DatabaseMessage([
+        return [
             'title' => 'Estado de tu reserva actualizado',
             'message' => "Tu reserva para el aula {$this->reserva->aula} ha sido marcada como '{$this->reserva->estado}'.",
-            'reserva_id' => $this->reserva->id,
+            'reserva' => [
+                'id' => $this->reserva->id,
+                'aula' => $this->reserva->aula,
+                'fecha_reserva' => $this->reserva->fecha_reserva,
+                'fecha_entrega' => $this->reserva->fecha_entrega,
+            ],
             'estado' => $this->reserva->estado,
             'comentario' => $this->reserva->comentario,
-        ]);
+        ];
     }
 
-    public function toMail($notifiable)
+   
+    public function toBroadcast($notifiable)
     {
-        $estadoTraducido = match($this->reserva->estado) {
-            'approved' => 'aprobada',
-            'rejected' => 'rechazada',
-            'returned' => 'devuelta',
-            default => $this->reserva->estado
-        };
+        return new BroadcastMessage($this->toDatabase($notifiable));
+    }
 
-        return (new MailMessage)
-            ->subject('Estado de tu reserva')
-            ->greeting('Hola ' . $this->reserva->user->first_name)
-            ->line("Tu reserva ha sido {$estadoTraducido}.")
-            ->line('Detalles:')
-            ->line('Aula: ' . $this->reserva->aula)
-            ->line('Fecha de reserva: ' . $this->reserva->fecha_reserva)
-            ->line('Fecha de entrega: ' . $this->reserva->fecha_entrega)
-            ->action('Ver reserva', url('/reservas/' . $this->reserva->id));
+    public function broadcastOn()
+    {
+        return new PrivateChannel("notifications.user.{$this->reserva->user->id}");
+    }
+
+    public function broadcastAs()
+    {
+        return 'reserva.estado.actualizado';
     }
 }
