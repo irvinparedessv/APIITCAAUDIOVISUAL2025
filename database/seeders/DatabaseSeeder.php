@@ -14,15 +14,12 @@ class DatabaseSeeder extends Seeder
         // Llamar al seeder de Roles primero
         $this->call([
             RoleSeeder::class,
-        ]);
-
-        // Luego, llamar al seeder de Usuarios
-        $this->call([
+            TipoReservaSeeder::class,
             UsuarioSeeder::class,
             AulaSeeder::class,
+            TipoEquipoSeeder::class,
+            EquipoSeeder::class
         ]);
 
-        $this->call(TipoEquipoSeeder::class);
-        $this->call(EquipoSeeder::class);
     }
 }

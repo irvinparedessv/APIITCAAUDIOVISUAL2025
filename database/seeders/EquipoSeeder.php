@@ -18,6 +18,7 @@ class EquipoSeeder extends Seeder
             'cantidad' => 3,
             'is_deleted' => false,
             'tipo_equipo_id' => 1,
+            'tipo_reserva_id' => 1,
             'imagen' => 'default.png'
         ]);
 
@@ -28,6 +29,7 @@ class EquipoSeeder extends Seeder
             'cantidad' => 2,
             'is_deleted' => false,
             'tipo_equipo_id' => 2,
+            'tipo_reserva_id' => 2,
             'imagen' => 'default.png'
         ]);
 
@@ -38,6 +40,7 @@ class EquipoSeeder extends Seeder
             'cantidad' => 10,
             'is_deleted' => false,
             'tipo_equipo_id' => 3,
+            'tipo_reserva_id' => 3,
             'imagen' => 'default.png'
         ]);
     }

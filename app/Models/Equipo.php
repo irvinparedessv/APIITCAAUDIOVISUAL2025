@@ -17,6 +17,7 @@ class Equipo extends Model
         'cantidad',
         'is_deleted',
         'tipo_equipo_id',
+        'tipo_reserva_id',
         'imagen' 
     ];
     public function getImagenUrlAttribute()
@@ -30,6 +31,11 @@ class Equipo extends Model
     public function tipoEquipo()
     {
         return $this->belongsTo(TipoEquipo::class);
+    }
+
+    public function tipoReserva()
+    {
+        return $this->belongsTo(TipoReserva::class);
     }
 
     public function scopeActivos($query)
