@@ -91,6 +91,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::get('/user/profile', [ProfileController::class, 'show']);
     Route::get('/notifications', [NotificationController::class, 'index']); // todas
     Route::get('/notifications/{id}', [NotificationController::class, 'show']); // detalle
+    Route::get('/equiposPorTipo/{tipoReservaId}', [EquipoController::class, 'getEquiposPorTipoReserva']);
 });
 
 

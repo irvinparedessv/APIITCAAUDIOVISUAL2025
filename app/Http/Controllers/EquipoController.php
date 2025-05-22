@@ -129,4 +129,12 @@ class EquipoController extends Controller
 
         return response()->json(['message' => 'Equipo eliminado lógicamente.']);
     }
+
+    public function getEquiposPorTipoReserva($tipoReservaId)
+    {
+        $equipos = Equipo::where('tipo_reserva_id', $tipoReservaId)->get();
+
+        return response()->json($equipos);
+    }
+
 }
