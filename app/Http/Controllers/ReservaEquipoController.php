@@ -32,7 +32,7 @@ class ReservaEquipoController extends Controller
             $query->where('user_id', $userId);
         }
 
-        $reservas = $query->with(['user', 'equipos', 'codigoQr'])->get();
+        $reservas = $query->with(['user', 'equipos', 'codigoQr', 'tipoReserva'])->get();
 
         return response()->json($reservas);
     }
@@ -40,7 +40,7 @@ class ReservaEquipoController extends Controller
     {
         // Buscar todas las reservas de ese usuario
         $reservas = ReservaEquipo::where('user_id', $id)
-            ->with(['user', 'equipos', 'codigoQr']) // Relación con user, equipos, y codigo qr
+            ->with(['user', 'equipos', 'codigoQr', 'tipoReserva']) // Relación con user, equipos, y codigo qr
             ->get();
 
         return response()->json($reservas);
@@ -63,6 +63,7 @@ class ReservaEquipoController extends Controller
             'horaSalida' => $reserva->fecha_reserva,
             'horaEntrada' => $reserva->fecha_entrega,
             'estado' => $reserva->estado,
+            'tipoReserva' => $reserva->tipoReserva->nombre ?? null,
         ]);
     }
 
@@ -77,6 +78,7 @@ class ReservaEquipoController extends Controller
             'fecha_reserva' => 'required|date', // solo la fecha
             'startTime' => 'required|date_format:H:i', // solo la hora
             'endTime' => 'required|date_format:H:i',   // solo la hora
+            'tipo_reserva_id' => 'required|exists:tipo_reservas,id',
         ]);
 
         // Unir fecha + hora usando Carbon
@@ -90,6 +92,7 @@ class ReservaEquipoController extends Controller
             'fecha_entrega' => $fechaEntrega,
             'aula' => $validated['aula'],
             'estado' => 'Pendiente', // Puedes recibirlo también del request si quieres
+            'tipo_reserva_id' => $validated['tipo_reserva_id'],
         ]);
 
         // Asociar equipos
@@ -101,7 +104,7 @@ class ReservaEquipoController extends Controller
         ]);
 
         // ✅ CARGA las relaciones necesarias antes de notificar
-        $reserva->load(['user', 'equipos', 'aula']); // Asegúrate de tener definida la relación 'aula' en el modelo
+        $reserva->load(['user', 'equipos', 'aula', 'tipoReserva']); // Asegúrate de tener definida la relación 'aula' en el modelo
 
         $userId = $reserva->user->id;
 

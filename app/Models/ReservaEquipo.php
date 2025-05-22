@@ -17,6 +17,7 @@ class ReservaEquipo extends Model
         'fecha_reserva',
         'fecha_entrega',
         'estado',
+        'tipo_reserva_id',
     ];
 
 
@@ -38,6 +39,11 @@ class ReservaEquipo extends Model
     public function aula()
     {
         return $this->belongsTo(Aula::class, 'aula_id'); // o el nombre correcto del campo
+    }
+
+    public function tipoReserva()
+    {
+        return $this->belongsTo(TipoReserva::class, 'tipo_reserva_id');
     }
 
     protected static function booted()

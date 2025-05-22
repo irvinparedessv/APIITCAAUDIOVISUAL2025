@@ -12,4 +12,11 @@ class TipoReserva extends Model
     protected $table = 'tipo_reservas';
 
     protected $fillable = ['nombre', 'is_deleted'];
+
+    public function reservas()
+    {
+        return $this->hasMany(ReservaEquipo::class, 'tipo_reserva_id');
+    }
+
 }
+
