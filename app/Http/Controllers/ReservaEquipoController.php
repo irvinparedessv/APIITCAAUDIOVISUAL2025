@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\BitacoraHelper;
 use App\Mail\EstadoReservaMailable;
+use App\Models\Bitacora;
 use App\Models\CodigoQrReserva;
 use App\Models\CodigoQrReservaEquipo;
 use App\Models\EquipmentReservation;
@@ -146,9 +148,17 @@ class ReservaEquipoController extends Controller
         ]);
 
         $reserva = ReservaEquipo::findOrFail($id);
+        $estadoAnterior = $reserva->estado;
         $reserva->estado = $request->estado;
         $reserva->comentario = $request->comentario;
         $reserva->save();
+
+        BitacoraHelper::registrarCambioEstadoReserva(
+            $id,
+            $estadoAnterior,
+            $request->estado,
+            $reserva->user->first_name.' '.$reserva->user->last_name // Nombre del prestamista
+        );
 
         $reserva->load('user.role');
         Log::info('Rol del usuario al notificar:', ['rol' => $reserva->user->role->nombre]);
@@ -162,5 +172,27 @@ class ReservaEquipoController extends Controller
 
         return response()->json(['message' => 'Estado actualizado, notificaciones y correos enviados correctamente']);
     }
+
+    // public function getBitacorasReserva($reservaId)
+    // {
+    //     $bitacoras = Bitacora::where('modulo', 'Reservas')
+    //         ->where('descripcion', 'like', "%reserva_id:{$reservaId}%")
+    //         ->where(function($query) {
+    //             $query->where('accion', 'like', '%Entregado%')
+    //                 ->orWhere('accion', 'like', '%Devuelto%');
+    //         })
+    //         ->select([
+    //             'id',
+    //             'nombre_usuario',
+    //             'accion',
+    //             'descripcion',
+    //             'created_at'
+    //         ])
+    //         ->orderBy('created_at', 'desc')
+    //         ->take(2)
+    //         ->get();
+
+    //     return response()->json($bitacoras);
+    // }
 
 }

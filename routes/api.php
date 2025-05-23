@@ -70,7 +70,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador'])->group(
     Route::put('/reservas-equipo/{id}/estado', [ReservaEquipoController::class, 'actualizarEstado']);
     Route::get('/bitacora', [BitacoraController::class, 'index']);
     Route::get('/tipo-reservas', [TipoReservaController::class, 'index']);
-
+    Route::get('/bitacoras/reserva/{reservaId}', [BitacoraController::class, 'historialReserva']);
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->group(function () {
