@@ -46,20 +46,4 @@ class ReservaEquipo extends Model
         return $this->belongsTo(TipoReserva::class, 'tipo_reserva_id');
     }
 
-    // protected static function booted()
-    // {
-    //     static::updating(function ($reserva) {
-    //         if ($reserva->isDirty('estado')) {
-    //             $original = $reserva->getOriginal('estado');
-    //             $nuevo = $reserva->estado;
-                
-    //             BitacoraHelper::registrarCambioEstadoReserva(
-    //                 $reserva->id,
-    //                 $original,
-    //                 $nuevo
-    //             );
-    //         }
-    //     });
-    // }
-
 }

@@ -12,12 +12,18 @@ class BitacoraController extends Controller
         return Bitacora::latest()->paginate(20);
     }
 
-    public function historialReserva($reservaId)
+   public function historialReserva($reservaId)
     {
-        return Bitacora::where('modulo', 'Reservas')
-            ->where('descripcion', 'like', "%reserva_id:{$reservaId}%")
+        return Bitacora::where(function($query) use ($reservaId) {
+                $query->where('modulo', 'Reserva Equipo')
+                    ->orWhere('modulo', 'Reservas');
+            })
+            ->where(function($query) use ($reservaId) {
+                $query->where('descripcion', 'like', "%reserva_id:{$reservaId}%")
+                    ->orWhere('descripcion', 'like', "%ID Reserva: {$reservaId}%");
+            })
             ->select(['id', 'nombre_usuario', 'accion', 'created_at', 'descripcion'])
             ->orderBy('created_at', 'desc')
             ->get();
     }
-}
+    }

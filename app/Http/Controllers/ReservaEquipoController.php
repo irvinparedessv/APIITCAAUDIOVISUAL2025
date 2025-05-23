@@ -173,26 +173,4 @@ class ReservaEquipoController extends Controller
         return response()->json(['message' => 'Estado actualizado, notificaciones y correos enviados correctamente']);
     }
 
-    // public function getBitacorasReserva($reservaId)
-    // {
-    //     $bitacoras = Bitacora::where('modulo', 'Reservas')
-    //         ->where('descripcion', 'like', "%reserva_id:{$reservaId}%")
-    //         ->where(function($query) {
-    //             $query->where('accion', 'like', '%Entregado%')
-    //                 ->orWhere('accion', 'like', '%Devuelto%');
-    //         })
-    //         ->select([
-    //             'id',
-    //             'nombre_usuario',
-    //             'accion',
-    //             'descripcion',
-    //             'created_at'
-    //         ])
-    //         ->orderBy('created_at', 'desc')
-    //         ->take(2)
-    //         ->get();
-
-    //     return response()->json($bitacoras);
-    // }
-
 }

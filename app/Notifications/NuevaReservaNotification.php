@@ -23,7 +23,7 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
     public function __construct(ReservaEquipo $reserva, $notifiableId)
     {
         $this->reserva = $reserva;
-        $this->reserva->load(['user', 'equipos.tipoEquipo', 'aula']); // cargamos relaciones necesarias
+        $this->reserva->load(['user', 'equipos.tipoEquipo', 'aula', 'tipoReserva']); 
         $this->notifiableId = $notifiableId;
     }
 
@@ -31,7 +31,7 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
     public function via($notifiable)
     {
         Log::info('Método via() ejecutado para notificaciones');
-        return ['database', 'broadcast']; // Aquí activas los dos canales
+        return ['database', 'broadcast']; 
     }
 
     public function toBroadcast($notifiable)
@@ -41,17 +41,17 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
             'first_name' => $this->reserva->user ? $this->reserva->user->first_name : null,
             'last_name' => $this->reserva->user ? $this->reserva->user->last_name : null,
         ]);
+
         return new BroadcastMessage([
-            
             'reserva' => [
                 'id' => $this->reserva->id,
-                'user' => $this->reserva->user ? $this->reserva->user->first_name . ' ' . $this->reserva->user->last_name : null, // Concatenamos el nombre
+                'user' => $this->reserva->user ? $this->reserva->user->first_name . ' ' . $this->reserva->user->last_name : null,
                 'aula' => $this->reserva->aula,
                 'fecha_reserva' => $this->reserva->fecha_reserva,
                 'fecha_entrega' => $this->reserva->fecha_entrega,
                 'estado' => $this->reserva->estado,
+                'tipo_reserva' => $this->reserva->tipoReserva ? $this->reserva->tipoReserva->nombre : null, // Añadido tipo de reserva
             ]
-            
         ]);
     }
 
@@ -66,14 +66,15 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
             'message' => "Nueva reserva recibida del usuario {$usuarioNombre}.",
             'reserva_id' => $this->reserva->id,
             'user' => $usuarioNombre,
-            'aula' => $this->reserva->aula?->nombre ?? $this->reserva->aula, // si aula es relación
+            'aula' => $this->reserva->aula?->nombre ?? $this->reserva->aula, 
             'fecha_reserva' => $this->reserva->fecha_reserva,
             'fecha_entrega' => $this->reserva->fecha_entrega,
             'estado' => $this->reserva->estado,
+            'tipo_reserva' => $this->reserva->tipoReserva ? $this->reserva->tipoReserva->nombre: null,
             'equipos' => $this->reserva->equipos->map(function($equipo) {
                 return [
                     'nombre' => $equipo->nombre,
-                    'tipo' => $equipo->tipoEquipo ? $equipo->tipoEquipo->nombre : null,
+                    'tipo_equipo' => $equipo->tipoEquipo ? $equipo->tipoEquipo->nombre : null, 
                 ];
             }),
 
@@ -84,7 +85,6 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
 
     public function broadcastOn()
     {
-         // Canal privado para el usuario específico responsable
         return [new PrivateChannel('notifications.user.' . $this->notifiableId)];
     }
 
@@ -92,7 +92,6 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
 
     public function broadcastAs()
     {
-        // Define un nombre de evento personalizado
         return 'nueva.reserva';
     }
 
@@ -110,10 +109,11 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
                 'fecha_reserva' => $this->reserva->fecha_reserva,
                 'fecha_entrega' => $this->reserva->fecha_entrega,
                 'estado' => $this->reserva->estado,
+                'tipo_reserva' => $this->reserva->tipoReserva ? $this->reserva->tipoReserva->nombre : null,
                 'equipos' => $this->reserva->equipos->map(function($equipo) {
                     return [
                         'nombre' => $equipo->nombre,
-                        'tipo' => $equipo->tipoEquipo ? $equipo->tipoEquipo->nombre : null,
+                        'tipo_equipo' => $equipo->tipoEquipo ? $equipo->tipoEquipo->nombre : null, 
                     ];
                 }),
 

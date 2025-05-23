@@ -21,7 +21,7 @@ class EstadoReservaNotification extends Notification implements ShouldQueue, Sho
 
     public function __construct(ReservaEquipo $reserva)
     {
-        $this->reserva = $reserva->load(['user', 'equipos.tipoEquipo']);
+        $this->reserva = $reserva->load(['user', 'equipos.tipoEquipo', 'tipoReserva']);
         $this->id = (string) Str::uuid();
     }
 
@@ -38,10 +38,11 @@ class EstadoReservaNotification extends Notification implements ShouldQueue, Sho
             'reserva' => [
                 'id' => $this->reserva->id,
                 'aula' => $this->reserva->aula,
+                'tipo_reserva' => $this->reserva->tipoReserva ? $this->reserva->tipoReserva->nombre : null,
                 'equipos' => $this->reserva->equipos->map(function($equipo) {
                     return [
                         'nombre' => $equipo->nombre,
-                        'tipo' => $equipo->tipoEquipo ? $equipo->tipoEquipo->nombre : null,
+                        'tipo_equipo' => $equipo->tipoEquipo ? $equipo->tipoEquipo->nombre : null,
                     ];
                 }),
                 'fecha_reserva' => $this->reserva->fecha_reserva,
