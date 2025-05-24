@@ -62,22 +62,24 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
             : 'Usuario desconocido';
 
         return [
+            'type' => 'nueva_reserva',
             'title' => 'Nueva reserva recibida',
             'message' => "Nueva reserva recibida del usuario {$usuarioNombre}.",
-            'reserva_id' => $this->reserva->id,
-            'user' => $usuarioNombre,
-            'aula' => $this->reserva->aula?->nombre ?? $this->reserva->aula, 
-            'fecha_reserva' => $this->reserva->fecha_reserva,
-            'fecha_entrega' => $this->reserva->fecha_entrega,
-            'estado' => $this->reserva->estado,
-            'tipo_reserva' => $this->reserva->tipoReserva ? $this->reserva->tipoReserva->nombre: null,
-            'equipos' => $this->reserva->equipos->map(function($equipo) {
-                return [
-                    'nombre' => $equipo->nombre,
-                    'tipo_equipo' => $equipo->tipoEquipo ? $equipo->tipoEquipo->nombre : null, 
-                ];
-            }),
-
+            'reserva' => [  // Cambiado a objeto 'reserva' para consistencia
+                'id' => $this->reserva->id,
+                'user' => $usuarioNombre,
+                'aula' => $this->reserva->aula?->nombre ?? $this->reserva->aula, 
+                'fecha_reserva' => $this->reserva->fecha_reserva,
+                'fecha_entrega' => $this->reserva->fecha_entrega,
+                'estado' => $this->reserva->estado,
+                'tipo_reserva' => $this->reserva->tipoReserva ? $this->reserva->tipoReserva->nombre : null,
+                'equipos' => $this->reserva->equipos->map(function($equipo) {
+                    return [
+                        'nombre' => $equipo->nombre,
+                        'tipo_equipo' => $equipo->tipoEquipo ? $equipo->tipoEquipo->nombre : null, 
+                    ];
+                }),
+            ]
         ];
     }
 

@@ -141,36 +141,108 @@ class ReservaEquipoController extends Controller
 
 
     public function actualizarEstado(Request $request, $id)
-    {
-        $request->validate([
-            'estado' => 'required|in:approved,rejected,returned',
-            'comentario' => 'nullable|string',
+{
+    $request->validate([
+        'estado' => 'required|in:approved,rejected,returned',
+        'comentario' => 'nullable|string',
+    ]);
+
+    $reserva = ReservaEquipo::with(['user.role', 'equipos.tipoEquipo', 'tipoReserva'])->findOrFail($id);
+    
+    // Validación adicional
+    if (!$reserva->user) {
+        Log::error('No se puede actualizar estado: Reserva sin usuario', ['reserva_id' => $id]);
+        return response()->json(['error' => 'La reserva no tiene usuario asociado'], 400);
+    }
+
+    $estadoAnterior = $reserva->estado;
+    $reserva->estado = $request->estado;
+    $reserva->comentario = $request->comentario;
+    $reserva->save();
+
+    BitacoraHelper::registrarCambioEstadoReserva(
+        $id,
+        $estadoAnterior,
+        $request->estado,
+        $reserva->user->first_name.' '.$reserva->user->last_name
+    );
+
+    try {
+        if (strtolower($reserva->user->role->nombre) === 'prestamista') {
+            Log::info('Notificando al prestamista...', [
+                'user_id' => $reserva->user->id,
+                'reserva_id' => $reserva->id
+            ]);
+            
+            $reserva->user->notify(new EstadoReservaNotification($reserva, $reserva->user->id));
+        }
+
+        Log::info("Enviando correo a prestamista: {$reserva->user->email}");
+        // Descomenta cuando esté listo el Mailable
+        // Mail::to($reserva->user->email)->queue(new EstadoReservaMailable($reserva));
+
+        return response()->json([
+            'message' => 'Estado actualizado correctamente',
+            'notificacion_enviada' => true
         ]);
 
-        $reserva = ReservaEquipo::findOrFail($id);
-        $estadoAnterior = $reserva->estado;
-        $reserva->estado = $request->estado;
-        $reserva->comentario = $request->comentario;
-        $reserva->save();
+    } catch (\Exception $e) {
+        Log::error('Error al notificar', [
+            'error' => $e->getMessage(),
+            'reserva_id' => $reserva->id,
+            'user_id' => $reserva->user->id ?? null
+        ]);
+        
+        return response()->json([
+            'message' => 'Estado actualizado pero falló la notificación',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+    // Agrega estos métodos al controlador
 
-        BitacoraHelper::registrarCambioEstadoReserva(
-            $id,
-            $estadoAnterior,
-            $request->estado,
-            $reserva->user->first_name.' '.$reserva->user->last_name // Nombre del prestamista
-        );
+    public function getNotificaciones(Request $request)
+    {
+        $user = $request->user();
+        $notificaciones = $user->notifications()
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($notification) {
+                return [
+                    'id' => $notification->id,
+                    'type' => $notification->type,
+                    'data' => $notification->data,
+                    'read_at' => $notification->read_at,
+                    'created_at' => $notification->created_at,
+                ];
 
-        $reserva->load('user.role');
-        Log::info('Rol del usuario al notificar:', ['rol' => $reserva->user->role->nombre]);
-        if (strtolower($reserva->user->role->nombre) === 'prestamista') {
-            Log::info('Notificando al prestamista...');
-            $reserva->user->notify(new EstadoReservaNotification($reserva));
+                Log::info('Notificaciones enviadas al frontend:', [
+        'count' => $notifications->count(),
+        'sample_data' => $notifications->first()?->data
+    ]);
+            });
+
+            
+
+        return response()->json($notificaciones);
+    }
+
+    public function marcarComoLeidas(Request $request)
+    {
+        $request->user()->unreadNotifications->markAsRead();
+        return response()->json(['success' => true]);
+    }
+
+    public function marcarComoLeida(Request $request, $id)
+    {
+        $notification = $request->user()->notifications()->where('id', $id)->first();
+        
+        if ($notification) {
+            $notification->markAsRead();
+            return response()->json(['success' => true]);
         }
-        //  Enviar correo solo al usuario que hizo la reserva
-        Log::info("Enviando correo a prestamista: {$reserva->user->email}");
-        //Mail::to($reserva->user->email)->queue(new EstadoReservaMailable($reserva));
-
-        return response()->json(['message' => 'Estado actualizado, notificaciones y correos enviados correctamente']);
+        
+        return response()->json(['success' => false, 'message' => 'Notificación no encontrada'], 404);
     }
 
 }

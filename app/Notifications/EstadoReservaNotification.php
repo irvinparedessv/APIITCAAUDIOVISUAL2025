@@ -17,12 +17,26 @@ class EstadoReservaNotification extends Notification implements ShouldQueue, Sho
     use Queueable;
 
     protected $reserva;
+    protected $notifiableId;  // Cambiado a protected para consistencia
     public $id;
 
-    public function __construct(ReservaEquipo $reserva)
+    public function __construct(ReservaEquipo $reserva, $notifiableId)
     {
+        // Validación importante
+        if (!$reserva->user) {
+            Log::error('No se puede crear notificación: Reserva sin usuario', ['reserva_id' => $reserva->id]);
+            throw new \Exception("La reserva no tiene usuario asociado");
+        }
+
         $this->reserva = $reserva->load(['user', 'equipos.tipoEquipo', 'tipoReserva']);
+        $this->notifiableId = $notifiableId ?: $reserva->user->id; // Usar parámetro o user->id
         $this->id = (string) Str::uuid();
+        
+        Log::info('Creando notificación de estado', [
+            'reserva_id' => $reserva->id,
+            'user_id' => $this->notifiableId,
+            'estado' => $reserva->estado
+        ]);
     }
 
     public function via($notifiable)
@@ -32,7 +46,12 @@ class EstadoReservaNotification extends Notification implements ShouldQueue, Sho
 
     public function toDatabase($notifiable)
     {
+        // Convertir fechas a string solo si son objetos Carbon/DateTime
+        $fechaReserva = $this->reserva->fecha_reserva;
+        $fechaEntrega = $this->reserva->fecha_entrega;
+        
         return [
+            'type' => 'estado_reserva',
             'title' => 'Estado de tu reserva actualizado',
             'message' => "Tu reserva para el aula {$this->reserva->aula} ha sido marcada como '{$this->reserva->estado}'.",
             'reserva' => [
@@ -44,12 +63,12 @@ class EstadoReservaNotification extends Notification implements ShouldQueue, Sho
                         'nombre' => $equipo->nombre,
                         'tipo_equipo' => $equipo->tipoEquipo ? $equipo->tipoEquipo->nombre : null,
                     ];
-                }),
-                'fecha_reserva' => $this->reserva->fecha_reserva,
-                'fecha_entrega' => $this->reserva->fecha_entrega,
-            ],
-            'estado' => $this->reserva->estado,
-            'comentario' => $this->reserva->comentario,
+                })->toArray(),
+                'fecha_reserva' => is_object($fechaReserva) ? $fechaReserva->toDateTimeString() : $fechaReserva,
+                'fecha_entrega' => is_object($fechaEntrega) ? $fechaEntrega->toDateTimeString() : $fechaEntrega,
+                'estado' => $this->reserva->estado,
+                'comentario' => $this->reserva->comentario,
+            ]
         ];
     }
 
@@ -60,7 +79,7 @@ class EstadoReservaNotification extends Notification implements ShouldQueue, Sho
 
     public function broadcastOn()
     {
-        return new PrivateChannel("notifications.user.{$this->reserva->user->id}");
+        return new PrivateChannel("notifications.user.{$this->notifiableId}");
     }
 
     public function broadcastAs()
@@ -68,4 +87,3 @@ class EstadoReservaNotification extends Notification implements ShouldQueue, Sho
         return 'reserva.estado.actualizado';
     }
 }
-

@@ -92,6 +92,9 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::get('/equiposPorTipo/{tipoReservaId}', [EquipoController::class, 'getEquiposPorTipoReserva']);
     Route::get('/tipo-reservas', [TipoReservaController::class, 'index']);
     Route::get('/bitacoras/reserva/{reservaId}', [BitacoraController::class, 'historialReserva']);
+    Route::get('/notificaciones', [ReservaEquipoController::class, 'getNotificaciones']);
+    Route::post('/notificaciones/marcar-leidas', [ReservaEquipoController::class, 'marcarComoLeidas']);
+    Route::post('/notificaciones/{id}/marcar-leida', [ReservaEquipoController::class, 'marcarComoLeida']);
 });
 
 
