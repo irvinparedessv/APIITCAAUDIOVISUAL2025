@@ -2,16 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\EstadoReservaMailable;
 use App\Models\CodigoQrReserva;
 use App\Models\CodigoQrReservaEquipo;
 use App\Models\EquipmentReservation;
 use App\Models\ReservaEquipo;
 use App\Models\Role;
 use App\Models\User;
+use App\Notifications\ConfirmarReservaUsuario;
+use App\Notifications\EstadoReservaNotification;
+use App\Notifications\NotificarResponsableReserva;
 use App\Notifications\NuevaReservaNotification;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 
@@ -95,26 +100,41 @@ class ReservaEquipoController extends Controller
 
         ]);
 
-        // ✅ CARGAR LA RELACIÓN USER ANTES DE NOTIFICAR
-        $reserva->load('user');
+        // ✅ CARGA las relaciones necesarias antes de notificar
+        $reserva->load(['user', 'equipos', 'aula']); // Asegúrate de tener definida la relación 'aula' en el modelo
 
-        // Notificar encargados
-        $encargadoRoleId = Role::where('nombre', 'encargado')->value('id');
-        $encargados = User::where('role_id', $encargadoRoleId)->get();
+        $userId = $reserva->user->id;
 
-        foreach ($encargados as $encargado) {
-            Log::info('Verificando reserva antes de notificar', [
-                'user' => $reserva->user,
-                'nombre_completo' => $reserva->user->first_name . ' ' . $reserva->user->last_name,
-            ]);
-            $encargado->notify(new NuevaReservaNotification($reserva));
-            Log::info("Notificando al encargado: " . $encargado->email);
+        // Obtener responsables (encargados y administradores), excluyendo al usuario que hizo la reserva
+        $responsableRoleIds = Role::whereIn('nombre', ['encargado', 'administrador'])->pluck('id');
+        $responsables = User::whereIn('role_id', $responsableRoleIds)
+                            ->where('id', '!=', $userId) // Excluye al usuario que hizo la reserva
+                            ->get();
+        Log::info('Responsables encontrados:', $responsables->pluck('id')->toArray());
+
+        foreach ($responsables as $responsable) {
+        // Evitar duplicar notificación si el responsable es quien hizo la reserva
+        if ($responsable->id === $reserva->user->id) {
+            continue;
         }
-        return response()->json([
-            'message' => 'Reserva creada exitosamente',
-            'reserva' => $reserva->load('equipos'),
-        ], 201);
+
+        // Enviar notificación real-time (broadcast + db)
+        $responsable->notify(new NuevaReservaNotification($reserva, $responsable->id));
+        Log::info("Notificación enviada");
+        // Enviar correo personalizado
+        $responsable->notify(new NotificarResponsableReserva($reserva));
     }
+        // Notificación por correo al usuario
+       $reserva->user->notify(new ConfirmarReservaUsuario($reserva));
+
+        return response()->json([
+                'message' => 'Reserva creada exitosamente',
+                'reserva' => $reserva->load('equipos'),
+            ], 201);
+    }
+
+
+
     public function actualizarEstado(Request $request, $id)
     {
         $request->validate([
@@ -122,16 +142,22 @@ class ReservaEquipoController extends Controller
             'comentario' => 'nullable|string',
         ]);
 
-         $reserva = ReservaEquipo::findOrFail($id);
-         $reserva->estado = $request->estado;
-         $reserva->comentario = $request->comentario;
-         $reserva->save();
-         
-        // Ver estado de las reservas de los equipos 
-         if ($reserva->user) {
-        $reserva->user->notify(new EstadoReservaNotification($reserva));
-        }
+        $reserva = ReservaEquipo::findOrFail($id);
+        $reserva->estado = $request->estado;
+        $reserva->comentario = $request->comentario;
+        $reserva->save();
 
-        return response()->json(['message' => 'Estado actualizado correctamente']);
+        $reserva->load('user.role');
+        Log::info('Rol del usuario al notificar:', ['rol' => $reserva->user->role->nombre]);
+        if (strtolower($reserva->user->role->nombre) === 'prestamista') {
+            Log::info('Notificando al prestamista...');
+            $reserva->user->notify(new EstadoReservaNotification($reserva));
+        }
+        //  Enviar correo solo al usuario que hizo la reserva
+        Log::info("Enviando correo a prestamista: {$reserva->user->email}");
+        Mail::to($reserva->user->email)->queue(new EstadoReservaMailable($reserva));
+
+        return response()->json(['message' => 'Estado actualizado, notificaciones y correos enviados correctamente']);
     }
+
 }
