@@ -48,6 +48,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador'])->group(function (
 
 Route::middleware(['auth:sanctum', 'checkrole:Encargado'])->group(function () {
     Route::put('/reservas-equipo/{id}/estado', [ReservaEquipoController::class, 'actualizarEstado']);
+    Route::put('/reservas-aula/{id}/estado', [ReservaAulaController::class, 'actualizarEstado']);
 });
 
 

@@ -54,4 +54,26 @@ class ReservaAulaController extends Controller
 
         return response()->json($query->get());
     }
+    
+    public function actualizarEstado(Request $request, $id)
+{
+    $request->validate([
+        'estado' => 'required|in:approved,rejected,returned',
+        'comentario' => 'nullable|string',
+    ]);
+
+    $reserva = ReservaAula::findOrFail($id);
+    $reserva->estado = $request->estado;
+    $reserva->comentario = $request->comentario;
+    $reserva->save();
+
+    // Ver estado de las reservas de las aulas
+if ($reserva->user) {
+    $reserva->user->notify(new EstadoReservaAulaNotification($reserva));
+}
+
+
+    return response()->json(['message' => 'Estado actualizado correctamente']);
+}
+
 }
