@@ -95,6 +95,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::get('/notificaciones', [ReservaEquipoController::class, 'getNotificaciones']);
     Route::post('/notificaciones/marcar-leidas', [ReservaEquipoController::class, 'marcarComoLeidas']);
     Route::post('/notificaciones/{id}/marcar-leida', [ReservaEquipoController::class, 'marcarComoLeida']);
+    Route::get('/equipos/{id}/disponibilidad', [ReservaEquipoController::class, 'verificarDisponibilidad']);
 });
 
 
