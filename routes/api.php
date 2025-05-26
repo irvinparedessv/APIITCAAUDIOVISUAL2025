@@ -61,7 +61,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador'])->group(function (
 
 Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador'])->group(function () {
     Route::get('/Obtenerequipos', [EquipoController::class, 'obtenerEquipos']);
-    Route::apiResource('equipos', EquipoController::class);
+    //Route::apiResource('equipos', EquipoController::class);
     Route::apiResource('tipoEquipos', TipoEquipoController::class);
     Route::get('/reservas', [ReservaEquipoController::class, 'index']); // Ver todas las reservas
     Route::post('/reservas', [ReservaEquipoController::class, 'store']);
@@ -95,6 +95,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::get('/notificaciones', [ReservaEquipoController::class, 'getNotificaciones']);
     Route::post('/notificaciones/marcar-leidas', [ReservaEquipoController::class, 'marcarComoLeidas']);
     Route::post('/notificaciones/{id}/marcar-leida', [ReservaEquipoController::class, 'marcarComoLeida']);
+    Route::apiResource('equipos', EquipoController::class);
     Route::get('/equipos/{id}/disponibilidad', [ReservaEquipoController::class, 'verificarDisponibilidad']);
 });
 
