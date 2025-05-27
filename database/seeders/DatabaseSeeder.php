@@ -18,7 +18,8 @@ class DatabaseSeeder extends Seeder
             UsuarioSeeder::class,
             AulaSeeder::class,
             TipoEquipoSeeder::class,
-            EquipoSeeder::class
+            EquipoSeeder::class,
+            ReservaEquipoSeeder::class,
         ]);
 
     }

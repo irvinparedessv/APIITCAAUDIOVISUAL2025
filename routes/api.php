@@ -16,10 +16,10 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\BitacoraController;
 use App\Http\Controllers\ChatGPTController;
+use App\Http\Controllers\PrediccionEquipoController;
 use App\Http\Controllers\ProfileController;  // ✅ Para Perfil Usuario    
 use App\Http\Controllers\ReservaAulaController;
 use App\Http\Controllers\TipoReservaController;
-
 
 
 // Rutas públicas
@@ -69,6 +69,15 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador'])->group(
     Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']); // Ver reserva por QR
     Route::put('/reservas-equipo/{id}/estado', [ReservaEquipoController::class, 'actualizarEstado']);
     Route::get('/bitacora', [BitacoraController::class, 'index']);
+   // Route::get('/predict/equipo/{id}', [PrediccionEquipoController::class, 'predecir']);
+   // Predicción general o por tipo de equipo
+    Route::get('/prediccion/reservas', [PrediccionEquipoController::class, 'predecirReservas']);
+    
+    // Predicciones para todos los tipos de equipo
+    Route::get('/prediccion/reservas/por-tipo', [PrediccionEquipoController::class, 'tiposEquipoConPrediccion']);
+//     Route::get('/analisis/equipos-populares', [PrediccionEquipoController::class, 'equiposPopulares']);
+// Route::get('/analisis/prediccion-demanda', [PrediccionEquipoController::class, 'prediccionDemanda']);
+// Route::get('/analisis/prediccion-equipo/{id}', [PrediccionEquipoController::class, 'prediccionEquipo']);
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->group(function () {
