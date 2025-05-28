@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\AulaController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\EmailController;
@@ -13,9 +14,12 @@ use App\Http\Controllers\ReservaEquipoController;
 use App\Http\Controllers\TipoEquipoController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Auth\PasswordResetController;
+use App\Http\Controllers\BitacoraController;
 use App\Http\Controllers\ChatGPTController;
+use App\Http\Controllers\PrediccionEquipoController;
 use App\Http\Controllers\ProfileController;  // ✅ Para Perfil Usuario    
 use App\Http\Controllers\ReservaAulaController;
+use App\Http\Controllers\TipoReservaController;
 
 
 // Rutas públicas
@@ -26,6 +30,7 @@ Route::get('/enviar-correo', [EmailController::class, 'enviarCorreo']);
 Route::post('/confirm-account/{token}', [UserController::class, 'confirmAccount']);
 Route::post('/change-password', [UserController::class, 'changePassword']);
 Route::post('/chatGPT', [ChatGPTController::class, 'chatWithGpt']);
+
 
 
 // Ruta para validar el token (puede ir en el grupo público o protegido)
@@ -56,14 +61,23 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador'])->group(function (
 
 Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador'])->group(function () {
     Route::get('/Obtenerequipos', [EquipoController::class, 'obtenerEquipos']);
-    Route::apiResource('equipos', EquipoController::class);
+    //Route::apiResource('equipos', EquipoController::class);
     Route::apiResource('tipoEquipos', TipoEquipoController::class);
     Route::get('/reservas', [ReservaEquipoController::class, 'index']); // Ver todas las reservas
     Route::post('/reservas', [ReservaEquipoController::class, 'store']);
     Route::post('/aulas', [AulaController::class, 'store']);
     Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']); // Ver reserva por QR
     Route::put('/reservas-equipo/{id}/estado', [ReservaEquipoController::class, 'actualizarEstado']);
-
+    Route::get('/bitacora', [BitacoraController::class, 'index']);
+   // Route::get('/predict/equipo/{id}', [PrediccionEquipoController::class, 'predecir']);
+   // Predicción general o por tipo de equipo
+    Route::get('/prediccion/reservas', [PrediccionEquipoController::class, 'predecirReservas']);
+    
+    // Predicciones para todos los tipos de equipo
+    Route::get('/prediccion/reservas/por-tipo', [PrediccionEquipoController::class, 'tiposEquipoConPrediccion']);
+//     Route::get('/analisis/equipos-populares', [PrediccionEquipoController::class, 'equiposPopulares']);
+// Route::get('/analisis/prediccion-demanda', [PrediccionEquipoController::class, 'prediccionDemanda']);
+// Route::get('/analisis/prediccion-equipo/{id}', [PrediccionEquipoController::class, 'prediccionEquipo']);
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->group(function () {
@@ -82,6 +96,16 @@ Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->grou
 Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamista'])->group(function () {
     Route::put('/user/profile', [ProfileController::class, 'update']);
     Route::get('/user/profile', [ProfileController::class, 'show']);
+    Route::get('/notifications', [NotificationController::class, 'index']); // todas
+    Route::get('/notifications/{id}', [NotificationController::class, 'show']); // detalle
+    Route::get('/equiposPorTipo/{tipoReservaId}', [EquipoController::class, 'getEquiposPorTipoReserva']);
+    Route::get('/tipo-reservas', [TipoReservaController::class, 'index']);
+    Route::get('/bitacoras/reserva/{reservaId}', [BitacoraController::class, 'historialReserva']);
+    Route::get('/notificaciones', [ReservaEquipoController::class, 'getNotificaciones']);
+    Route::post('/notificaciones/marcar-leidas', [ReservaEquipoController::class, 'marcarComoLeidas']);
+    Route::post('/notificaciones/{id}/marcar-leida', [ReservaEquipoController::class, 'marcarComoLeida']);
+    Route::apiResource('equipos', EquipoController::class);
+    Route::get('/equipos/{id}/disponibilidad', [ReservaEquipoController::class, 'verificarDisponibilidad']);
 });
 
 

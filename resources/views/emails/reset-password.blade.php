@@ -29,7 +29,7 @@
     }
 </style>
 
-# Estimado/a {{ $user->name }},
+# Estimado/a {{ $user->first_name }} {{ $user->last_name }},
 
 Hemos recibido una solicitud para restablecer la contraseña de tu cuenta. Para continuar con el proceso, haz clic en el siguiente botón:
 

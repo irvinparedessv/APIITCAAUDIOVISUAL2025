@@ -17,11 +17,21 @@ use Illuminate\Support\Facades\Mail;
 
 class UserController extends Controller
 {
-    // Listar todos los usuarios con su rol
-    public function index()
+
+    public function index(Request $request)
     {
-        $usuarios = User::with('role')->get();
-        return response()->json($usuarios);
+        $perPage = $request->perPage ?? 15;
+        
+        $usuarios = User::with('role')
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+
+        return response()->json([
+            'data' => $usuarios->items(),
+            'current_page' => $usuarios->currentPage(),
+            'last_page' => $usuarios->lastPage(),
+            'total' => $usuarios->total(),
+        ]);
     }
 
 
@@ -114,7 +124,6 @@ class UserController extends Controller
             'first_name' => 'sometimes|required|string|max:255',
             'last_name' => 'sometimes|required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $usuario->id,
-            'password' => 'nullable|string|min:6',
             'role_id' => 'sometimes|required|exists:roles,id',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:255',
@@ -125,12 +134,6 @@ class UserController extends Controller
         if (isset($validated['estado'])) {
             $usuario->estado = $validated['estado'];
             $usuario->is_deleted = $validated['estado'] == 0;
-        }
-
-        // Actualizar contraseña si viene en la solicitud
-        if (!empty($validated['password'])) {
-            $usuario->password = Hash::make($validated['password']);
-            unset($validated['password']); // Evita que se vuelva a asignar sin encriptar abajo
         }
 
         // Actualizar otros campos
