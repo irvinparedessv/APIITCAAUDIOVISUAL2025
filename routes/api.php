@@ -44,9 +44,8 @@ Route::middleware('auth:sanctum')->get('/validate-token', function (Request $req
 
 // Rutas protegidas
 Route::middleware(['auth:sanctum', 'checkrole:Administrador'])->group(function () {
-    Route::get('/usuarios', function () {
-        return User::with('role')->get();
-    });
+    Route::get('/usuarios', [UserController::class, 'index']);
+
     Route::resource('roles', RoleController::class);
     Route::apiResource('users', UserController::class);
     Route::apiResource('equipos', EquipoController::class);
@@ -54,9 +53,10 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador'])->group(function (
     Route::apiResource('tipoEquipos', TipoEquipoController::class);
 });
 
-// Route::middleware(['auth:sanctum', 'checkrole:Encargado'])->group(function () {
-//     Route::put('/reservas-equipo/{id}/estado', [ReservaEquipoController::class, 'actualizarEstado']);
-// });
+Route::middleware(['auth:sanctum', 'checkrole:Encargado'])->group(function () {
+    Route::put('/reservas-equipo/{id}/estado', [ReservaEquipoController::class, 'actualizarEstado']);
+    Route::put('/reservas-aula/{id}/estado', [ReservaAulaController::class, 'actualizarEstado']);
+});
 
 
 Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador'])->group(function () {
@@ -68,16 +68,6 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador'])->group(
     Route::post('/aulas', [AulaController::class, 'store']);
     Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']); // Ver reserva por QR
     Route::put('/reservas-equipo/{id}/estado', [ReservaEquipoController::class, 'actualizarEstado']);
-    Route::get('/bitacora', [BitacoraController::class, 'index']);
-   // Route::get('/predict/equipo/{id}', [PrediccionEquipoController::class, 'predecir']);
-   // Predicción general o por tipo de equipo
-    Route::get('/prediccion/reservas', [PrediccionEquipoController::class, 'predecirReservas']);
-    
-    // Predicciones para todos los tipos de equipo
-    Route::get('/prediccion/reservas/por-tipo', [PrediccionEquipoController::class, 'tiposEquipoConPrediccion']);
-//     Route::get('/analisis/equipos-populares', [PrediccionEquipoController::class, 'equiposPopulares']);
-// Route::get('/analisis/prediccion-demanda', [PrediccionEquipoController::class, 'prediccionDemanda']);
-// Route::get('/analisis/prediccion-equipo/{id}', [PrediccionEquipoController::class, 'prediccionEquipo']);
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->group(function () {
