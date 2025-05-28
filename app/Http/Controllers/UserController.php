@@ -19,39 +19,39 @@ class UserController extends Controller
 {
     // Listar todos los usuarios con su rol
     public function index(Request $request)
-{
-    $perPage = $request->input('per_page', 10);
-    $query = User::with('role');
+    {
+        $perPage = $request->input('per_page', 10);
+        $query = User::with('role');
 
-    // Filtros dinámicos
-    if ($request->has('first_name')) {
-        $query->where('first_name', 'like', '%' . $request->first_name . '%');
+        // Filtros dinámicos
+        if ($request->has('first_name')) {
+            $query->where('first_name', 'like', '%' . $request->first_name . '%');
+        }
+
+        if ($request->has('last_name')) {
+            $query->where('last_name', 'like', '%' . $request->last_name . '%');
+        }
+
+        if ($request->has('email')) {
+            $query->where('email', 'like', '%' . $request->email . '%');
+        }
+
+        if ($request->has('role_id')) {
+            $query->where('role_id', $request->role_id);
+        }
+
+        if ($request->has('estado')) {
+            $query->where('estado', $request->estado);
+        }
+
+        if ($request->has('phone')) {
+            $query->where('phone', 'like', '%' . $request->phone . '%');
+        }
+
+        $usuarios = $query->paginate($perPage);
+
+        return response()->json($usuarios);
     }
-
-    if ($request->has('last_name')) {
-        $query->where('last_name', 'like', '%' . $request->last_name . '%');
-    }
-
-    if ($request->has('email')) {
-        $query->where('email', 'like', '%' . $request->email . '%');
-    }
-
-    if ($request->has('role_id')) {
-        $query->where('role_id', $request->role_id);
-    }
-
-    if ($request->has('estado')) {
-        $query->where('estado', $request->estado);
-    }
-
-    if ($request->has('phone')) {
-        $query->where('phone', 'like', '%' . $request->phone . '%');
-    }
-
-    $usuarios = $query->paginate($perPage);
-
-    return response()->json($usuarios);
-}
 
 
     public function store(Request $request)
@@ -143,7 +143,6 @@ class UserController extends Controller
             'first_name' => 'sometimes|required|string|max:255',
             'last_name' => 'sometimes|required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $usuario->id,
-            'password' => 'nullable|string|min:6',
             'role_id' => 'sometimes|required|exists:roles,id',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:255',
@@ -154,12 +153,6 @@ class UserController extends Controller
         if (isset($validated['estado'])) {
             $usuario->estado = $validated['estado'];
             $usuario->is_deleted = $validated['estado'] == 0;
-        }
-
-        // Actualizar contraseña si viene en la solicitud
-        if (!empty($validated['password'])) {
-            $usuario->password = Hash::make($validated['password']);
-            unset($validated['password']); // Evita que se vuelva a asignar sin encriptar abajo
         }
 
         // Actualizar otros campos

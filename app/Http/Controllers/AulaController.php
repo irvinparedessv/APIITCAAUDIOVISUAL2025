@@ -65,8 +65,19 @@ class AulaController extends Controller
 
     public function index(): JsonResponse
     {
-        return response()->json(
-            Aula::select('id', 'name')->get()
-        );
+        $aulas = Aula::with(['primeraImagen'])
+            ->select('id', 'name')
+            ->get()
+            ->map(function ($aula) {
+                return [
+                    'id' => $aula->id,
+                    'name' => $aula->name,
+                    'image_path' => $aula->primeraImagen
+                        ? url($aula->primeraImagen->image_path)
+                        : null,
+                ];
+            });
+
+        return response()->json($aulas);
     }
 }
