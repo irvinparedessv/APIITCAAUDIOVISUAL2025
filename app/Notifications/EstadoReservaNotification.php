@@ -9,7 +9,6 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\BroadcastMessage;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -18,12 +17,26 @@ class EstadoReservaNotification extends Notification implements ShouldQueue, Sho
     use Queueable;
 
     protected $reserva;
+    protected $notifiableId;  // Cambiado a protected para consistencia
     public $id;
 
-    public function __construct(ReservaEquipo $reserva)
+    public function __construct(ReservaEquipo $reserva, $notifiableId)
     {
-        $this->reserva = $reserva->load('user');
-        $this->id = Str::uuid()->toString(); // <- Laravel lo requiere para broadcasting
+        // Validación importante
+        if (!$reserva->user) {
+            Log::error('No se puede crear notificación: Reserva sin usuario', ['reserva_id' => $reserva->id]);
+            throw new \Exception("La reserva no tiene usuario asociado");
+        }
+
+        $this->reserva = $reserva->load(['user', 'equipos.tipoEquipo', 'tipoReserva']);
+        $this->notifiableId = $notifiableId ?: $reserva->user->id; // Usar parámetro o user->id
+        $this->id = (string) Str::uuid();
+        
+        Log::info('Creando notificación de estado', [
+            'reserva_id' => $reserva->id,
+            'user_id' => $this->notifiableId,
+            'estado' => $reserva->estado
+        ]);
     }
 
     public function via($notifiable)
@@ -33,21 +46,32 @@ class EstadoReservaNotification extends Notification implements ShouldQueue, Sho
 
     public function toDatabase($notifiable)
     {
+        // Convertir fechas a string solo si son objetos Carbon/DateTime
+        $fechaReserva = $this->reserva->fecha_reserva;
+        $fechaEntrega = $this->reserva->fecha_entrega;
+        
         return [
+            'type' => 'estado_reserva',
             'title' => 'Estado de tu reserva actualizado',
             'message' => "Tu reserva para el aula {$this->reserva->aula} ha sido marcada como '{$this->reserva->estado}'.",
             'reserva' => [
                 'id' => $this->reserva->id,
                 'aula' => $this->reserva->aula,
-                'fecha_reserva' => $this->reserva->fecha_reserva,
-                'fecha_entrega' => $this->reserva->fecha_entrega,
-            ],
-            'estado' => $this->reserva->estado,
-            'comentario' => $this->reserva->comentario,
+                'tipo_reserva' => $this->reserva->tipoReserva ? $this->reserva->tipoReserva->nombre : null,
+                'equipos' => $this->reserva->equipos->map(function($equipo) {
+                    return [
+                        'nombre' => $equipo->nombre,
+                        'tipo_equipo' => $equipo->tipoEquipo ? $equipo->tipoEquipo->nombre : null,
+                    ];
+                })->toArray(),
+                'fecha_reserva' => is_object($fechaReserva) ? $fechaReserva->toDateTimeString() : $fechaReserva,
+                'fecha_entrega' => is_object($fechaEntrega) ? $fechaEntrega->toDateTimeString() : $fechaEntrega,
+                'estado' => $this->reserva->estado,
+                'comentario' => $this->reserva->comentario,
+            ]
         ];
     }
 
-   
     public function toBroadcast($notifiable)
     {
         return new BroadcastMessage($this->toDatabase($notifiable));
@@ -55,7 +79,7 @@ class EstadoReservaNotification extends Notification implements ShouldQueue, Sho
 
     public function broadcastOn()
     {
-        return new PrivateChannel("notifications.user.{$this->reserva->user->id}");
+        return new PrivateChannel("notifications.user.{$this->notifiableId}");
     }
 
     public function broadcastAs()

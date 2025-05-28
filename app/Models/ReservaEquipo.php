@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\BitacoraHelper;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -16,13 +17,14 @@ class ReservaEquipo extends Model
         'fecha_reserva',
         'fecha_entrega',
         'estado',
+        'tipo_reserva_id',
     ];
-
 
 
     public function equipos()
     {
-        return $this->belongsToMany(Equipo::class, 'equipo_reserva', 'reserva_equipo_id', 'equipo_id');
+        return $this->belongsToMany(Equipo::class, 'equipo_reserva', 'reserva_equipo_id', 'equipo_id')
+                    ->withPivot('cantidad');
     }
 
     public function user()
@@ -37,6 +39,11 @@ class ReservaEquipo extends Model
     public function aula()
     {
         return $this->belongsTo(Aula::class, 'aula_id'); // o el nombre correcto del campo
+    }
+
+    public function tipoReserva()
+    {
+        return $this->belongsTo(TipoReserva::class, 'tipo_reserva_id');
     }
 
 }

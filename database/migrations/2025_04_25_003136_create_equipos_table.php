@@ -19,6 +19,7 @@ return new class extends Migration
             $table->integer('cantidad')->default(0);
             $table->boolean('is_deleted')->default(false); 
             $table->foreignId('tipo_equipo_id')->constrained('tipo_equipos') ->onDelete('cascade'); 
+            $table->foreignId('tipo_reserva_id')->constrained('tipo_reservas')->onDelete('cascade');
             $table->string('imagen')->nullable();
             $table->timestamps();
         });
