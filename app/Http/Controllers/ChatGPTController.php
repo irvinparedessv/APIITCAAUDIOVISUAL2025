@@ -30,7 +30,7 @@ class ChatGPTController extends Controller
                     'content' => $prompt,
                 ]
             ],
-            'temperature' => 0.7,
+            'temperature' => 0.5,
         ]);
 
         return response()->json($response->json());

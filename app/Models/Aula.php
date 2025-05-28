@@ -20,4 +20,9 @@ class Aula extends Model
     {
         return $this->hasMany(HorarioAulas::class);
     }
+
+    public function primeraImagen()
+    {
+        return $this->hasOne(ImagenesAula::class, 'aula_id')->orderBy('id');
+    }
 }
