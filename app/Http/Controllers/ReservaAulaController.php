@@ -11,7 +11,19 @@ class ReservaAulaController extends Controller
 {
     public function aulas()
     {
-        return response()->json(Aula::all());
+        $aulas = Aula::with('primeraImagen')
+            ->get()
+            ->map(function ($aula) {
+                return [
+                    'id' => $aula->id,
+                    'name' => $aula->name,
+                    'image_path' => $aula->primeraImagen
+                        ? url($aula->primeraImagen->image_path)
+                        : null,
+                ];
+            });
+
+        return response()->json($aulas);
     }
     public function store(Request $request)
     {
