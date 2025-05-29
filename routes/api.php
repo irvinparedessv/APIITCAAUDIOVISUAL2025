@@ -68,6 +68,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador'])->group(
     Route::post('/aulas', [AulaController::class, 'store']);
     Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']); // Ver reserva por QR
     Route::put('/reservas-equipo/{id}/estado', [ReservaEquipoController::class, 'actualizarEstado']);
+    Route::put('/reservas-aula/{id}/estado', [ReservaAulaController::class, 'actualizarEstado']);
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->group(function () {

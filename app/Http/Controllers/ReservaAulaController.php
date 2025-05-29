@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\BitacoraHelper;
 use App\Models\Aula;
 use App\Models\ReservaAula;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use App\Notifications\EstadoReservaAulaNotification;
 
 class ReservaAulaController extends Controller
 {
@@ -68,24 +70,33 @@ class ReservaAulaController extends Controller
     }
     
     public function actualizarEstado(Request $request, $id)
-{
-    $request->validate([
-        'estado' => 'required|in:approved,rejected,returned',
-        'comentario' => 'nullable|string',
-    ]);
+    {
+        $request->validate([
+            'estado' => 'required|in:approved,rejected,returned',
+            'comentario' => 'nullable|string',
+        ]);
 
-    $reserva = ReservaAula::findOrFail($id);
-    $reserva->estado = $request->estado;
-    $reserva->comentario = $request->comentario;
-    $reserva->save();
+        $reserva = ReservaAula::with('user')->findOrFail($id);
 
-    // Ver estado de las reservas de las aulas
-if ($reserva->user) {
-    $reserva->user->notify(new EstadoReservaAulaNotification($reserva));
-}
+        $estadoAnterior = $reserva->estado;
+        $reserva->estado = $request->estado;
+        $reserva->comentario = $request->comentario;
+        $reserva->save();
 
+        if ($reserva->user) {
+            // Notificar al usuario
+            $reserva->user->notify(new EstadoReservaAulaNotification($reserva));
 
-    return response()->json(['message' => 'Estado actualizado correctamente']);
-}
+            // Registrar en bitácora
+            BitacoraHelper::registrarCambioEstadoReservaAula(
+                $id,
+                $estadoAnterior,
+                $request->estado,
+                $reserva->user->first_name . ' ' . $reserva->user->last_name
+            );
+        }
+
+        return response()->json(['message' => 'Estado actualizado correctamente']);
+    }
 
 }
