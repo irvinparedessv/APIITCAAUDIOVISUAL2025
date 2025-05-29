@@ -13,7 +13,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Support\Facades\Log;
 
-class NuevaReservaNotification extends Notification implements ShouldQueue, ShouldBroadcast
+class NuevaReservaEquipoNotification extends Notification implements ShouldQueue, ShouldBroadcast
 {
     use Queueable;
 
@@ -63,7 +63,7 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
 
         return [
             'type' => 'nueva_reserva',
-            'title' => 'Nueva reserva recibida',
+            'title' => 'Nueva reserva de equipo recibida',
             'message' => "Nueva reserva recibida del usuario {$usuarioNombre}.",
             'reserva' => [  // Cambiado a objeto 'reserva' para consistencia
                 'id' => $this->reserva->id,

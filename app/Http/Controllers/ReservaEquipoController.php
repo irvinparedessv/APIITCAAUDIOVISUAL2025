@@ -13,8 +13,10 @@ use App\Models\ReservaEquipo;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\ConfirmarReservaUsuario;
+use App\Notifications\EstadoReservaEquipoNotification;
 use App\Notifications\EstadoReservaNotification;
 use App\Notifications\NotificarResponsableReserva;
+use App\Notifications\NuevaReservaEquipoNotification;
 use App\Notifications\NuevaReservaNotification;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -161,7 +163,7 @@ class ReservaEquipoController extends Controller
             }
 
             // Enviar notificación real-time (broadcast + db)
-            $responsable->notify(new NuevaReservaNotification($reserva, $responsable->id));
+            $responsable->notify(new NuevaReservaEquipoNotification($reserva, $responsable->id));
             Log::info("Notificación enviada");
             // Enviar correo personalizado
             //$responsable->notify(new NotificarResponsableReserva($reserva));
@@ -212,7 +214,7 @@ class ReservaEquipoController extends Controller
                     'reserva_id' => $reserva->id
                 ]);
                 
-                $reserva->user->notify(new EstadoReservaNotification($reserva, $reserva->user->id));
+                $reserva->user->notify(new EstadoReservaEquipoNotification($reserva, $reserva->user->id));
             }
 
             Log::info("Enviando correo a prestamista: {$reserva->user->email}");
