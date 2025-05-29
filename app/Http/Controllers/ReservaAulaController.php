@@ -5,9 +5,13 @@ namespace App\Http\Controllers;
 use App\Helpers\BitacoraHelper;
 use App\Models\Aula;
 use App\Models\ReservaAula;
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Notifications\EstadoReservaAulaNotification;
+use App\Notifications\NuevaReservaAulaNotification;
+use Illuminate\Support\Facades\Log;
 
 class ReservaAulaController extends Controller
 {
@@ -27,6 +31,7 @@ class ReservaAulaController extends Controller
 
         return response()->json($aulas);
     }
+    
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -49,8 +54,25 @@ class ReservaAulaController extends Controller
             'estado' => $request->estado ?? 'pendiente',
         ]);
 
+        // Cargar relaciones para notificaciones
+        $reserva->load(['user', 'aula']);
+
+        // Obtener responsables (encargados y administradores), excluyendo al usuario que hizo la reserva
+        $responsableRoleIds = Role::whereIn('nombre', ['encargado', 'administrador'])->pluck('id');
+        $responsables = User::whereIn('role_id', $responsableRoleIds)
+                            ->where('id', '!=', $reserva->user_id) // Excluye al usuario que hizo la reserva
+                            ->get();
+        
+        Log::info('Responsables encontrados para aula:', $responsables->pluck('id')->toArray());
+
+        foreach ($responsables as $responsable) {
+            // Enviar notificación real-time (broadcast + db)
+            $responsable->notify(new NuevaReservaAulaNotification($reserva, $responsable->id));
+            Log::info("Notificación de aula enviada a: " . $responsable->id);
+        }
+
         return response()->json([
-            'message' => 'Reserva creada exitosamente',
+            'message' => 'Reserva de aula creada exitosamente',
             'reserva' => $reserva
         ], 201);
     }
@@ -98,5 +120,4 @@ class ReservaAulaController extends Controller
 
         return response()->json(['message' => 'Estado actualizado correctamente']);
     }
-
 }

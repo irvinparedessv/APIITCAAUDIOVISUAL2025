@@ -3,56 +3,82 @@
 namespace App\Notifications;
 
 use App\Models\ReservaAula;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
-use Illuminate\Notifications\Messages\DatabaseMessage;
-use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Messages\BroadcastMessage;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
-class EstadoReservaAulaNotification extends Notification implements ShouldQueue
+class EstadoReservaAulaNotification extends Notification implements ShouldQueue, ShouldBroadcast
 {
     use Queueable;
 
     protected $reserva;
+    protected $notifiableId;
+    public $id;
 
-    public function __construct(ReservaAula $reserva)
+    public function __construct(ReservaAula $reserva, $notifiableId = null)
     {
-        $this->reserva = $reserva->load(['user', 'aula']);
+        if (!$reserva->user) {
+            Log::error('No se puede crear notificación: Reserva de aula sin usuario', ['reserva_id' => $reserva->id]);
+            throw new \Exception("La reserva de aula no tiene usuario asociado");
+        }
+
+        $this->reserva = $reserva->fresh(['user', 'aula']);
+        $this->notifiableId = $notifiableId ?: $reserva->user->id;
+        $this->id = (string) Str::uuid();
+        
+        Log::info('Creando notificación de estado de aula', [
+            'reserva_id' => $reserva->id,
+            'user_id' => $this->notifiableId,
+            'estado' => $reserva->estado
+        ]);
+
+        Log::debug('Debug aula en notificación', [
+    'aula_id' => $reserva->aula_id,
+    'aula' => $reserva->aula,
+    'reserva' => $reserva->toArray(),
+]);
+
     }
 
     public function via($notifiable)
     {
-        return ['database', 'mail'];
+        return ['database', 'broadcast'];
     }
 
     public function toDatabase($notifiable)
     {
-        return new DatabaseMessage([
+        return [
+            'type' => 'estado_reserva_aula',
             'title' => 'Estado de tu reserva de aula actualizado',
-            'message' => "Tu reserva para el aula {$this->reserva->aula->nombre} ha sido marcada como '{$this->reserva->estado}'.",
-            'reserva_id' => $this->reserva->id,
-            'estado' => $this->reserva->estado,
-            'comentario' => $this->reserva->comentario,
-        ]);
+            'message' => "Tu reserva para el aula {$this->reserva->aula->name} ha sido marcada como '{$this->reserva->estado}'.",
+            'reserva' => [
+                'id' => $this->reserva->id,
+                'aula' => $this->reserva->aula->name,
+                'fecha' => $this->reserva->fecha,
+                'horario' => $this->reserva->horario,
+                'estado' => $this->reserva->estado,
+                'comentario' => $this->reserva->comentario,
+            ]
+        ];
     }
 
-    public function toMail($notifiable)
+    public function toBroadcast($notifiable)
     {
-        $estadoTraducido = match($this->reserva->estado) {
-            'approved' => 'aprobada',
-            'rejected' => 'rechazada',
-            'returned' => 'devuelta',
-            default => $this->reserva->estado
-        };
+        return new BroadcastMessage($this->toDatabase($notifiable));
+    }
 
-        return (new MailMessage)
-            ->subject('Estado de tu reserva de aula')
-            ->greeting('Hola ' . $this->reserva->user->first_name)
-            ->line("Tu reserva ha sido {$estadoTraducido}.")
-            ->line('Detalles de la reserva:')
-            ->line('Aula: ' . $this->reserva->aula->nombre)
-            ->line('Fecha: ' . $this->reserva->fecha)
-            ->line('Horario: ' . $this->reserva->horario)
-            ->action('Ver reserva', url('/reservas-aulas/' . $this->reserva->id));
+    public function broadcastOn()
+    {
+        return new PrivateChannel("notifications.user.{$this->notifiableId}");
+    }
+
+    public function broadcastAs()
+    {
+        return 'reserva.aula.estado.actualizado';
     }
 }
