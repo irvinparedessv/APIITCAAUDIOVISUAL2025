@@ -72,9 +72,15 @@ class ReservaEquipoController extends Controller
         ]);
     }
 
+    public function equiposReserva()
+    {
+        $equipos = Equipo::activos()->get(['id', 'nombre']);
+
+        return $equipos;
+    }
     public function store(Request $request)
     {
-         // Validar datos
+        // Validar datos
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'equipo' => 'required|array',
@@ -92,9 +98,9 @@ class ReservaEquipoController extends Controller
             $equipoModel = Equipo::find($equipo['id']);
             $inicio = Carbon::parse($validated['fecha_reserva'] . ' ' . $validated['startTime']);
             $fin = Carbon::parse($validated['fecha_reserva'] . ' ' . $validated['endTime']);
-            
+
             $disponibilidad = $equipoModel->disponibilidadPorRango($inicio, $fin);
-            
+
             if ($equipo['cantidad'] > $disponibilidad['cantidad_disponible']) {
                 return response()->json([
                     'message' => 'No hay suficientes unidades disponibles del equipo: ' . $equipoModel->nombre,
@@ -150,8 +156,8 @@ class ReservaEquipoController extends Controller
         // Obtener responsables (encargados y administradores), excluyendo al usuario que hizo la reserva
         $responsableRoleIds = Role::whereIn('nombre', ['encargado', 'administrador'])->pluck('id');
         $responsables = User::whereIn('role_id', $responsableRoleIds)
-                            ->where('id', '!=', $userId) // Excluye al usuario que hizo la reserva
-                            ->get();
+            ->where('id', '!=', $userId) // Excluye al usuario que hizo la reserva
+            ->get();
         Log::info('Responsables encontrados:', $responsables->pluck('id')->toArray());
 
         foreach ($responsables as $responsable) {
@@ -186,7 +192,7 @@ class ReservaEquipoController extends Controller
         ]);
 
         $reserva = ReservaEquipo::with(['user.role', 'equipos.tipoEquipo', 'tipoReserva'])->findOrFail($id);
-        
+
         // Validación adicional
         if (!$reserva->user) {
             Log::error('No se puede actualizar estado: Reserva sin usuario', ['reserva_id' => $id]);
@@ -202,7 +208,7 @@ class ReservaEquipoController extends Controller
             $id,
             $estadoAnterior,
             $request->estado,
-            $reserva->user->first_name.' '.$reserva->user->last_name
+            $reserva->user->first_name . ' ' . $reserva->user->last_name
         );
 
         try {
@@ -211,26 +217,25 @@ class ReservaEquipoController extends Controller
                     'user_id' => $reserva->user->id,
                     'reserva_id' => $reserva->id
                 ]);
-                
+
                 $reserva->user->notify(new EstadoReservaNotification($reserva, $reserva->user->id));
             }
 
             Log::info("Enviando correo a prestamista: {$reserva->user->email}");
-           
+
             // Mail::to($reserva->user->email)->queue(new EstadoReservaMailable($reserva));
 
             return response()->json([
                 'message' => 'Estado actualizado correctamente',
                 'notificacion_enviada' => true
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error al notificar', [
                 'error' => $e->getMessage(),
                 'reserva_id' => $reserva->id,
                 'user_id' => $reserva->user->id ?? null
             ]);
-            
+
             return response()->json([
                 'message' => 'Estado actualizado pero falló la notificación',
                 'error' => $e->getMessage()
@@ -294,13 +299,12 @@ class ReservaEquipoController extends Controller
     public function marcarComoLeida(Request $request, $id)
     {
         $notification = $request->user()->notifications()->where('id', $id)->first();
-        
+
         if ($notification) {
             $notification->markAsRead();
             return response()->json(['success' => true]);
         }
-        
+
         return response()->json(['success' => false, 'message' => 'Notificación no encontrada'], 404);
     }
-
 }
