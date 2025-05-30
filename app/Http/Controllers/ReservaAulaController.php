@@ -7,9 +7,12 @@ use App\Models\Aula;
 use App\Models\ReservaAula;
 use App\Models\Role;
 use App\Models\User;
+use App\Notifications\ConfirmarReservaAulaUsuario;
+use App\Notifications\EmailEstadoAulaNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Notifications\EstadoReservaAulaNotification;
+use App\Notifications\NotificarResponsableReservaAula;
 use App\Notifications\NuevaReservaAulaNotification;
 use Illuminate\Support\Facades\Log;
 
@@ -69,8 +72,11 @@ class ReservaAulaController extends Controller
             // Enviar notificación real-time (broadcast + db)
             $responsable->notify(new NuevaReservaAulaNotification($reserva, $responsable->id));
             Log::info("Notificación de aula enviada a: " . $responsable->id);
+            //$responsable->notify(new NotificarResponsableReservaAula($reserva));
         }
 
+        //$reserva->user->notify(new ConfirmarReservaAulaUsuario($reserva));
+        
         return response()->json([
             'message' => 'Reserva de aula creada exitosamente',
             'reserva' => $reserva
@@ -108,7 +114,7 @@ class ReservaAulaController extends Controller
         if ($reserva->user) {
             // Notificar al usuario
             $reserva->user->notify(new EstadoReservaAulaNotification($reserva));
-
+            //$reserva->user->notify(new EmailEstadoAulaNotification($reserva));
             // Registrar en bitácora
             BitacoraHelper::registrarCambioEstadoReservaAula(
                 $id,
