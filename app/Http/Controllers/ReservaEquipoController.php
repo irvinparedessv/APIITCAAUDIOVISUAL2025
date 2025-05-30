@@ -35,7 +35,8 @@ class ReservaEquipoController extends Controller
             $query->where('user_id', $userId);
         }
 
-        $reservas = $query->with(['user', 'equipos', 'codigoQr', 'tipoReserva'])->get();
+        // Aplicar paginación con máximo 10 elementos por página
+        $reservas = $query->with(['user', 'equipos', 'codigoQr', 'tipoReserva'])->paginate(10);
 
         return response()->json($reservas);
     }

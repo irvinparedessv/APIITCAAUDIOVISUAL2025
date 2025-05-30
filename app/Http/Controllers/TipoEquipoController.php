@@ -10,11 +10,16 @@ class TipoEquipoController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        // Obtener todos los tipos de equipo que no han sido eliminados
-        $tiposEquipos = TipoEquipo::where('is_deleted', false)->get();
-        return response()->json($tiposEquipos);
+
+       // Obtener el número de elementos por página (por defecto 10)
+    $perPage = $request->input('per_page', 10);
+
+    // Usar paginación con el método paginate()
+    $tiposEquipos = TipoEquipo::where('is_deleted', false)->paginate($perPage);
+
+    return response()->json($tiposEquipos);
     }
 
     /**

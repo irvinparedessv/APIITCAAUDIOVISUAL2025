@@ -71,7 +71,8 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador'])->group(
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->group(function () {
-    Route::apiResource('Obtenerequipos', EquipoController::class);
+    //Route::apiResource('Obtenerequipos', EquipoController::class);
+    Route::get('/Obtenerequipos', [EquipoController::class, 'obtenerEquipos']);
     Route::post('/reservas', [ReservaEquipoController::class, 'store']);
     Route::get('/reservas/{id}', [ReservaEquipoController::class, 'getByUser']); // Ver reservas de un usuario
     Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']); // Ver reserva por QR
