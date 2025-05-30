@@ -13,7 +13,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Support\Facades\Log;
 
-class NuevaReservaEquipoNotification extends Notification implements ShouldQueue, ShouldBroadcast
+class NuevaReservaNotification extends Notification implements ShouldQueue, ShouldBroadcast
 {
     use Queueable;
 
