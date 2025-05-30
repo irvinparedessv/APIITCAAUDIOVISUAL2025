@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -22,7 +23,6 @@ class ProfileController extends Controller
     {
         $user = Auth::user();
 
-        // Validar solo los campos que sí se pueden actualizar
         $validated = $request->validate([
             'first_name' => 'sometimes|string|max:100',
             'last_name' => 'sometimes|string|max:100',
@@ -31,10 +31,15 @@ class ProfileController extends Controller
             'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
-        // Manejar imagen si se sube una nueva
+        // Si se sube una nueva imagen
         if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $path = $image->store('user_images', 'public');
+            // Eliminar imagen anterior si existe
+            if ($user->image && Storage::disk('public')->exists($user->image)) {
+                Storage::disk('public')->delete($user->image);
+            }
+
+            // Guardar la nueva imagen
+            $path = $request->file('image')->store('user_images', 'public');
             $user->image = $path;
         }
 
