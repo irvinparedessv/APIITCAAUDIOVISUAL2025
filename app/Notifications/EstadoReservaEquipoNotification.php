@@ -12,7 +12,7 @@ use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
-class EstadoReservaNotification extends Notification implements ShouldQueue, ShouldBroadcast
+class EstadoReservaEquipoNotification extends Notification implements ShouldQueue, ShouldBroadcast
 {
     use Queueable;
 
@@ -52,7 +52,7 @@ class EstadoReservaNotification extends Notification implements ShouldQueue, Sho
         
         return [
             'type' => 'estado_reserva',
-            'title' => 'Estado de tu reserva actualizado',
+            'title' => 'Estado de tu reserva de equipo actualizada',
             'message' => "Tu reserva para el aula {$this->reserva->aula} ha sido marcada como '{$this->reserva->estado}'.",
             'reserva' => [
                 'id' => $this->reserva->id,

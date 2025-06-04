@@ -13,6 +13,7 @@ use App\Models\ReservaEquipo;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\ConfirmarReservaUsuario;
+use App\Notifications\EstadoReservaEquipoNotification;
 use App\Notifications\EstadoReservaNotification;
 use App\Notifications\NotificarResponsableReserva;
 use App\Notifications\NuevaReservaNotification;
@@ -212,7 +213,7 @@ class ReservaEquipoController extends Controller
                     'reserva_id' => $reserva->id
                 ]);
                 
-                $reserva->user->notify(new EstadoReservaNotification($reserva, $reserva->user->id));
+                $reserva->user->notify(new EstadoReservaEquipoNotification($reserva, $reserva->user->id));
             }
 
             Log::info("Enviando correo a prestamista: {$reserva->user->email}");

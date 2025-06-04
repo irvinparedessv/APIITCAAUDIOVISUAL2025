@@ -13,29 +13,33 @@ class EquipoController extends Controller
     // Listar todos los equipos
     public function index(Request $request)
     {
-        // Usamos el scope 'activos()' para obtener solo los registros activos
         $query = Equipo::activos();
 
-        // Filtro de búsqueda
         if ($request->has('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('nombre', 'like', "%$search%")
-                    ->orWhere('descripcion', 'like', "%$search%");
+                ->orWhere('descripcion', 'like', "%$search%");
             });
         }
 
-        // Paginación
-        $equipos = $query->paginate(10); // Devuelve LengthAwarePaginator
+        $paginated = $query->paginate(10);
 
-        // Agregar el campo imagen_url a cada equipo (sin perder la paginación)
-        $equipos->getCollection()->transform(function ($equipo) {
-            $equipo->imagen_url = $equipo->imagen_url;
+        // Agregar el campo imagen_url a cada equipo sin perder la paginación
+        $paginated->getCollection()->transform(function ($equipo) {
+            $equipo->imagen_url = $equipo->imagen_url; // Asumo que esto genera la URL correcta
             return $equipo;
         });
 
-        return response()->json($equipos);
+        return response()->json([
+            'data' => $paginated->items(),
+            'total' => $paginated->total(),
+            'current_page' => $paginated->currentPage(),
+            'per_page' => $paginated->perPage(),
+            // Puedes agregar más info si quieres (last_page, etc)
+        ]);
     }
+
 
 
     public function obtenerEquipos()
