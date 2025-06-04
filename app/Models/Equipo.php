@@ -19,7 +19,7 @@ class Equipo extends Model
         'is_deleted',
         'tipo_equipo_id',
         'tipo_reserva_id',
-        'imagen' 
+        'imagen'
     ];
     public function getImagenUrlAttribute()
     {
@@ -42,15 +42,15 @@ class Equipo extends Model
     public function scopeActivos($query)
     {
         return $query->where('is_deleted', false)
-                     ->whereHas('tipoEquipo', function ($q) {
-                         $q->where('is_deleted', false);
-                     });
+            ->whereHas('tipoEquipo', function ($q) {
+                $q->where('is_deleted', false);
+            });
     }
 
     public function reservas()
     {
         return $this->belongsToMany(ReservaEquipo::class, 'equipo_reserva', 'equipo_id', 'reserva_equipo_id')
-                    ->withPivot('cantidad');
+            ->withPivot('cantidad');
     }
 
     public function disponibilidadPorRango(\Carbon\CarbonInterface $inicio, \Carbon\CarbonInterface $fin)
@@ -60,7 +60,7 @@ class Equipo extends Model
             ->where(function ($query) use ($inicio, $fin) {
                 $query->where(function ($q) use ($inicio, $fin) {
                     $q->where('fecha_reserva', '<', $fin)
-                    ->where('fecha_entrega', '>', $inicio);
+                        ->where('fecha_entrega', '>', $inicio);
                 });
             })
             ->whereIn('estado', ['Pendiente', 'approved'])
@@ -69,7 +69,7 @@ class Equipo extends Model
         // Calcular cantidades usando sum en lugar de count para considerar las cantidades
         $cantidadEnReserva = $reservas->where('estado', 'Pendiente')->sum('pivot.cantidad');
         $cantidadEntregada = $reservas->where('estado', 'approved')->sum('pivot.cantidad');
-        
+
         $cantidadDisponible = max(0, $this->cantidad - ($cantidadEnReserva + $cantidadEntregada));
 
         return [

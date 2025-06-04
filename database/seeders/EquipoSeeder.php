@@ -32,7 +32,16 @@ class EquipoSeeder extends Seeder
             'tipo_reserva_id' => 2,
             'imagen' => 'default.png'
         ]);
-
+        Equipo::create([
+            'nombre' => 'Router Cisco  V2',
+            'descripcion' => 'Router personal para hogar',
+            'estado' => false,
+            'cantidad' => 4,
+            'is_deleted' => false,
+            'tipo_equipo_id' => 2,
+            'tipo_reserva_id' => 2,
+            'imagen' => 'default.png'
+        ]);
         Equipo::create([
             'nombre' => 'Laptop HP EliteBook',
             'descripcion' => 'Laptop liviana ideal para movilidad',
@@ -45,4 +54,3 @@ class EquipoSeeder extends Seeder
         ]);
     }
 }
-

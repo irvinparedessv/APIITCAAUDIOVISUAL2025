@@ -20,21 +20,28 @@ class ReservaAulaController extends Controller
 {
     public function aulas()
     {
-        $aulas = Aula::with('primeraImagen')
-            ->get()
-            ->map(function ($aula) {
-                return [
-                    'id' => $aula->id,
-                    'name' => $aula->name,
-                    'image_path' => $aula->primeraImagen
-                        ? url($aula->primeraImagen->image_path)
-                        : null,
-                ];
-            });
+        $aulas = Aula::with(['primeraImagen', 'horarios'])->get()->map(function ($aula) {
+            return [
+                'id' => $aula->id,
+                'name' => $aula->name,
+                'image_path' => $aula->primeraImagen
+                    ? url($aula->primeraImagen->image_path)
+                    : null,
+                'horarios' => $aula->horarios->map(function ($horario) {
+                    return [
+                        'start_date' => $horario->start_date,
+                        'end_date' => $horario->end_date,
+                        'start_time' => $horario->start_time,
+                        'end_time' => $horario->end_time,
+                        'days' => json_decode($horario->days),
+                    ];
+                }),
+            ];
+        });
 
         return response()->json($aulas);
     }
-    
+
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -63,9 +70,9 @@ class ReservaAulaController extends Controller
         // Obtener responsables (encargados y administradores), excluyendo al usuario que hizo la reserva
         $responsableRoleIds = Role::whereIn('nombre', ['encargado', 'administrador'])->pluck('id');
         $responsables = User::whereIn('role_id', $responsableRoleIds)
-                            ->where('id', '!=', $reserva->user_id) // Excluye al usuario que hizo la reserva
-                            ->get();
-        
+            ->where('id', '!=', $reserva->user_id) // Excluye al usuario que hizo la reserva
+            ->get();
+
         Log::info('Responsables encontrados para aula:', $responsables->pluck('id')->toArray());
 
         foreach ($responsables as $responsable) {
@@ -76,7 +83,7 @@ class ReservaAulaController extends Controller
         }
 
         //$reserva->user->notify(new ConfirmarReservaAulaUsuario($reserva));
-        
+
         return response()->json([
             'message' => 'Reserva de aula creada exitosamente',
             'reserva' => $reserva
@@ -96,7 +103,7 @@ class ReservaAulaController extends Controller
 
         return response()->json($query->get());
     }
-    
+
     public function actualizarEstado(Request $request, $id)
     {
         $request->validate([
@@ -104,6 +111,10 @@ class ReservaAulaController extends Controller
             'comentario' => 'nullable|string',
         ]);
 
+        $reserva = ReservaAula::findOrFail($id);
+        $reserva->estado = $request->estado;
+        $reserva->comentario = $request->comentario;
+        $reserva->save();
         $reserva = ReservaAula::with('user')->findOrFail($id);
 
         $estadoAnterior = $reserva->estado;
@@ -111,18 +122,11 @@ class ReservaAulaController extends Controller
         $reserva->comentario = $request->comentario;
         $reserva->save();
 
+        // Ver estado de las reservas de las aulas
         if ($reserva->user) {
-            // Notificar al usuario
             $reserva->user->notify(new EstadoReservaAulaNotification($reserva));
-            //$reserva->user->notify(new EmailEstadoAulaNotification($reserva));
-            // Registrar en bitácora
-            BitacoraHelper::registrarCambioEstadoReservaAula(
-                $id,
-                $estadoAnterior,
-                $request->estado,
-                $reserva->user->first_name . ' ' . $reserva->user->last_name
-            );
         }
+
 
         return response()->json(['message' => 'Estado actualizado correctamente']);
     }
