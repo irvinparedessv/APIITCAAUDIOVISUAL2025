@@ -8,7 +8,6 @@ use Phpml\SupportVectorMachine\Kernel;
 use App\Models\ReservaEquipo;
 use Carbon\Carbon;
 
-
 class PrediccionEquipoService
 {
     public function predecirReservasMensuales(int $mesesAPredecir = 6, int $tipoEquipoId = null)
@@ -17,7 +16,7 @@ class PrediccionEquipoService
         [$datosHistoricos, $primerMesReal] = $tipoEquipoId 
             ? $this->obtenerDatosHistoricosPorTipo($tipoEquipoId)
             : $this->obtenerDatosHistoricos();
-        
+
         if (count($datosHistoricos) < 3) {
             throw new \Exception("No hay suficientes datos históricos para realizar la predicción (mínimo 3 meses requeridos)");
         }
@@ -73,8 +72,8 @@ class PrediccionEquipoService
             ->selectRaw('YEAR(fecha_reserva) as year, MONTH(fecha_reserva) as month, SUM(equipo_reserva.cantidad) as total')
             ->join('equipo_reserva', 'reserva_equipos.id', '=', 'equipo_reserva.reserva_equipo_id')
             ->groupBy('year', 'month')
-            ->orderBy('year', 'asc')
-            ->orderBy('month', 'asc')
+            ->orderBy('year')
+            ->orderBy('month')
             ->get();
 
         return $this->procesarDatosHistoricos($reservasPorMes);
@@ -94,8 +93,8 @@ class PrediccionEquipoService
             ->join('equipo_reserva', 'reserva_equipos.id', '=', 'equipo_reserva.reserva_equipo_id')
             ->join('equipos', 'equipo_reserva.equipo_id', '=', 'equipos.id')
             ->groupBy('year', 'month')
-            ->orderBy('year', 'asc')
-            ->orderBy('month', 'asc')
+            ->orderBy('year')
+            ->orderBy('month')
             ->get();
 
         return $this->procesarDatosHistoricos($reservasPorMes);
@@ -135,7 +134,7 @@ class PrediccionEquipoService
 
         for ($i = $trainingSize; $i < $count; $i++) {
             $prediccion = $modelo->predict([$samples[$i][0]]);
-            $errores[] = abs($prediccion - $targets[$i]) / ($targets[$i] ?: 1);
+            $errores[] = abs($prediccion - $targets[$i]) / max(1, $targets[$i]);
         }
 
         $errorRelativo = array_sum($errores) / count($errores);
@@ -144,7 +143,6 @@ class PrediccionEquipoService
 
     protected function convertirNumeroAMes(int $mesOffset, Carbon $inicio): string
     {
-        $fecha = $inicio->copy()->addMonths($mesOffset);
-        return $fecha->format('M Y'); // Ej: Ene 2024
+        return $inicio->copy()->addMonths($mesOffset)->format('M Y'); // Ej: Ene 2024
     }
 }

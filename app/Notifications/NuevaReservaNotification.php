@@ -63,7 +63,7 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
 
         return [
             'type' => 'nueva_reserva',
-            'title' => 'Nueva reserva recibida',
+            'title' => 'Nueva reserva de equipo recibida',
             'message' => "Nueva reserva recibida del usuario {$usuarioNombre}.",
             'reserva' => [  // Cambiado a objeto 'reserva' para consistencia
                 'id' => $this->reserva->id,
