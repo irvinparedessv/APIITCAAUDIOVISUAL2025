@@ -11,17 +11,24 @@ class ReservaAulaController extends Controller
 {
     public function aulas()
     {
-        $aulas = Aula::with('primeraImagen')
-            ->get()
-            ->map(function ($aula) {
-                return [
-                    'id' => $aula->id,
-                    'name' => $aula->name,
-                    'image_path' => $aula->primeraImagen
-                        ? url($aula->primeraImagen->image_path)
-                        : null,
-                ];
-            });
+        $aulas = Aula::with(['primeraImagen', 'horarios'])->get()->map(function ($aula) {
+            return [
+                'id' => $aula->id,
+                'name' => $aula->name,
+                'image_path' => $aula->primeraImagen
+                    ? url($aula->primeraImagen->image_path)
+                    : null,
+                'horarios' => $aula->horarios->map(function ($horario) {
+                    return [
+                        'start_date' => $horario->start_date,
+                        'end_date' => $horario->end_date,
+                        'start_time' => $horario->start_time,
+                        'end_time' => $horario->end_time,
+                        'days' => json_decode($horario->days),
+                    ];
+                }),
+            ];
+        });
 
         return response()->json($aulas);
     }
