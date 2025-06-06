@@ -99,6 +99,9 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::get('/notificaciones', [ReservaEquipoController::class, 'getNotificaciones']);
     Route::post('/notificaciones/marcar-leidas', [ReservaEquipoController::class, 'marcarComoLeidas']);
     Route::post('/notificaciones/{id}/marcar-leida', [ReservaEquipoController::class, 'marcarComoLeida']);
+    Route::delete('/notificaciones/{id}', [NotificationController::class, 'destroy']);
+    Route::delete('/notificaciones/clear-all', [NotificationController::class, 'clearAll']);
+    Route::get('/notificaciones/trashed', [NotificationController::class, 'trashed']);
     Route::apiResource('equipos', EquipoController::class);
     Route::get('/equipos/{id}/disponibilidad', [ReservaEquipoController::class, 'verificarDisponibilidad']);
 });
