@@ -104,17 +104,13 @@ class ReservaAulaController extends Controller
         return response()->json($query->get());
     }
 
-    public function actualizarEstado(Request $request, $id)
+   public function actualizarEstado(Request $request, $id)
     {
         $request->validate([
             'estado' => 'required|in:approved,rejected,returned',
             'comentario' => 'nullable|string',
         ]);
 
-        $reserva = ReservaAula::findOrFail($id);
-        $reserva->estado = $request->estado;
-        $reserva->comentario = $request->comentario;
-        $reserva->save();
         $reserva = ReservaAula::with('user')->findOrFail($id);
 
         $estadoAnterior = $reserva->estado;
@@ -122,11 +118,18 @@ class ReservaAulaController extends Controller
         $reserva->comentario = $request->comentario;
         $reserva->save();
 
-        // Ver estado de las reservas de las aulas
         if ($reserva->user) {
+            // Notificar al usuario
             $reserva->user->notify(new EstadoReservaAulaNotification($reserva));
+            //$reserva->user->notify(new EmailEstadoAulaNotification($reserva));
+            // Registrar en bitácora
+            BitacoraHelper::registrarCambioEstadoReservaAula(
+                $id,
+                $estadoAnterior,
+                $request->estado,
+                $reserva->user->first_name . ' ' . $reserva->user->last_name
+            );
         }
-
 
         return response()->json(['message' => 'Estado actualizado correctamente']);
     }
