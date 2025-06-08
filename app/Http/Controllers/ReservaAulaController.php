@@ -104,10 +104,10 @@ class ReservaAulaController extends Controller
         return response()->json($query->get());
     }
 
-   public function actualizarEstado(Request $request, $id)
+    public function actualizarEstado(Request $request, $id)
     {
         $request->validate([
-            'estado' => 'required|in:approved,rejected,returned',
+            'estado' => 'required|in:Aprobado,Rechazado,Devuelto',
             'comentario' => 'nullable|string',
         ]);
 

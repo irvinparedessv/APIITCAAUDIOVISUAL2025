@@ -56,7 +56,7 @@ class ChatGPTController extends Controller
                 $runStatus = Http::withHeaders($headers)
                     ->get("https://api.openai.com/v1/threads/{$threadId}/runs/{$runId}");
                 $status = $runStatus->json('status');
-            } while ($status !== 'completed' && $status !== 'failed');
+            } while ($status !== 'Completado' && $status !== 'failed');
 
             if ($status === 'failed') {
                 throw new \Exception('El assistant falló al generar la respuesta.');

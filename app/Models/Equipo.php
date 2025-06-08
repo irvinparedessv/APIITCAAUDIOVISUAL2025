@@ -63,12 +63,12 @@ class Equipo extends Model
                         ->where('fecha_entrega', '>', $inicio);
                 });
             })
-            ->whereIn('estado', ['Pendiente', 'approved'])
+            ->whereIn('estado', ['Pendiente', 'Aprobado'])
             ->get();
 
         // Calcular cantidades usando sum en lugar de count para considerar las cantidades
         $cantidadEnReserva = $reservas->where('estado', 'Pendiente')->sum('pivot.cantidad');
-        $cantidadEntregada = $reservas->where('estado', 'approved')->sum('pivot.cantidad');
+        $cantidadEntregada = $reservas->where('estado', 'Aprobado')->sum('pivot.cantidad');
 
         $cantidadDisponible = max(0, $this->cantidad - ($cantidadEnReserva + $cantidadEntregada));
 

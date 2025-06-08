@@ -40,14 +40,12 @@ class BitacoraHelper
 
     private static function mapearEstado(string $estado): string
     {
-        return match(strtolower($estado)) {
-            'approved', 'entregado' => 'Entregado',
-            'returned', 'devuelto' => 'Devuelto',
-            'rejected', 'rechazado' => 'Rechazado',
-            'pending', 'pendiente' => 'Pendiente',
+        return match (strtolower($estado)) {
+            'Aprobado', 'entregado' => 'Entregado',
+            'Devuelto', 'devuelto' => 'Devuelto',
+            'Rechazado', 'rechazado' => 'Rechazado',
+            'Pendiente', 'pendiente' => 'Pendiente',
             default => ucfirst($estado)
         };
     }
-
-    
 }

@@ -1,10 +1,10 @@
 @php
-    $estadoColor = match($reserva->estado) {
-        'approved' => '✅ Aprobada',
-        'rejected' => '❌ Rechazada',
-        'returned' => '🔁 Devuelta',
-        default => ucfirst($reserva->estado),
-    };
+$estadoColor = match($reserva->estado) {
+'Aprobado' => '✅ Aprobada',
+'Rechazado' => '❌ Rechazada',
+'Devuelto' => '🔁 Devuelta',
+default => ucfirst($reserva->estado),
+};
 @endphp
 
 @component('mail::message')
@@ -13,15 +13,15 @@
 Se ha actualizado una reserva realizada por **{{ $reserva->user->first_name }} {{ $reserva->user->last_name }}**.
 
 @component('mail::panel')
-**Aula:** {{ $reserva->aula }}  
-**Fecha de reserva:** {{ $reserva->fecha_reserva }}  
-**Fecha de entrega:** {{ $reserva->fecha_entrega }}  
-**Nuevo estado:** {{ $estadoColor }}  
+**Aula:** {{ $reserva->aula }}
+**Fecha de reserva:** {{ $reserva->fecha_reserva }}
+**Fecha de entrega:** {{ $reserva->fecha_entrega }}
+**Nuevo estado:** {{ $estadoColor }}
 @if($reserva->comentario)
 **Comentario:** {{ $reserva->comentario }}
 @endif
 @endcomponent
 
-Gracias,  
+Gracias,
 {{ config('app.name') }}
 @endcomponent

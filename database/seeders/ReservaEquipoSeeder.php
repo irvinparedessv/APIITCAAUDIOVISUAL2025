@@ -46,7 +46,7 @@ class ReservaEquipoSeeder extends Seeder
                         'aula' => $aula,
                         'fecha_reserva' => $horaInicio,
                         'fecha_entrega' => $horaFin,
-                        'estado' => 'approved',
+                        'estado' => 'Aprobado',
                         'tipo_reserva_id' => 1,
                     ]);
 

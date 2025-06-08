@@ -34,11 +34,11 @@ return [
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DB_URL'),
-            'host' => env('DB_HOST', '127.0.0.1'),
+            'host' => env('DB_HOST', 'prestamod612.online'),
             'port' => env('DB_PORT', '3306'),
-            'database' => env('DB_DATABASE', 'itcaaudiov'),
-            'username' => env('DB_USERNAME', 'root'),
-            'password' => env('DB_PASSWORD', ''),
+            'database' => env('DB_DATABASE', 'prestamo_db'),
+            'username' => env('DB_USERNAME', 'prestamo_user'),
+            'password' => env('DB_PASSWORD', 'ctvW~M{[r&SO'),
             'unix_socket' => env('DB_SOCKET', ''),
             'charset' => env('DB_CHARSET', 'utf8mb4'),
             'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
@@ -50,6 +50,26 @@ return [
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
         ],
+
+
+        'mysql_local' => [ // Local
+            'driver' => 'mysql',
+            'host' => env('DB_HOST_LOCAL', '127.0.0.1'),
+            'port' => env('DB_PORT_LOCAL', '3306'),
+            'database' => env('DB_DATABASE_LOCAL', 'itcaaudiov'),
+            'username' => env('DB_USERNAME_LOCAL', 'root'),
+            'password' => env('DB_PASSWORD_LOCAL', ''),
+            'unix_socket' => env('DB_SOCKET_LOCAL', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => [],
+        ],
+
+
 
     ],
 

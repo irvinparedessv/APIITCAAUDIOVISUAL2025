@@ -13,7 +13,7 @@ class PrediccionEquipoService
     public function predecirReservasMensuales(int $mesesAPredecir = 6, int $tipoEquipoId = null)
     {
         // Obtener datos históricos y la fecha base real
-        [$datosHistoricos, $primerMesReal] = $tipoEquipoId 
+        [$datosHistoricos, $primerMesReal] = $tipoEquipoId
             ? $this->obtenerDatosHistoricosPorTipo($tipoEquipoId)
             : $this->obtenerDatosHistoricos();
 
@@ -68,7 +68,7 @@ class PrediccionEquipoService
         $fechaFin = Carbon::now();
 
         $reservasPorMes = ReservaEquipo::whereBetween('fecha_reserva', [$fechaInicio, $fechaFin])
-            ->whereIn('estado', ['approved', 'completed'])
+            ->whereIn('estado', ['Aprobado', 'Completado'])
             ->selectRaw('YEAR(fecha_reserva) as year, MONTH(fecha_reserva) as month, SUM(equipo_reserva.cantidad) as total')
             ->join('equipo_reserva', 'reserva_equipos.id', '=', 'equipo_reserva.reserva_equipo_id')
             ->groupBy('year', 'month')
@@ -85,7 +85,7 @@ class PrediccionEquipoService
         $fechaFin = Carbon::now();
 
         $reservasPorMes = ReservaEquipo::whereBetween('fecha_reserva', [$fechaInicio, $fechaFin])
-            ->whereIn('reserva_equipos.estado', ['approved', 'completed'])
+            ->whereIn('reserva_equipos.estado', ['Aprobado', 'Completado'])
             ->whereHas('equipos', function ($query) use ($tipoEquipoId) {
                 $query->where('tipo_equipo_id', $tipoEquipoId);
             })
