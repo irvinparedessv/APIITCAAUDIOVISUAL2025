@@ -167,6 +167,7 @@ class UserController extends Controller
     public function destroy(string $id)
     {
         $usuario = User::findOrFail($id);
+        $usuario->email = 'deleted_' . $usuario->id . '_' . time() . '@xdeleted.com';
 
         // En lugar de eliminar físicamente, se marca como inactivo y eliminado
         $usuario->estado = 0; // Inactivo
