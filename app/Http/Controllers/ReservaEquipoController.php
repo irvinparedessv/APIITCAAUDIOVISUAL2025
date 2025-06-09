@@ -12,6 +12,7 @@ use App\Models\Equipo;
 use App\Models\ReservaEquipo;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use App\Notifications\ConfirmarReservaUsuario;
 use App\Notifications\EstadoReservaEquipoNotification;
 use App\Notifications\EstadoReservaNotification;
@@ -28,12 +29,12 @@ class ReservaEquipoController extends Controller
 {
     public function index(Request $request)
     {
-        $userId = $request->query('user_id');
-
+        $user = $request->user(); // Usuario autenticado
         $query = ReservaEquipo::query();
 
-        if ($userId) {
-            $query->where('user_id', $userId);
+        // Si NO es superusuario (por nombre del rol), filtra por su propio ID
+        if ($user->role->nombre !== 'Administrador') {
+            $query->where('user_id', $user->id);
         }
 
         $reservas = $query->with(['user', 'equipos', 'codigoQr', 'tipoReserva'])->get();
@@ -41,15 +42,31 @@ class ReservaEquipoController extends Controller
         return response()->json($reservas);
     }
 
+
     public function getByUser($id)
     {
-        // Buscar todas las reservas de ese usuario
-        $reservas = ReservaEquipo::where('user_id', $id)
-            ->with(['user', 'equipos', 'codigoQr', 'tipoReserva']) // Relación con user, equipos, y codigo qr
-            ->get();
+        /** @var User $user */
+        $user = auth()->user();
+        $query = ReservaEquipo::query();
+
+        if ($user->role->nombre === 'Administrador') {
+            // Superusuario ve todas las reservas sin importar $id
+            $reservas = $query->with(['user', 'equipos', 'codigoQr', 'tipoReserva'])->get();
+        } else {
+            // Usuarios normales solo ven las reservas del $id solicitado
+            // (Opcional: validar que $id sea igual a su propio id para evitar ver otras)
+            if ($user->id !== (int)$id) {
+                return response()->json(['error' => 'No autorizado'], 403);
+            }
+
+            $reservas = $query->where('user_id', $id)
+                ->with(['user', 'equipos', 'codigoQr', 'tipoReserva'])
+                ->get();
+        }
 
         return response()->json($reservas);
     }
+
 
     public function show($idQr)
     {
