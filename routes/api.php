@@ -91,17 +91,19 @@ Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->grou
 Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamista'])->group(function () {
     Route::put('/user/profile', [ProfileController::class, 'update']);
     Route::get('/user/profile', [ProfileController::class, 'show']);
-    Route::get('/notifications', [NotificationController::class, 'index']); // todas
-    Route::get('/notifications/{id}', [NotificationController::class, 'show']); // detalle
     Route::get('/equiposPorTipo/{tipoReservaId}', [EquipoController::class, 'getEquiposPorTipoReserva']);
     Route::get('/tipo-reservas', [TipoReservaController::class, 'index']);
     Route::get('/bitacoras/reserva/{reservaId}', [BitacoraController::class, 'historialReserva']);
+    Route::get('/notifications', [NotificationController::class, 'index']); // todas
+    Route::get('/notifications/{id}', [NotificationController::class, 'show']); // detalle
     Route::get('/notificaciones', [ReservaEquipoController::class, 'getNotificaciones']);
-    Route::post('/notificaciones/marcar-leidas', [ReservaEquipoController::class, 'marcarComoLeidas']);
-    Route::post('/notificaciones/{id}/marcar-leida', [ReservaEquipoController::class, 'marcarComoLeida']);
+    Route::post('/notificaciones/marcar-leidas', [NotificationController::class, 'marcarComoLeidas']);
+    Route::post('/notificaciones/{id}/marcar-leida', [NotificationController::class, 'marcarComoLeida']);
     Route::delete('/notificaciones/{id}', [NotificationController::class, 'destroy']);
-    Route::delete('/notificaciones/clear-all', [NotificationController::class, 'clearAll']);
-    Route::get('/notificaciones/trashed', [NotificationController::class, 'trashed']);
+    Route::put('/notificaciones/{id}/archivar', [NotificationController::class, 'archive']);
+    Route::put('/notificaciones/archivar-todas', [NotificationController::class, 'archiveAll']);
+    Route::get('/notificaciones/historial', [NotificationController::class, 'history']);
+    Route::delete('/notifications', [NotificationController::class, 'destroyAll']);
     Route::apiResource('equipos', EquipoController::class);
     Route::get('/equipos/{id}/disponibilidad', [ReservaEquipoController::class, 'verificarDisponibilidad']);
 });

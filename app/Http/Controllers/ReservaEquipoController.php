@@ -265,25 +265,31 @@ class ReservaEquipoController extends Controller
     public function getNotificaciones(Request $request)
     {
         $user = $request->user();
+
+        // Obtener solo las notificaciones NO archivadas
         $notificaciones = $user->notifications()
+            ->where('is_archived', false) 
             ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($notification) {
-                return [
-                    'id' => $notification->id,
-                    'type' => $notification->type,
-                    'data' => $notification->data,
-                    'read_at' => $notification->read_at,
-                    'created_at' => $notification->created_at,
-                ];
+            ->get();
 
-                Log::info('Notificaciones enviadas al frontend:', [
-                    'count' => $notifications->count(),
-                    'sample_data' => $notifications->first()?->data
-                ]);
-            });
+        // Para loguear datos antes del map
+        Log::info('Notificaciones enviadas al frontend:', [
+            'count' => $notificaciones->count(),
+            'sample_data' => $notificaciones->first()?->data
+        ]);
 
-        return response()->json($notificaciones);
+        // Mapear para transformar estructura 
+        $result = $notificaciones->map(function ($notification) {
+            return [
+                'id' => $notification->id,
+                'type' => $notification->type,
+                'data' => $notification->data,
+                'read_at' => $notification->read_at,
+                'created_at' => $notification->created_at,
+            ];
+        });
+
+        return response()->json($result);
     }
 
     public function verificarDisponibilidad(Request $request, $equipoId)
@@ -307,23 +313,5 @@ class ReservaEquipoController extends Controller
                 'fin' => $fin->toDateTimeString()
             ]
         ]);
-    }
-
-    public function marcarComoLeidas(Request $request)
-    {
-        $request->user()->unreadNotifications->markAsRead();
-        return response()->json(['success' => true]);
-    }
-
-    public function marcarComoLeida(Request $request, $id)
-    {
-        $notification = $request->user()->notifications()->where('id', $id)->first();
-
-        if ($notification) {
-            $notification->markAsRead();
-            return response()->json(['success' => true]);
-        }
-
-        return response()->json(['success' => false, 'message' => 'Notificación no encontrada'], 404);
     }
 }

@@ -53,7 +53,7 @@ class EstadoReservaEquipoNotification extends Notification implements ShouldQueu
         return [
             'type' => 'estado_reserva',
             'title' => 'Estado de tu reserva de equipo actualizada',
-            'message' => "Tu reserva para el aula {$this->reserva->aula} ha sido marcada como '{$this->reserva->estado}'.",
+            'message' => "Tu reserva de equipo ha sido marcada como '{$this->reserva->estado}'.",
             'reserva' => [
                 'id' => $this->reserva->id,
                 'aula' => $this->reserva->aula,
