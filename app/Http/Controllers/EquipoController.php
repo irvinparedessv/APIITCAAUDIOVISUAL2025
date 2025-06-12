@@ -44,7 +44,7 @@ class EquipoController extends Controller
 
     public function obtenerEquipos()
     {
-        return Equipo::where('is_deleted', false)->select('id', 'nombre')->get();
+        return Equipo::where('is_deleted', false)->where('estado', true)->select('id', 'nombre', 'descripcion', 'cantidad')->get();
     }
 
     public function store(Request $request)
@@ -154,7 +154,10 @@ class EquipoController extends Controller
 
     public function getEquiposPorTipoReserva($tipoReservaId)
     {
-        $equipos = Equipo::where('tipo_reserva_id', $tipoReservaId)->get();
+        $equipos = Equipo::where('tipo_reserva_id', $tipoReservaId)
+                        ->where('estado', true)
+                        ->where('is_deleted', false)
+                        ->get(['id', 'nombre', 'tipo_equipo_id']); 
 
         return response()->json($equipos);
     }

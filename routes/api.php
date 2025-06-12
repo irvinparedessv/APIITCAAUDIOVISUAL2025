@@ -60,7 +60,6 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado'])->group(function () {
 
 
 Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador'])->group(function () {
-    Route::get('/Obtenerequipos', [EquipoController::class, 'obtenerEquipos']);
     //Route::apiResource('equipos', EquipoController::class);
     Route::apiResource('tipoEquipos', TipoEquipoController::class);
     Route::get('/reservas', [ReservaEquipoController::class, 'index']); // Ver todas las reservas
@@ -107,6 +106,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::get('/reservas-aula/{id}', [ReservaAulaController::class, 'show']);
     Route::get('/reservas-aula', [ReservaAulaController::class, 'reservas']);
     Route::get('/equipos/{id}/disponibilidad', [ReservaEquipoController::class, 'verificarDisponibilidad']);
+    Route::get('/obtenerEquipos', [EquipoController::class, 'obtenerEquipos']);
 });
 
 
