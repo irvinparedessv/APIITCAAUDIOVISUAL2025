@@ -105,6 +105,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::get('/notificaciones/historial', [NotificationController::class, 'history']);
     Route::delete('/notifications', [NotificationController::class, 'destroyAll']);
     Route::apiResource('equipos', EquipoController::class);
+    Route::get('/reservas-aula/{id}', [ReservaAulaController::class, 'show']);
     Route::get('/equipos/{id}/disponibilidad', [ReservaEquipoController::class, 'verificarDisponibilidad']);
 });
 

@@ -133,4 +133,10 @@ class ReservaAulaController extends Controller
 
         return response()->json(['message' => 'Estado actualizado correctamente']);
     }
+    public function show($id)
+    {
+        $reserva = ReservaAula::with(['aula', 'user'])->findOrFail($id);
+
+        return response()->json($reserva);
+    }
 }
