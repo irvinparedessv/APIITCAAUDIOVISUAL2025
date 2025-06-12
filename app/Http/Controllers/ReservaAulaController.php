@@ -89,11 +89,14 @@ class ReservaAulaController extends Controller
             'reserva' => $reserva
         ], 201);
     }
-
     public function reservas(Request $request)
     {
         $from = $request->query('from');
         $to = $request->query('to');
+        $status = $request->query('status');
+        $search = $request->query('search'); // nuevo parámetro para buscar por aula o usuario
+        $perPage = $request->query('per_page', 10);
+        $page = $request->query('page', 1);
 
         $query = ReservaAula::with(['aula', 'user']);
 
@@ -101,8 +104,27 @@ class ReservaAulaController extends Controller
             $query->whereBetween('fecha', [$from, $to]);
         }
 
-        return response()->json($query->get());
+        if ($status && strtolower($status) !== 'todos') {
+            $query->where('estado', $status);
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('aula', function ($q2) use ($search) {
+                    $q2->where('name', 'like', "%$search%");
+                })->orWhereHas('user', function ($q3) use ($search) {
+                    $q3->where('first_name', 'like', "%$search%")
+                        ->orWhere('last_name', 'like', "%$search%");
+                });
+            });
+        }
+
+        $reservas = $query->orderBy('fecha', 'desc')->paginate($perPage, ['*'], 'page', $page);
+
+        return response()->json($reservas);
     }
+
+
 
     public function actualizarEstado(Request $request, $id)
     {

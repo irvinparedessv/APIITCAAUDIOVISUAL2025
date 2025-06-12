@@ -84,7 +84,6 @@ Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->grou
     Route::get('/aulasEquipos', [AulaController::class, 'index']);
     //Route::post('/reservas', [ReservaAulaController::class, 'store']);
     Route::get('/aulas', [ReservaAulaController::class, 'aulas']);
-    Route::get('/reservas-aula', [ReservaAulaController::class, 'reservas']);
 });
 
 //👉Aqui podemos ver el perfil de los usuarios de acuerdo a roles
@@ -106,6 +105,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::delete('/notifications', [NotificationController::class, 'destroyAll']);
     Route::apiResource('equipos', EquipoController::class);
     Route::get('/reservas-aula/{id}', [ReservaAulaController::class, 'show']);
+    Route::get('/reservas-aula', [ReservaAulaController::class, 'reservas']);
     Route::get('/equipos/{id}/disponibilidad', [ReservaEquipoController::class, 'verificarDisponibilidad']);
 });
 
