@@ -43,29 +43,31 @@ class ReservaEquipoController extends Controller
     }
 
 
-    public function getByUser($id)
-    {
-        /** @var User $user */
-        $user = auth()->user();
-        $query = ReservaEquipo::query();
+  public function getByUser($id)
+{
+    /** @var User $user */
+    $user = auth()->user();
+    $query = ReservaEquipo::query();
 
-        if ($user->role->nombre === 'Administrador') {
-            // Superusuario ve todas las reservas sin importar $id
-            $reservas = $query->with(['user', 'equipos', 'codigoQr', 'tipoReserva'])->get();
-        } else {
-            // Usuarios normales solo ven las reservas del $id solicitado
-            // (Opcional: validar que $id sea igual a su propio id para evitar ver otras)
-            if ($user->id !== (int)$id) {
-                return response()->json(['error' => 'No autorizado'], 403);
-            }
-
-            $reservas = $query->where('user_id', $id)
-                ->with(['user', 'equipos', 'codigoQr', 'tipoReserva'])
-                ->get();
+    if ($user->role->nombre === 'Administrador') {
+        // Superusuario ve todas las reservas sin importar $id, ordenadas descendente por fecha_reserva
+        $reservas = $query->with(['user', 'equipos', 'codigoQr', 'tipoReserva'])
+                         ->orderBy('created_at', 'DESC')
+                         ->get();
+    } else {
+        // Usuarios normales solo ven las reservas del $id solicitado
+        if ($user->id !== (int)$id) {
+            return response()->json(['error' => 'No autorizado'], 403);
         }
 
-        return response()->json($reservas);
+        $reservas = $query->where('user_id', $id)
+                         ->with(['user', 'equipos', 'codigoQr', 'tipoReserva'])
+                         ->orderBy('created_at', 'DESC')
+                         ->get();
     }
+
+    return response()->json($reservas);
+}
 
 
     public function show($idQr)
