@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\Log;
 
 class EquipoController extends Controller
 {
-    // Listar todos los equipos
     public function index(Request $request)
     {
         $query = Equipo::activos();
@@ -23,11 +22,14 @@ class EquipoController extends Controller
             });
         }
 
-        $paginated = $query->paginate(10);
+        $perPage = $request->input('perPage', 10); // por defecto 10 si no se manda
+        $page = $request->input('page', 1); // por defecto página 1
 
-        // Agregar el campo imagen_url a cada equipo sin perder la paginación
+        $paginated = $query->paginate($perPage, ['*'], 'page', $page);
+
+        // Agrega la URL de la imagen
         $paginated->getCollection()->transform(function ($equipo) {
-            $equipo->imagen_url = $equipo->imagen_url; // Asumo que esto genera la URL correcta
+            $equipo->imagen_url = $equipo->imagen_url;
             return $equipo;
         });
 
@@ -36,12 +38,10 @@ class EquipoController extends Controller
             'total' => $paginated->total(),
             'current_page' => $paginated->currentPage(),
             'per_page' => $paginated->perPage(),
-            // Puedes agregar más info si quieres (last_page, etc)
+            'last_page' => $paginated->lastPage(),
         ]);
     }
-
-
-
+    
     public function obtenerEquipos()
     {
         return Equipo::where('is_deleted', false)->where('estado', true)->select('id', 'nombre', 'descripcion', 'cantidad')->get();

@@ -43,32 +43,39 @@ class ReservaEquipoController extends Controller
     }
 
 
-  public function getByUser($id)
-{
-    /** @var User $user */
-    $user = auth()->user();
-    $query = ReservaEquipo::query();
+    public function getByUser(Request $request, $id)
+    {
+        /** @var User $user */
+        $user = auth()->user();
+        $perPage = $request->input('per_page', 15); // Items por página
 
-    if ($user->role->nombre === 'Administrador') {
-        // Superusuario ve todas las reservas sin importar $id, ordenadas descendente por fecha_reserva
-        $reservas = $query->with(['user', 'equipos', 'codigoQr', 'tipoReserva'])
-                         ->orderBy('created_at', 'DESC')
-                         ->get();
-    } else {
-        // Usuarios normales solo ven las reservas del $id solicitado
-        if ($user->id !== (int)$id) {
-            return response()->json(['error' => 'No autorizado'], 403);
+        $query = ReservaEquipo::with(['user', 'equipos', 'codigoQr', 'tipoReserva'])
+            ->orderBy('created_at', 'DESC');
+
+        // Filtros opcionales
+        if ($request->has('estado') && $request->estado !== 'Todos') {
+            $query->where('estado', $request->estado);
+        }
+        if ($request->has('tipo_reserva') && $request->tipo_reserva !== 'Todos') {
+            $tipoReserva = $request->tipo_reserva;
+            $query->whereHas('tipoReserva', function ($q) use ($tipoReserva) {
+                $q->where('nombre', $tipoReserva);
+            });
         }
 
-        $reservas = $query->where('user_id', $id)
-                         ->with(['user', 'equipos', 'codigoQr', 'tipoReserva'])
-                         ->orderBy('created_at', 'DESC')
-                         ->get();
+        if ($user->role->nombre === 'Administrador') {
+            // Admin ve todas las reservas paginadas
+            $reservas = $query->paginate($perPage);
+        } else {
+            // Usuarios normales solo ven sus propias reservas
+            if ($user->id !== (int)$id) {
+                return response()->json(['error' => 'No autorizado'], 403);
+            }
+            $reservas = $query->where('user_id', $id)->paginate($perPage);
+        }
+
+        return response()->json($reservas);
     }
-
-    return response()->json($reservas);
-}
-
 
     public function show($idQr)
     {
@@ -316,4 +323,39 @@ class ReservaEquipoController extends Controller
             ]
         ]);
     }
+
+    public function reservasDelDia(Request $request)
+    {
+        $hoy = Carbon::today()->toDateString();
+
+        $user = $request->user();
+
+        if (!in_array($user->role->nombre, ['Administrador', 'Encargado'])) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $perPage = $request->get('per_page', 15);
+
+        $query = ReservaEquipo::with(['user', 'equipos', 'tipoReserva'])
+            ->whereDate('fecha_reserva', $hoy)
+            ->orderBy('created_at', 'DESC');
+
+        // Filtros opcionales
+        if ($request->has('estado') && $request->estado !== 'Todos') {
+            $query->where('estado', $request->estado);
+        }
+        if ($request->has('tipo_reserva') && $request->tipo_reserva !== 'Todos') {
+            $tipoReserva = $request->tipo_reserva;
+            $query->whereHas('tipoReserva', function ($q) use ($tipoReserva) {
+                $q->where('nombre', $tipoReserva);
+            });
+        }
+
+        $reservas = $query->paginate($perPage);
+
+        return response()->json($reservas);
+    }
+
+    
+
 }

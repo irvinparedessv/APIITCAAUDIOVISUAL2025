@@ -71,6 +71,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador'])->group(
     Route::get('/bitacora', [BitacoraController::class, 'index']);
     Route::get('/prediccion/reservas', [PrediccionEquipoController::class, 'predecirReservas']);
     Route::get('/prediccion/reservas/por-tipo', [PrediccionEquipoController::class, 'tiposEquipoConPrediccion']);
+    Route::get('/reservas/dia', [ReservaEquipoController::class, 'reservasDelDia']);
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->group(function () {
