@@ -14,6 +14,8 @@ class EquipoController extends Controller
     {
         $query = Equipo::activos();
 
+        $query->orderBy('created_at', 'desc');
+
         if ($request->has('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
