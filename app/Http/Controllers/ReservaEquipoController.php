@@ -63,7 +63,7 @@ class ReservaEquipoController extends Controller
             });
         }
 
-        if ($user->role->nombre === 'Administrador') {
+        if (in_array($user->role->nombre, ['Administrador', 'Encargado'])) {
             // Admin ve todas las reservas paginadas
             $reservas = $query->paginate($perPage);
         } else {
@@ -105,6 +105,7 @@ class ReservaEquipoController extends Controller
 
         return $equipos;
     }
+    
     public function store(Request $request)
     {
         // Validar datos
@@ -178,6 +179,8 @@ class ReservaEquipoController extends Controller
             ];
         }
 
+        // Calcular la página donde cae esta reserva
+        $pagina = $this->calcularPaginaReserva($reserva->id);
 
         $userId = $reserva->user->id;
         // Obtener responsables (encargados y administradores), excluyendo al usuario que hizo la reserva
@@ -194,7 +197,7 @@ class ReservaEquipoController extends Controller
             }
 
             // Enviar notificación real-time (broadcast + db)
-            $responsable->notify(new NuevaReservaNotification($reserva, $responsable->id));
+            $responsable->notify(new NuevaReservaNotification($reserva, $responsable->id, $pagina));
             Log::info("Notificación enviada");
             // Enviar correo personalizado
             //$responsable->notify(new NotificarResponsableReserva($reserva));
@@ -245,8 +248,8 @@ class ReservaEquipoController extends Controller
                     'reserva_id' => $reserva->id
                 ]);
 
-
-                $reserva->user->notify(new EstadoReservaEquipoNotification($reserva, $reserva->user->id));
+                $pagina = $this->calcularPaginaReserva($reserva->id);
+                $reserva->user->notify(new EstadoReservaEquipoNotification($reserva, $reserva->user->id, $pagina));
             }
 
             Log::info("Enviando correo a prestamista: {$reserva->user->email}");
@@ -356,6 +359,14 @@ class ReservaEquipoController extends Controller
         return response()->json($reservas);
     }
 
-    
+    private function calcularPaginaReserva(int $reservaId, int $porPagina = 15): int
+    {
+        $ids = ReservaEquipo::orderBy('created_at', 'desc')->pluck('id')->toArray();
+        $index = array_search($reservaId, $ids);
+
+        return $index === false ? 1 : (int) ceil(($index + 1) / $porPagina);
+    }
+
+
 
 }

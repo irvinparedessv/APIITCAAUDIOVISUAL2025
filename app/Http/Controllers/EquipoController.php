@@ -44,9 +44,26 @@ class EquipoController extends Controller
         ]);
     }
     
-    public function obtenerEquipos()
+    public function obtenerEquipos(Request $request)
     {
-        return Equipo::where('is_deleted', false)->where('estado', true)->select('id', 'nombre', 'descripcion', 'cantidad')->get();
+        $query = Equipo::where('is_deleted', false)->where('estado', true);
+
+        // Filtro por tipo de equipo
+        if ($request->filled('tipo_equipo_id')) {
+            $query->where('tipo_equipo_id', $request->tipo_equipo_id);
+        }
+
+        // Búsqueda por nombre
+        if ($request->filled('buscar')) {
+            $query->where('nombre', 'like', '%' . $request->buscar . '%');
+        }
+
+        // Selección de campos y paginación
+        $equipos = $query->select('id', 'nombre', 'descripcion', 'cantidad', 'tipo_equipo_id')
+                        ->orderBy('nombre')
+                        ->paginate(10); // Cambia 10 por la cantidad que desees por página
+
+        return response()->json($equipos);
     }
 
     public function store(Request $request)

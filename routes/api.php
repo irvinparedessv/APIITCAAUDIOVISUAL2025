@@ -78,12 +78,9 @@ Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->grou
     Route::apiResource('Obtenerequipos', EquipoController::class);
     Route::get('equiposReserva', [ReservaEquipoController::class, 'equiposReserva']);
     Route::post('/reservas', [ReservaEquipoController::class, 'store']);
-    Route::get('/reservas/{id}', [ReservaEquipoController::class, 'getByUser']); // Ver reservas de un usuario
     Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']); // Ver reserva por QR
     Route::post('/reservasAula', [ReservaAulaController::class, 'store']);
-    Route::get('/aulasEquipos', [AulaController::class, 'index']);
     //Route::post('/reservas', [ReservaAulaController::class, 'store']);
-    Route::get('/aulas', [ReservaAulaController::class, 'aulas']);
 });
 
 //👉Aqui podemos ver el perfil de los usuarios de acuerdo a roles
@@ -104,10 +101,13 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::get('/notificaciones/historial', [NotificationController::class, 'history']);
     Route::delete('/notifications', [NotificationController::class, 'destroyAll']);
     Route::apiResource('equipos', EquipoController::class);
+    Route::get('/reservas/{id}', [ReservaEquipoController::class, 'getByUser']); // Ver reservas de un usuario
     Route::get('/reservas-aula/{id}', [ReservaAulaController::class, 'show']);
     Route::get('/reservas-aula', [ReservaAulaController::class, 'reservas']);
     Route::get('/equipos/{id}/disponibilidad', [ReservaEquipoController::class, 'verificarDisponibilidad']);
     Route::get('/obtenerEquipos', [EquipoController::class, 'obtenerEquipos']);
+    Route::get('/aulasEquipos', [AulaController::class, 'index']);
+    Route::get('/aulas', [ReservaAulaController::class, 'aulas']);
 });
 
 

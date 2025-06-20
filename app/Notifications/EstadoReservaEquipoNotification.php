@@ -17,21 +17,22 @@ class EstadoReservaEquipoNotification extends Notification implements ShouldQueu
     use Queueable;
 
     protected $reserva;
-    protected $notifiableId;  // Cambiado a protected para consistencia
+    protected $notifiableId;
     public $id;
+    public $pagina; // ✅ NUEVO
 
-    public function __construct(ReservaEquipo $reserva, $notifiableId)
+    public function __construct(ReservaEquipo $reserva, $notifiableId, $pagina = 1)
     {
-        // Validación importante
         if (!$reserva->user) {
             Log::error('No se puede crear notificación: Reserva sin usuario', ['reserva_id' => $reserva->id]);
             throw new \Exception("La reserva no tiene usuario asociado");
         }
 
         $this->reserva = $reserva->load(['user', 'equipos.tipoEquipo', 'tipoReserva']);
-        $this->notifiableId = $notifiableId ?: $reserva->user->id; // Usar parámetro o user->id
+        $this->notifiableId = $notifiableId ?: $reserva->user->id;
+        $this->pagina = $pagina; // ✅ NUEVO
         $this->id = (string) Str::uuid();
-        
+
         Log::info('Creando notificación de estado', [
             'reserva_id' => $reserva->id,
             'user_id' => $this->notifiableId,
@@ -46,22 +47,22 @@ class EstadoReservaEquipoNotification extends Notification implements ShouldQueu
 
     public function toDatabase($notifiable)
     {
-        // Convertir fechas a string solo si son objetos Carbon/DateTime
         $fechaReserva = $this->reserva->fecha_reserva;
         $fechaEntrega = $this->reserva->fecha_entrega;
-        
+
         return [
             'type' => 'estado_reserva',
             'title' => 'Estado de tu reserva de equipo actualizada',
             'message' => "Tu reserva de equipo ha sido marcada como '{$this->reserva->estado}'.",
             'reserva' => [
                 'id' => $this->reserva->id,
+                'pagina' => $this->pagina, // ✅ NUEVO
                 'aula' => $this->reserva->aula,
-                'tipo_reserva' => $this->reserva->tipoReserva ? $this->reserva->tipoReserva->nombre : null,
+                'tipo_reserva' => $this->reserva->tipoReserva?->nombre,
                 'equipos' => $this->reserva->equipos->map(function($equipo) {
                     return [
                         'nombre' => $equipo->nombre,
-                        'tipo_equipo' => $equipo->tipoEquipo ? $equipo->tipoEquipo->nombre : null,
+                        'tipo_equipo' => $equipo->tipoEquipo?->nombre,
                     ];
                 })->toArray(),
                 'fecha_reserva' => is_object($fechaReserva) ? $fechaReserva->toDateTimeString() : $fechaReserva,
