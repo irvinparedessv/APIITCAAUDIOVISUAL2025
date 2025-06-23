@@ -45,8 +45,7 @@ class ReservaEquipoController extends Controller
 
     public function getByUser(Request $request, $id)
     {
-        /** @var User $user */
-        $user = auth()->user();
+        $user = Auth::user();
         $perPage = $request->input('per_page', 15); // Items por página
 
         $query = ReservaEquipo::with(['user', 'equipos', 'codigoQr', 'tipoReserva'])
@@ -120,7 +119,40 @@ class ReservaEquipoController extends Controller
             'endTime' => 'required|date_format:H:i',
             'tipo_reserva_id' => 'required|exists:tipo_reservas,id',
         ]);
+        
 
+        // Obtener fecha y hora actual
+        $now = Carbon::now();
+        $fechaReserva = Carbon::parse($validated['fecha_reserva']);
+        $horaInicio = Carbon::parse($validated['fecha_reserva'] . ' ' . $validated['startTime']);
+
+        Log::info('Ahora: ' . $now);
+        Log::info('Hora inicio reserva: ' . $horaInicio);   
+
+        // Validar que no sea más de 7 días de anticipación
+        if ($fechaReserva->isAfter($now->copy()->addDays(7))) {
+            return response()->json([
+                'message' => 'Solo se pueden hacer reservas con hasta una semana de anticipación.'
+            ], 422);
+        }
+
+        // Validar si es para el mismo día
+        if ($fechaReserva->isToday()) {
+            Log::info("Hora actual: $now, hora inicio: $horaInicio");
+        
+            $minAnticipacion = 30;
+
+            $minutosDiferencia = $now->copy()->startOfMinute()->diffInMinutes($horaInicio->copy()->startOfMinute(), false);
+
+            Log::info("Diferencia en minutos: $minutosDiferencia");
+
+            if ($minutosDiferencia < $minAnticipacion) {
+                return response()->json([
+                    'message' => "Si reservas para hoy, debe ser al menos con $minAnticipacion minutos de anticipación."
+                ], 422);
+            }
+        }
+       
         // Verificar disponibilidad
         foreach ($validated['equipo'] as $equipo) {
             $equipoModel = Equipo::find($equipo['id']);
@@ -366,6 +398,24 @@ class ReservaEquipoController extends Controller
 
         return $index === false ? 1 : (int) ceil(($index + 1) / $porPagina);
     }
+
+    function roundUpToNextHalfHour(Carbon $dateTime): Carbon
+    {
+        $minutes = $dateTime->minute;
+
+        if ($minutes === 0 || $minutes === 30) {
+            // Ya está en media hora exacta
+            return $dateTime->copy()->second(0);
+        }
+
+        // Si minutos están entre 1 y 29, subir a :30
+        if ($minutes < 30) {
+            return $dateTime->copy()->minute(30)->second(0);
+        }
+
+        // Si minutos están entre 31 y 59, subir a la próxima hora exacta
+        return $dateTime->copy()->addHour()->minute(0)->second(0);
+    }   
 
 
 
