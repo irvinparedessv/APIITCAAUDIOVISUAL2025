@@ -49,7 +49,7 @@ class ReservaAulaController extends Controller
             'fecha' => 'required|date',
             'horario' => 'required|string',
             'user_id' => 'required|exists:users,id',
-            'estado' => 'nullable|string|in:pendiente,confirmada,cancelada',
+            'estado' => 'nullable|string|in:pendiente,aprobado,cancelado,rechazado',
         ]);
 
         if ($validator->fails()) {
@@ -61,8 +61,11 @@ class ReservaAulaController extends Controller
             'fecha' => $request->fecha,
             'horario' => $request->horario,
             'user_id' => $request->user_id,
-            'estado' => $request->estado ?? 'pendiente',
+            'estado' => $request->estado ?? 'Pendiente',
         ]);
+
+         // Calcular en qué página cae esta reserva (según paginación de 10 por página)
+        $pagina = $this->calcularPaginaReserva($reserva->id, 10);
 
         // Cargar relaciones para notificaciones
         $reserva->load(['user', 'aula']);
@@ -77,7 +80,7 @@ class ReservaAulaController extends Controller
 
         foreach ($responsables as $responsable) {
             // Enviar notificación real-time (broadcast + db)
-            $responsable->notify(new NuevaReservaAulaNotification($reserva, $responsable->id));
+            $responsable->notify(new NuevaReservaAulaNotification($reserva, $responsable->id, $pagina));
             Log::info("Notificación de aula enviada a: " . $responsable->id);
             //$responsable->notify(new NotificarResponsableReservaAula($reserva));
         }
@@ -86,7 +89,8 @@ class ReservaAulaController extends Controller
 
         return response()->json([
             'message' => 'Reserva de aula creada exitosamente',
-            'reserva' => $reserva
+            'reserva' => $reserva,
+            'pagina' => $pagina,
         ], 201);
     }
     public function reservas(Request $request)
@@ -129,7 +133,7 @@ class ReservaAulaController extends Controller
     public function actualizarEstado(Request $request, $id)
     {
         $request->validate([
-            'estado' => 'required|in:Aprobado,Rechazado,Devuelto',
+            'estado' => 'required|in:Aprobado,Cancelado,Rechazado',
             'comentario' => 'nullable|string',
         ]);
 
@@ -140,9 +144,12 @@ class ReservaAulaController extends Controller
         $reserva->comentario = $request->comentario;
         $reserva->save();
 
+        // Calcular la página donde se encuentra la reserva
+        $pagina = $this->calcularPaginaReserva($id);
+
         if ($reserva->user) {
             // Notificar al usuario
-            $reserva->user->notify(new EstadoReservaAulaNotification($reserva));
+            $reserva->user->notify(new EstadoReservaAulaNotification($reserva, $pagina));
             //$reserva->user->notify(new EmailEstadoAulaNotification($reserva));
             // Registrar en bitácora
             BitacoraHelper::registrarCambioEstadoReservaAula(
@@ -161,4 +168,13 @@ class ReservaAulaController extends Controller
 
         return response()->json($reserva);
     }
+
+    private function calcularPaginaReserva(int $reservaId, int $porPagina = 10): int
+    {
+        $ids = ReservaAula::orderBy('created_at', 'desc')->pluck('id')->toArray();
+        $index = array_search($reservaId, $ids);
+
+        return $index === false ? 1 : (int) ceil(($index + 1) / $porPagina);
+    }
+
 }

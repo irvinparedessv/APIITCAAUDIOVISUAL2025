@@ -19,8 +19,10 @@ class EstadoReservaAulaNotification extends Notification implements ShouldQueue,
     protected $reserva;
     protected $notifiableId;
     public $id;
+    protected $pagina;
 
-    public function __construct(ReservaAula $reserva, $notifiableId = null)
+
+    public function __construct(ReservaAula $reserva, $notifiableId = null, $pagina = 1)
     {
         if (!$reserva->user) {
             Log::error('No se puede crear notificación: Reserva de aula sin usuario', ['reserva_id' => $reserva->id]);
@@ -30,6 +32,7 @@ class EstadoReservaAulaNotification extends Notification implements ShouldQueue,
         $this->reserva = $reserva->fresh(['user', 'aula']);
         $this->notifiableId = $notifiableId ?: $reserva->user->id;
         $this->id = (string) Str::uuid();
+        $this->pagina = $pagina;
         
         Log::info('Creando notificación de estado de aula', [
             'reserva_id' => $reserva->id,
@@ -38,10 +41,10 @@ class EstadoReservaAulaNotification extends Notification implements ShouldQueue,
         ]);
 
         Log::debug('Debug aula en notificación', [
-    'aula_id' => $reserva->aula_id,
-    'aula' => $reserva->aula,
-    'reserva' => $reserva->toArray(),
-]);
+            'aula_id' => $reserva->aula_id,
+            'aula' => $reserva->aula,
+            'reserva' => $reserva->toArray(),
+        ]);
 
     }
 
@@ -56,6 +59,7 @@ class EstadoReservaAulaNotification extends Notification implements ShouldQueue,
             'type' => 'estado_reserva_aula',
             'title' => 'Estado de tu reserva de aula actualizado',
             'message' => "Tu reserva para el aula {$this->reserva->aula->name} ha sido marcada como '{$this->reserva->estado}'.",
+            'pagina' => $this->pagina, // ✅ Aquí
             'reserva' => [
                 'id' => $this->reserva->id,
                 'aula' => $this->reserva->aula->name,
@@ -66,6 +70,7 @@ class EstadoReservaAulaNotification extends Notification implements ShouldQueue,
             ]
         ];
     }
+
 
     public function toBroadcast($notifiable)
     {

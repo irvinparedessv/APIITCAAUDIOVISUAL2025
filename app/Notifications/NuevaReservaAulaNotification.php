@@ -18,12 +18,14 @@ class NuevaReservaAulaNotification extends Notification implements ShouldQueue, 
 
     public $reserva;
     public $notifiableId;
+    public $pagina;
 
-    public function __construct(ReservaAula $reserva, $notifiableId)
+    public function __construct(ReservaAula $reserva, $notifiableId, int $pagina = 1)
     {
         $this->reserva = $reserva;
         $this->reserva->load(['user', 'aula']); 
         $this->notifiableId = $notifiableId;
+        $this->pagina = $pagina; // Guardar página
     }
 
     public function via($notifiable)
@@ -43,6 +45,7 @@ class NuevaReservaAulaNotification extends Notification implements ShouldQueue, 
         return new BroadcastMessage([
             'reserva' => [
                 'id' => $this->reserva->id,
+                'pagina' => $this->pagina,
                 'user' => $this->reserva->user ? $this->reserva->user->first_name . ' ' . $this->reserva->user->last_name : null,
                 'aula' => $this->reserva->aula->name,
                 'fecha' => $this->reserva->fecha,
@@ -64,6 +67,7 @@ class NuevaReservaAulaNotification extends Notification implements ShouldQueue, 
             'message' => "Nueva reserva de aula recibida del usuario {$usuarioNombre}.",
             'reserva' => [
                 'id' => $this->reserva->id,
+                'pagina' => $this->pagina,
                 'user' => $usuarioNombre,
                 'aula' => $this->reserva->aula->name,
                 'fecha' => $this->reserva->fecha,
@@ -92,6 +96,7 @@ class NuevaReservaAulaNotification extends Notification implements ShouldQueue, 
         return [
             'reserva' => [
                 'id' => $this->reserva->id,
+                'pagina' => $this->pagina,
                 'user' => $usuarioNombre,
                 'aula' => $this->reserva->aula->name,
                 'fecha' => $this->reserva->fecha,
