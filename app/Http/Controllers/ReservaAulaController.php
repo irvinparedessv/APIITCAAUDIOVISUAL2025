@@ -55,6 +55,7 @@ class ReservaAulaController extends Controller
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
+        Log::info('Fecha recibida en request:', ['fecha' => $request->fecha]);
 
         $reserva = ReservaAula::create([
             'aula_id' => $request->aula_id,
@@ -87,12 +88,25 @@ class ReservaAulaController extends Controller
 
         //$reserva->user->notify(new ConfirmarReservaAulaUsuario($reserva));
 
-        return response()->json([
-            'message' => 'Reserva de aula creada exitosamente',
-            'reserva' => $reserva,
-            'pagina' => $pagina,
-        ], 201);
+    return response()->json([
+        'message' => 'Reserva de aula creada exitosamente',
+        'reserva' => [
+            'id' => $reserva->id,
+            'aula_id' => $reserva->aula_id,
+            'fecha' => $reserva->fecha->format('Y-m-d'), // ✅ esto es lo que necesitas
+            'horario' => $reserva->horario,
+            'user_id' => $reserva->user_id,
+            'estado' => $reserva->estado,
+            'created_at' => $reserva->created_at->toDateTimeString(),
+            'updated_at' => $reserva->updated_at->toDateTimeString(),
+            'aula' => $reserva->aula,
+            'user' => $reserva->user,
+        ],
+        'pagina' => $pagina,
+    ], 201);        
+
     }
+
     public function reservas(Request $request)
     {
         $from = $request->query('from');

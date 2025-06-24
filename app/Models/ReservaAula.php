@@ -19,6 +19,10 @@ class ReservaAula extends Model
         'estado',
     ];
 
+    protected $casts = [
+        'fecha' => 'date',
+    ];
+
     public function aula()
     {
         return $this->belongsTo(Aula::class);

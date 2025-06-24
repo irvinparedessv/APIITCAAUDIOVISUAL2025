@@ -63,7 +63,7 @@ class EstadoReservaAulaNotification extends Notification implements ShouldQueue,
             'reserva' => [
                 'id' => $this->reserva->id,
                 'aula' => $this->reserva->aula->name,
-                'fecha' => $this->reserva->fecha,
+                'fecha' => $this->reserva->fecha->format('Y-m-d'),
                 'horario' => $this->reserva->horario,
                 'estado' => $this->reserva->estado,
                 'comentario' => $this->reserva->comentario,
