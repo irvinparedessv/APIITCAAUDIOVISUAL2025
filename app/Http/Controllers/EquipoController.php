@@ -12,24 +12,43 @@ class EquipoController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Equipo::activos();
+        $query = Equipo::activos()->with('tipoEquipo'); // Cargar relación tipoEquipo
 
         $query->orderBy('created_at', 'desc');
 
+        // Filtro de búsqueda
         if ($request->has('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('nombre', 'like', "%$search%")
-                ->orWhere('descripcion', 'like', "%$search%");
+                ->orWhere('descripcion', 'like', "%$search%")
+                // Buscar en nombre del tipoEquipo (relación)
+                ->orWhereHas('tipoEquipo', function($q2) use ($search) {
+                    $q2->where('nombre', 'like', "%$search%");
+                })
+                // Buscar en estado convertido a texto
+                ->orWhereRaw("CASE WHEN estado = 1 THEN 'Disponible' ELSE 'No Disponible' END LIKE ?", ["%$search%"]);
             });
         }
 
-        $perPage = $request->input('perPage', 10); // por defecto 10 si no se manda
-        $page = $request->input('page', 1); // por defecto página 1
+        // Filtro por tipo de equipo (id)
+        if ($request->has('tipo_equipo_id')) {
+            $query->where('tipo_equipo_id', $request->input('tipo_equipo_id'));
+        }
+
+        // Filtro por estado booleano exacto
+        if ($request->has('estado')) {
+            $estado = filter_var($request->input('estado'), FILTER_VALIDATE_BOOLEAN);
+            $query->where('estado', $estado);
+        }
+
+        // Paginación
+        $perPage = $request->input('perPage', 10);
+        $page = $request->input('page', 1);
 
         $paginated = $query->paginate($perPage, ['*'], 'page', $page);
 
-        // Agrega la URL de la imagen
+        // Agregar URL de imagen si es necesario
         $paginated->getCollection()->transform(function ($equipo) {
             $equipo->imagen_url = $equipo->imagen_url;
             return $equipo;
@@ -43,6 +62,8 @@ class EquipoController extends Controller
             'last_page' => $paginated->lastPage(),
         ]);
     }
+
+
     
     public function obtenerEquipos(Request $request)
     {

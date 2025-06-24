@@ -44,37 +44,76 @@ class ReservaEquipoController extends Controller
 
 
     public function getByUser(Request $request, $id)
-    {
-        $user = Auth::user();
-        $perPage = $request->input('per_page', 15); // Items por página
+{
+    $user = Auth::user();
+    $perPage = $request->input('per_page', 15);
 
-        $query = ReservaEquipo::with(['user', 'equipos', 'codigoQr', 'tipoReserva'])
-            ->orderBy('created_at', 'DESC');
+    $query = ReservaEquipo::with(['user', 'equipos', 'codigoQr', 'tipoReserva'])
+        ->orderBy('created_at', 'DESC');
 
-        // Filtros opcionales
-        if ($request->has('estado') && $request->estado !== 'Todos') {
-            $query->where('estado', $request->estado);
-        }
-        if ($request->has('tipo_reserva') && $request->tipo_reserva !== 'Todos') {
-            $tipoReserva = $request->tipo_reserva;
-            $query->whereHas('tipoReserva', function ($q) use ($tipoReserva) {
-                $q->where('nombre', $tipoReserva);
-            });
-        }
-
-        if (in_array($user->role->nombre, ['Administrador', 'Encargado'])) {
-            // Admin ve todas las reservas paginadas
-            $reservas = $query->paginate($perPage);
-        } else {
-            // Usuarios normales solo ven sus propias reservas
-            if ($user->id !== (int)$id) {
-                return response()->json(['error' => 'No autorizado'], 403);
-            }
-            $reservas = $query->where('user_id', $id)->paginate($perPage);
-        }
-
-        return response()->json($reservas);
+    // Filtro de búsqueda por texto
+    if ($request->has('search') && !empty($request->search)) {
+        $searchTerm = $request->search;
+        $query->where(function($q) use ($searchTerm) {
+            // Campos directos de reserva_equipos
+            $q->where('aula', 'LIKE', "%{$searchTerm}%")
+              ->orWhere('estado', 'LIKE', "%{$searchTerm}%")
+              ->orWhere('comentario', 'LIKE', "%{$searchTerm}%")
+              
+              // Búsqueda en relación con usuario
+              ->orWhereHas('user', function($q) use ($searchTerm) {
+                  $q->where('first_name', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('last_name', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('email', 'LIKE', "%{$searchTerm}%");
+              })
+              
+              // Búsqueda en relación con tipo de reserva
+              ->orWhereHas('tipoReserva', function($q) use ($searchTerm) {
+                  $q->where('nombre', 'LIKE', "%{$searchTerm}%");
+              })
+              
+              // Búsqueda en relación con equipos
+              ->orWhereHas('equipos', function($q) use ($searchTerm) {
+                  $q->where('nombre', 'LIKE', "%{$searchTerm}%");
+              });
+        });
     }
+
+    // Filtro por estado
+    if ($request->has('estado') && $request->estado !== 'Todos') {
+        $query->where('estado', $request->estado);
+    }
+
+    // Filtro por tipo de reserva
+    if ($request->has('tipo_reserva') && $request->tipo_reserva !== 'Todos') {
+        $tipoReserva = $request->tipo_reserva;
+        $query->whereHas('tipoReserva', function($q) use ($tipoReserva) {
+            $q->where('nombre', $tipoReserva);
+        });
+    }
+
+    // Filtro por fecha inicio
+    if ($request->has('fecha_inicio')) {
+        $query->whereDate('fecha_reserva', '>=', $request->fecha_inicio);
+    }
+
+    // Filtro por fecha fin
+    if ($request->has('fecha_fin')) {
+        $query->whereDate('fecha_reserva', '<=', $request->fecha_fin);
+    }
+
+    // Lógica de permisos
+    if (in_array($user->role->nombre, ['Administrador', 'Encargado'])) {
+        $reservas = $query->paginate($perPage);
+    } else {
+        if ($user->id !== (int)$id) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+        $reservas = $query->where('user_id', $id)->paginate($perPage);
+    }
+
+    return response()->json($reservas);
+}
 
     public function show($idQr)
     {

@@ -57,12 +57,21 @@ class UserController extends Controller
     public function store(Request $request)
     {
         try {
+            // Verificar primero si el email ya existe para dar un mensaje más específico
+            if (User::where('email', $request->email)->exists()) {
+                return response()->json([
+                    'error' => 'email_exists',
+                    'message' => 'El correo electrónico ya está registrado en el sistema'
+                ], 409); // 409 Conflict
+            }
+
             // Si no se envía estado, se asigna 'inactivo' (0) por defecto
             $request->merge([
                 'estado' => $request->estado ?? 0,
             ]);
 
-            $request->validate([
+            // Validación de campos
+            $validatedData = $request->validate([
                 'first_name' => 'required|string|max:255',
                 'last_name' => 'required|string|max:255',
                 'email' => 'required|string|email|max:255|unique:users',
@@ -73,24 +82,35 @@ class UserController extends Controller
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             ]);
 
+            // Procesamiento de la imagen
             $imagePath = null;
             if ($request->hasFile('image')) {
-                $imagePath = $request->file('image')->store('user_images', 'public');
+                try {
+                    $imagePath = $request->file('image')->store('user_images', 'public');
+                } catch (\Exception $e) {
+                    Log::error("Error al subir la imagen: " . $e->getMessage());
+                    return response()->json([
+                        'error' => 'image_upload_error',
+                        'message' => 'No se pudo subir la imagen del usuario'
+                    ], 500);
+                }
             }
 
+            // Generar contraseña temporal y token
             $tempPassword = Str::random(10);
             $confirmationToken = Str::uuid();
             Log::info("Token generado para {$request->email}: {$confirmationToken}");
 
+            // Creación del usuario
             $usuario = User::create([
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
-                'email' => $request->email,
+                'first_name' => $validatedData['first_name'],
+                'last_name' => $validatedData['last_name'],
+                'email' => $validatedData['email'],
                 'password' => Hash::make($tempPassword),
-                'role_id' => $request->role_id,
-                'phone' => $request->phone,
-                'address' => $request->address,
-                'estado' => $request->estado,
+                'role_id' => $validatedData['role_id'],
+                'phone' => $validatedData['phone'],
+                'address' => $validatedData['address'],
+                'estado' => $validatedData['estado'],
                 'confirmation_token' => $confirmationToken,
                 'image' => $imagePath,
                 'is_deleted' => false,
@@ -101,26 +121,39 @@ class UserController extends Controller
             $confirmationUrl = "http://localhost:5173/confirm-account/{$confirmationToken}";
             Log::info("URL de confirmación: {$confirmationUrl}");
 
-            // Intentar enviar el correo
+            // Envío de correo electrónico
             try {
                 Mail::to($usuario->email)->send(new ConfirmAccountMail($usuario, $tempPassword, $confirmationUrl));
             } catch (\Throwable $e) {
                 Log::error("Error al enviar el correo a {$usuario->email}: " . $e->getMessage());
-                // O puedes notificar que se creó el usuario, pero no se envió el correo
                 return response()->json([
-                    'message' => 'Usuario creado, pero no se pudo enviar el correo.',
+                    'success' => true,
+                    'message' => 'Usuario creado, pero no se pudo enviar el correo de confirmación. Contacte al administrador.',
                     'usuario' => $usuario,
                     'error_correo' => true,
+                    'mail_error' => $e->getMessage()
                 ], 201);
             }
 
             return response()->json([
+                'success' => true,
                 'message' => 'Usuario creado y correo enviado correctamente.',
                 'usuario' => $usuario
             ], 201);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Captura errores de validación
+            return response()->json([
+                'error' => 'validation_error',
+                'messages' => $e->errors()
+            ], 422);
+            
         } catch (\Throwable $e) {
             Log::error("Error en el proceso de creación de usuario: " . $e->getMessage());
-            return response()->json(['error' => 'Error interno al crear el usuario.'], 500);
+            return response()->json([
+                'error' => 'server_error',
+                'message' => 'Error interno al crear el usuario: ' . $e->getMessage()
+            ], 500);
         }
     }
 
