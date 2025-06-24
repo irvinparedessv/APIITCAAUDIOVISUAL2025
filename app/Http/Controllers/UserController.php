@@ -17,41 +17,50 @@ use Illuminate\Support\Facades\Mail;
 
 class UserController extends Controller
 {
-    // Listar todos los usuarios con su rol
     public function index(Request $request)
-    {
-        $perPage = $request->input('per_page', 10);
-        $query = User::with('role');
+{
+    $perPage = $request->input('per_page', 10);
+    $query = User::with('role');
 
-        // Filtros dinámicos
-        if ($request->has('first_name')) {
-            $query->where('first_name', 'like', '%' . $request->first_name . '%');
-        }
-
-        if ($request->has('last_name')) {
-            $query->where('last_name', 'like', '%' . $request->last_name . '%');
-        }
-
-        if ($request->has('email')) {
-            $query->where('email', 'like', '%' . $request->email . '%');
-        }
-
-        if ($request->has('role_id')) {
-            $query->where('role_id', $request->role_id);
-        }
-
-        if ($request->has('estado')) {
-            $query->where('estado', $request->estado);
-        }
-
-        if ($request->has('phone')) {
-            $query->where('phone', 'like', '%' . $request->phone . '%');
-        }
-
-        $usuarios = $query->paginate($perPage);
-
-        return response()->json($usuarios);
+    // Filtros individuales que ya tenías
+    if ($request->has('first_name')) {
+        $query->where('first_name', 'like', '%' . $request->first_name . '%');
     }
+
+    if ($request->has('last_name')) {
+        $query->where('last_name', 'like', '%' . $request->last_name . '%');
+    }
+
+    if ($request->has('email')) {
+        $query->where('email', 'like', '%' . $request->email . '%');
+    }
+
+    if ($request->has('role_id')) {
+        $query->where('role_id', $request->role_id);
+    }
+
+    if ($request->has('estado')) {
+        $query->where('estado', $request->estado);
+    }
+
+    if ($request->has('phone')) {
+        $query->where('phone', 'like', '%' . $request->phone . '%');
+    }
+
+    // Filtro adicional de búsqueda general (opcional)
+    if ($request->has('search') && !empty($request->search)) {
+        $search = $request->search;
+        $query->where(function ($q) use ($search) {
+            $q->whereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"])
+              ->orWhere('email', 'like', "%{$search}%");
+        });
+    }
+
+    $usuarios = $query->paginate($perPage);
+
+    return response()->json($usuarios);
+}
+
 
 
     public function store(Request $request)
