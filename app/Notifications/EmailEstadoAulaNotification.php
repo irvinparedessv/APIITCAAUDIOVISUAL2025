@@ -27,7 +27,7 @@ class EmailEstadoAulaNotification extends Notification implements ShouldQueue
     public function toMail($notifiable)
     {
         return (new MailMessage)
-            ->subject('Estado de tu reserva de aula')
+            ->subject('Estado de reserva de aula')
             ->markdown('emails.reserva_estado_aula', [
                 'reserva' => $this->reserva,
                 'usuario' => $notifiable

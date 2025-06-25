@@ -1,9 +1,9 @@
 @component('mail::message')
-# 🔄 Estado de tu reserva actualizado
+# 🔄 Estado de reserva actualizado
 
 Hola **{{ $usuario->first_name }} {{ $usuario->last_name }}**,
 
-El estado de tu reserva del aula **{{ $reserva->aula->name }}** ha sido actualizado a:
+El estado de la reserva del aula **{{ $reserva->aula->name }}** ha sido actualizado a:
 
 @component('mail::panel')
 📅 **Fecha:** {{ \Carbon\Carbon::parse($reserva->fecha)->format('d/m/Y') }}  

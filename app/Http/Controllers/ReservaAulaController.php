@@ -7,6 +7,7 @@ use App\Models\Aula;
 use App\Models\ReservaAula;
 use App\Models\Role;
 use App\Models\User;
+use App\Notifications\CancelarReservaAulaPrestamista;
 use App\Notifications\ConfirmarReservaAulaUsuario;
 use App\Notifications\EmailEstadoAulaNotification;
 use Illuminate\Http\Request;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Notifications\EstadoReservaAulaNotification;
 use App\Notifications\NotificarResponsableReservaAula;
 use App\Notifications\NuevaReservaAulaNotification;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class ReservaAulaController extends Controller
@@ -146,6 +148,8 @@ class ReservaAulaController extends Controller
 
     public function actualizarEstado(Request $request, $id)
     {
+        $user = Auth::user();
+
         $request->validate([
             'estado' => 'required|in:Aprobado,Cancelado,Rechazado',
             'comentario' => 'nullable|string',
@@ -153,29 +157,57 @@ class ReservaAulaController extends Controller
 
         $reserva = ReservaAula::with('user')->findOrFail($id);
 
+        if (strtolower($user->role->nombre) === 'prestamista') {
+            if ($reserva->user_id !== $user->id) {
+                return response()->json(['error' => 'No autorizado.'], 403);
+            }
+
+            if (strtolower($request->estado) !== 'cancelado') {
+                return response()->json(['error' => 'Solo puedes cancelar tu reserva.'], 403);
+            }
+
+            if (strtolower($reserva->estado) !== 'pendiente') {
+                return response()->json(['error' => 'Solo puedes cancelar reservas pendientes.'], 400);
+            }
+        }
+
         $estadoAnterior = $reserva->estado;
         $reserva->estado = $request->estado;
         $reserva->comentario = $request->comentario;
         $reserva->save();
 
-        // Calcular la página donde se encuentra la reserva
         $pagina = $this->calcularPaginaReserva($id);
 
-        if ($reserva->user) {
-            // Notificar al usuario
-            $reserva->user->notify(new EstadoReservaAulaNotification($reserva, $pagina));
-            //$reserva->user->notify(new EmailEstadoAulaNotification($reserva));
-            // Registrar en bitácora
-            BitacoraHelper::registrarCambioEstadoReservaAula(
-                $id,
-                $estadoAnterior,
-                $request->estado,
-                $reserva->user->first_name . ' ' . $reserva->user->last_name
-            );
+        // 🔥 Notificar dependiendo de quién realiza la acción
+        if (strtolower($user->role->nombre) === 'prestamista' && strtolower($request->estado) === 'cancelado') {
+            // No se notifica al prestamista (ya lo hizo él), sino a los encargados y admins
+            $this->notificarResponsablesPorCancelacion($user, $reserva, $pagina);
+        } else {
+            // Encargado o admin cambia estado → notificar al prestamista
+            if ($reserva->user) {
+                $reserva->user->notify(new EstadoReservaAulaNotification($reserva, $pagina));
+                //$reserva->user->notify(new EmailEstadoAulaNotification($reserva));
+            }
         }
 
-        return response()->json(['message' => 'Estado actualizado correctamente']);
+        BitacoraHelper::registrarCambioEstadoReservaAula(
+            $id,
+            $estadoAnterior,
+            $request->estado,
+            $user->first_name . ' ' . $user->last_name
+        );
+
+        $reserva->load(['aula', 'user']); // 👈 Asegura que vengan las relaciones
+
+        return response()->json([
+            'message' => 'Estado actualizado correctamente.',
+            'reserva' => $reserva,
+        ]);return response()->json(['message' => 'Estado actualizado correctamente.']); 
     }
+
+
+
+    
     public function show($id)
     {
         $reserva = ReservaAula::with(['aula', 'user'])->findOrFail($id);
@@ -190,5 +222,19 @@ class ReservaAulaController extends Controller
 
         return $index === false ? 1 : (int) ceil(($index + 1) / $porPagina);
     }
+
+    private function notificarResponsablesPorCancelacion($usuario, ReservaAula $reserva, int $pagina)
+    {
+        $rolesResponsables = Role::whereIn('nombre', ['encargado', 'administrador'])->pluck('id');
+        $responsables = User::whereIn('role_id', $rolesResponsables)->get();
+
+        foreach ($responsables as $responsable) {
+            Log::info("Enviando notificación de cancelación al responsable ID: {$responsable->id}");
+            $responsable->notify(new CancelarReservaAulaPrestamista($reserva, $responsable->id, $pagina));
+            //$responsable->notify(new EmailEstadoAulaNotification($reserva));
+
+        }
+    }
+
 
 }
