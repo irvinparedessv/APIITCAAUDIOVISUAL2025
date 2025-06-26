@@ -12,6 +12,7 @@ use App\Models\Equipo;
 use App\Models\ReservaEquipo;
 use App\Models\Role;
 use App\Models\User;
+use App\Notifications\CancelarReservaEquipoPrestamista;
 use Illuminate\Support\Facades\Auth;
 use App\Notifications\ConfirmarReservaUsuario;
 use App\Notifications\EstadoReservaEquipoNotification;
@@ -287,17 +288,28 @@ class ReservaEquipoController extends Controller
 
     public function actualizarEstado(Request $request, $id)
     {
+        $user = Auth::user();
+
         $request->validate([
-            'estado' => 'required|in:Aprobado,Rechazado,Devuelto',
+            'estado' => 'required|in:Aprobado,Rechazado,Devuelto,Cancelado',
             'comentario' => 'nullable|string',
         ]);
 
         $reserva = ReservaEquipo::with(['user.role', 'equipos.tipoEquipo', 'tipoReserva'])->findOrFail($id);
 
-        // Validación adicional
-        if (!$reserva->user) {
-            Log::error('No se puede actualizar estado: Reserva sin usuario', ['reserva_id' => $id]);
-            return response()->json(['error' => 'La reserva no tiene usuario asociado'], 400);
+        // ✅ Validaciones si es prestamista
+        if (strtolower($user->role->nombre) === 'prestamista') {
+            if ($reserva->user_id !== $user->id) {
+                return response()->json(['error' => 'No autorizado.'], 403);
+            }
+
+            if (strtolower($request->estado) !== 'cancelado') {
+                return response()->json(['error' => 'Solo puedes cancelar tu reserva.'], 403);
+            }
+
+            if (strtolower($reserva->estado) !== 'pendiente') {
+                return response()->json(['error' => 'Solo puedes cancelar reservas pendientes.'], 400);
+            }
         }
 
         $estadoAnterior = $reserva->estado;
@@ -312,20 +324,22 @@ class ReservaEquipoController extends Controller
             $reserva->user->first_name . ' ' . $reserva->user->last_name
         );
 
-        try {
-            if (strtolower($reserva->user->role->nombre) === 'prestamista') {
-                Log::info('Notificando al prestamista...', [
-                    'user_id' => $reserva->user->id,
-                    'reserva_id' => $reserva->id
-                ]);
+        $pagina = $this->calcularPaginaReserva($reserva->id);
 
-                $pagina = $this->calcularPaginaReserva($reserva->id);
-                $reserva->user->notify(new EstadoReservaEquipoNotification($reserva, $reserva->user->id, $pagina));
+        try {
+           if (strtolower($user->role->nombre) === 'prestamista' && strtolower($request->estado) === 'cancelado') {
+                // El prestamista cancela → notificar solo a admins y encargados
+                $this->notificarResponsablesPorCancelacionEquipo($user, $reserva, $pagina);
+            } else {
+                // Admin o encargado cambia estado (incluye cancelar) → notificar al prestamista
+                if ($reserva->user) {
+                    $reserva->user->notify(new EstadoReservaEquipoNotification($reserva, $reserva->user->id, $pagina));
+                    //Mail::to($reserva->user->email)->queue(new EstadoReservaMailable($reserva));
+                }
             }
 
+            // Log o envío correo
             Log::info("Enviando correo a prestamista: {$reserva->user->email}");
-
-            // Mail::to($reserva->user->email)->queue(new EstadoReservaMailable($reserva));
 
             return response()->json([
                 'message' => 'Estado actualizado correctamente',
@@ -455,6 +469,19 @@ class ReservaEquipoController extends Controller
         // Si minutos están entre 31 y 59, subir a la próxima hora exacta
         return $dateTime->copy()->addHour()->minute(0)->second(0);
     }   
+
+    private function notificarResponsablesPorCancelacionEquipo(User $prestamista, ReservaEquipo $reserva, int $pagina)
+    {
+        $responsables = User::whereHas('role', function ($q) {
+            $q->whereIn('nombre', ['administrador', 'encargado']);
+        })->where('id', '!=', $prestamista->id)->get();
+
+        foreach ($responsables as $responsable) {
+            $responsable->notify(new CancelarReservaEquipoPrestamista($reserva, $responsable->id, $pagina));
+            // Enviar correo al responsable
+            //Mail::to($responsable->email)->queue(new EstadoReservaMailable($reserva));
+        }
+    }
 
 
 

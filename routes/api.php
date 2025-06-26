@@ -64,7 +64,6 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador'])->group(
     Route::post('/reservas', [ReservaEquipoController::class, 'store']);
     Route::post('/aulas', [AulaController::class, 'store']);
     Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']); // Ver reserva por QR
-    Route::put('/reservas-equipo/{id}/estado', [ReservaEquipoController::class, 'actualizarEstado']);
     Route::get('/bitacora', [BitacoraController::class, 'index']);
 
     
@@ -114,6 +113,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::get('/aulas', [ReservaAulaController::class, 'aulas']);
     Route::apiResource('tipoEquipos', TipoEquipoController::class);
     Route::put('/reservas-aula/{id}/estado', [ReservaAulaController::class, 'actualizarEstado']);
+    Route::put('/reservas-equipo/{id}/estado', [ReservaEquipoController::class, 'actualizarEstado']);
 });
 
 
