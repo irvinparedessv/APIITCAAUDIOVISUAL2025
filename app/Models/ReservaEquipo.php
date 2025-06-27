@@ -18,6 +18,7 @@ class ReservaEquipo extends Model
         'fecha_entrega',
         'estado',
         'tipo_reserva_id',
+        'documento_evento',
     ];
 
 
@@ -45,5 +46,13 @@ class ReservaEquipo extends Model
     {
         return $this->belongsTo(TipoReserva::class, 'tipo_reserva_id');
     }
+
+    public function getDocumentoEventoUrlAttribute()
+    {
+        return $this->documento_evento
+            ? asset('storage/' . $this->documento_evento)
+            : null;
+    }
+
 
 }

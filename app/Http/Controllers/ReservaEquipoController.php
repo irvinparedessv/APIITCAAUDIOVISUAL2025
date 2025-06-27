@@ -40,81 +40,98 @@ class ReservaEquipoController extends Controller
 
         $reservas = $query->with(['user', 'equipos', 'codigoQr', 'tipoReserva'])->get();
 
+        $reservas->transform(function ($reserva) {
+            return [
+                ...$reserva->toArray(),
+                'documento_url' => $reserva->documento_evento_url,
+            ];
+        });
+
         return response()->json($reservas);
     }
 
 
     public function getByUser(Request $request, $id)
-{
-    $user = Auth::user();
-    $perPage = $request->input('per_page', 15);
+    {
+        $user = Auth::user();
+        $perPage = $request->input('per_page', 15);
 
-    $query = ReservaEquipo::with(['user', 'equipos', 'codigoQr', 'tipoReserva'])
-        ->orderBy('created_at', 'DESC');
+        $query = ReservaEquipo::with(['user', 'equipos', 'codigoQr', 'tipoReserva'])
+            ->orderBy('created_at', 'DESC');
 
-    // Filtro de búsqueda por texto
-    if ($request->has('search') && !empty($request->search)) {
-        $searchTerm = $request->search;
-        $query->where(function($q) use ($searchTerm) {
-            // Campos directos de reserva_equipos
-            $q->where('aula', 'LIKE', "%{$searchTerm}%")
-              ->orWhere('estado', 'LIKE', "%{$searchTerm}%")
-              ->orWhere('comentario', 'LIKE', "%{$searchTerm}%")
-              
-              // Búsqueda en relación con usuario
-              ->orWhereHas('user', function($q) use ($searchTerm) {
-                  $q->where('first_name', 'LIKE', "%{$searchTerm}%")
-                    ->orWhere('last_name', 'LIKE', "%{$searchTerm}%")
-                    ->orWhere('email', 'LIKE', "%{$searchTerm}%");
-              })
-              
-              // Búsqueda en relación con tipo de reserva
-              ->orWhereHas('tipoReserva', function($q) use ($searchTerm) {
-                  $q->where('nombre', 'LIKE', "%{$searchTerm}%");
-              })
-              
-              // Búsqueda en relación con equipos
-              ->orWhereHas('equipos', function($q) use ($searchTerm) {
-                  $q->where('nombre', 'LIKE', "%{$searchTerm}%");
-              });
-        });
-    }
-
-    // Filtro por estado
-    if ($request->has('estado') && $request->estado !== 'Todos') {
-        $query->where('estado', $request->estado);
-    }
-
-    // Filtro por tipo de reserva
-    if ($request->has('tipo_reserva') && $request->tipo_reserva !== 'Todos') {
-        $tipoReserva = $request->tipo_reserva;
-        $query->whereHas('tipoReserva', function($q) use ($tipoReserva) {
-            $q->where('nombre', $tipoReserva);
-        });
-    }
-
-    // Filtro por fecha inicio
-    if ($request->has('fecha_inicio')) {
-        $query->whereDate('fecha_reserva', '>=', $request->fecha_inicio);
-    }
-
-    // Filtro por fecha fin
-    if ($request->has('fecha_fin')) {
-        $query->whereDate('fecha_reserva', '<=', $request->fecha_fin);
-    }
-
-    // Lógica de permisos
-    if (in_array($user->role->nombre, ['Administrador', 'Encargado'])) {
-        $reservas = $query->paginate($perPage);
-    } else {
-        if ($user->id !== (int)$id) {
-            return response()->json(['error' => 'No autorizado'], 403);
+        // Filtro de búsqueda por texto
+        if ($request->has('search') && !empty($request->search)) {
+            $searchTerm = $request->search;
+            $query->where(function($q) use ($searchTerm) {
+                // Campos directos de reserva_equipos
+                $q->where('aula', 'LIKE', "%{$searchTerm}%")
+                ->orWhere('estado', 'LIKE', "%{$searchTerm}%")
+                ->orWhere('comentario', 'LIKE', "%{$searchTerm}%")
+                
+                // Búsqueda en relación con usuario
+                ->orWhereHas('user', function($q) use ($searchTerm) {
+                    $q->where('first_name', 'LIKE', "%{$searchTerm}%")
+                        ->orWhere('last_name', 'LIKE', "%{$searchTerm}%")
+                        ->orWhere('email', 'LIKE', "%{$searchTerm}%");
+                })
+                
+                // Búsqueda en relación con tipo de reserva
+                ->orWhereHas('tipoReserva', function($q) use ($searchTerm) {
+                    $q->where('nombre', 'LIKE', "%{$searchTerm}%");
+                })
+                
+                // Búsqueda en relación con equipos
+                ->orWhereHas('equipos', function($q) use ($searchTerm) {
+                    $q->where('nombre', 'LIKE', "%{$searchTerm}%");
+                });
+            });
         }
-        $reservas = $query->where('user_id', $id)->paginate($perPage);
-    }
 
-    return response()->json($reservas);
-}
+        // Filtro por estado
+        if ($request->has('estado') && $request->estado !== 'Todos') {
+            $query->where('estado', $request->estado);
+        }
+
+        // Filtro por tipo de reserva
+        if ($request->has('tipo_reserva') && $request->tipo_reserva !== 'Todos') {
+            $tipoReserva = $request->tipo_reserva;
+            $query->whereHas('tipoReserva', function($q) use ($tipoReserva) {
+                $q->where('nombre', $tipoReserva);
+            });
+        }
+
+        // Filtro por fecha inicio
+        if ($request->has('fecha_inicio')) {
+            $query->whereDate('fecha_reserva', '>=', $request->fecha_inicio);
+        }
+
+        // Filtro por fecha fin
+        if ($request->has('fecha_fin')) {
+            $query->whereDate('fecha_reserva', '<=', $request->fecha_fin);
+        }
+
+        // Lógica de permisos
+        if (in_array($user->role->nombre, ['Administrador', 'Encargado'])) {
+            $reservas = $query->paginate($perPage);
+        } else {
+            if ($user->id !== (int)$id) {
+                return response()->json(['error' => 'No autorizado'], 403);
+            }
+            $reservas = $query->where('user_id', $id)->paginate($perPage);
+        }
+
+        // Transformar para agregar la URL del documento
+        $reservas->getCollection()->transform(function ($reserva) {
+            return [
+                ...$reserva->toArray(),
+                'documento_url' => $reserva->documento_evento
+                    ? asset('storage/' . $reserva->documento_evento)
+                    : null,
+            ];
+        });
+
+        return response()->json($reservas);
+    }
 
     public function show($idQr)
     {
@@ -158,6 +175,7 @@ class ReservaEquipoController extends Controller
             'startTime' => 'required|date_format:H:i',
             'endTime' => 'required|date_format:H:i',
             'tipo_reserva_id' => 'required|exists:tipo_reservas,id',
+            'documento_evento' => 'nullable|file|mimes:pdf,doc,docx|max:5120',
         ]);
         
 
@@ -210,6 +228,12 @@ class ReservaEquipoController extends Controller
             }
         }
 
+        // 📂 Guardar archivo si se subió
+        $documentoPath = null;
+        if ($request->hasFile('documento_evento')) {
+            $documentoPath = $request->file('documento_evento')->store('eventos', 'public');
+        }
+
         // Crear la reserva
         $reserva = ReservaEquipo::create([
             'user_id' => $validated['user_id'],
@@ -218,6 +242,7 @@ class ReservaEquipoController extends Controller
             'aula' => $validated['aula'],
             'estado' => 'Pendiente',
             'tipo_reserva_id' => $validated['tipo_reserva_id'],
+            'documento_evento' => $documentoPath,
         ]);
 
         // Asociar equipos con cantidades
@@ -277,9 +302,12 @@ class ReservaEquipoController extends Controller
         // Notificación por correo al usuario
         //$reserva->user->notify(new ConfirmarReservaUsuario($reserva));
 
-        return response()->json([
+       return response()->json([
             'message' => 'Reserva creada exitosamente',
-            'reserva' => $reserva->load('equipos'),
+            'reserva' => [
+                ...$reserva->toArray(),
+                'documento_url' => $reserva->documento_evento_url,
+            ],
             'equipos_actualizados' => $equiposActualizados
         ], 201);
     }
@@ -441,6 +469,13 @@ class ReservaEquipoController extends Controller
 
         $reservas = $query->paginate($perPage);
 
+        $reservas->getCollection()->transform(function ($reserva) {
+            return [
+                ...$reserva->toArray(),
+                'documento_url' => $reserva->documento_evento_url,
+            ];
+        });
+
         return response()->json($reservas);
     }
 
@@ -482,7 +517,5 @@ class ReservaEquipoController extends Controller
             //Mail::to($responsable->email)->queue(new EstadoReservaMailable($reserva));
         }
     }
-
-
 
 }
