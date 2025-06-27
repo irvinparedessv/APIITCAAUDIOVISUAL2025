@@ -63,6 +63,83 @@ class AulaController extends Controller
         }
     }
 
+
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'day' => 'nullable|string|max:255',
+            'startTime' => 'nullable|string',
+            'endTime' => 'nullable|string',
+            'images.*' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
+
+        $aula = Aula::findOrFail($id);
+        $aula->name = $request->name;
+        $aula->save();
+
+        // Actualizar horario
+        if ($request->filled(['day', 'startTime', 'endTime'])) {
+            // Puedes eliminar los existentes si es un horario único
+            $aula->horarioPersonalizado()->delete();
+
+            $aula->horarioPersonalizado()->create([
+                'dia' => $request->day,
+                'hora_inicio' => $request->startTime,
+                'hora_fin' => $request->endTime,
+            ]);
+        }
+
+        // Guardar nuevas imágenes
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $img) {
+                $path = $img->store('render_images', 'public');
+
+                $aula->imagenes()->create([
+                    'image_path' => Storage::url($path),
+                ]);
+            }
+        }
+
+        return response()->json(['message' => 'Aula actualizada correctamente.']);
+    }
+
+    public function list(Request $request)
+    {
+        // Traemos solo el conteo de imágenes, no las imágenes en sí
+        $query = Aula::withCount('imagenes');
+
+        if ($search = $request->input('search')) {
+            $query->where('name', 'like', "%$search%");
+        }
+
+        $perPage = $request->input('perPage', 5);
+        $aulas = $query->paginate($perPage);
+
+        // Convertimos los items para agregar una propiedad booleana si tiene imágenes
+        $aulasTransformadas = $aulas->getCollection()->map(function ($aula) {
+            return [
+                'id' => $aula->id,
+                'name' => $aula->name,
+                // otras propiedades que necesitas devolver...
+                'count_images' => $aula->imagenes_count,
+                'has_images' => $aula->imagenes_count > 0,
+            ];
+        });
+
+        return response()->json([
+            'data' => $aulasTransformadas,
+            'total' => $aulas->total(),
+            'last_page' => $aulas->lastPage(),
+        ]);
+    }
+    public function destroy($id)
+    {
+        $aula = Aula::findOrFail($id);
+        $aula->delete();
+        return response()->json(['message' => 'Aula eliminada']);
+    }
+
     public function index(): JsonResponse
     {
         $aulas = Aula::with(['primeraImagen'])
@@ -79,5 +156,11 @@ class AulaController extends Controller
             });
 
         return response()->json($aulas);
+    }
+    public function show($id)
+    {
+        $aula = Aula::with(['imagenes', 'horarios'])->findOrFail($id);
+
+        return response()->json($aula);
     }
 }

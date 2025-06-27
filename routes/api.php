@@ -65,8 +65,10 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador'])->group(
     Route::post('/aulas', [AulaController::class, 'store']);
     Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']); // Ver reserva por QR
     Route::get('/bitacora', [BitacoraController::class, 'index']);
-
-    
+    Route::get('/Getaulas', [AulaController::class, 'list']);
+    Route::delete('/aulas/{id}', [AulaController::class, 'destroy']);
+    Route::post('/aulas/{id}/update', [AulaController::class, 'update']);
+    Route::get('/aulas/{id}', [AulaController::class, 'show']);
     Route::get('/prediccion/reservas', [PrediccionEquipoController::class, 'predecirReservas']);
     Route::get('/prediccion/reservas/por-tipo', [PrediccionEquipoController::class, 'tiposEquipoConPrediccion']);
     Route::get('/prediccion/equipos/buscar', [PrediccionEquipoController::class, 'buscarEquipos']);
