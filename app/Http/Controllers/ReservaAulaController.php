@@ -59,6 +59,19 @@ class ReservaAulaController extends Controller
         }
         Log::info('Fecha recibida en request:', ['fecha' => $request->fecha]);
 
+        // Validar que el usuario no tenga otra reserva para ese mismo día y horario
+        $existeReserva = ReservaAula::where('user_id', $request->user_id)
+            ->whereDate('fecha', $request->fecha)
+            ->where('horario', $request->horario)
+            ->whereIn('estado', ['Pendiente', 'Aprobado']) // solo reservas activas
+            ->exists();
+
+        if ($existeReserva) {
+            return response()->json([
+                'message' => 'El usuario ya tiene una reserva para ese día y horario.'
+            ], 409);
+        }
+
         $reserva = ReservaAula::create([
             'aula_id' => $request->aula_id,
             'fecha' => $request->fecha,

@@ -228,6 +228,27 @@ class ReservaEquipoController extends Controller
             }
         }
 
+        // Validar que el usuario no tenga otra reserva en el mismo rango horario
+        $conflicto = ReservaEquipo::where('user_id', $validated['user_id'])
+            ->whereDate('fecha_reserva', $validated['fecha_reserva'])
+            ->where(function ($query) use ($validated) {
+                $inicioNueva = Carbon::parse($validated['fecha_reserva'] . ' ' . $validated['startTime']);
+                $finNueva = Carbon::parse($validated['fecha_reserva'] . ' ' . $validated['endTime']);
+
+                $query->where(function ($q) use ($inicioNueva, $finNueva) {
+                    $q->where('fecha_reserva', '<', $finNueva)
+                    ->where('fecha_entrega', '>', $inicioNueva);
+                });
+            })
+            ->whereIn('estado', ['Pendiente', 'Aprobado']) // solo si aún está activa
+            ->exists();
+
+        if ($conflicto) {
+            return response()->json([
+                'message' => 'Ya tienes una reserva activa o pendiente en este horario.',
+            ], 422);
+        }
+
         // 📂 Guardar archivo si se subió
         $documentoPath = null;
         if ($request->hasFile('documento_evento')) {
@@ -452,7 +473,7 @@ class ReservaEquipoController extends Controller
 
         $perPage = $request->get('per_page', 15);
 
-        $query = ReservaEquipo::with(['user', 'equipos', 'tipoReserva'])
+        $query = ReservaEquipo::with(['user', 'equipos', 'tipoReserva', 'codigoQr'])
             ->whereDate('fecha_reserva', $hoy)
             ->orderBy('created_at', 'DESC');
 
