@@ -116,6 +116,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::apiResource('tipoEquipos', TipoEquipoController::class);
     Route::put('/reservas-aula/{id}/estado', [ReservaAulaController::class, 'actualizarEstado']);
     Route::put('/reservas-equipo/{id}/estado', [ReservaEquipoController::class, 'actualizarEstado']);
+    Route::get('/usuarios/rol/{nombreRol}', [UserController::class, 'getUsuariosPorRol']);
 });
 
 

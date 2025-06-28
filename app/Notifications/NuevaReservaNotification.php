@@ -17,13 +17,15 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
 
     public $reserva;
     public $notifiableId;
-    public $pagina; // ✅ NUEVO
+    public $pagina;
+    public $creadorId; // 👈 NUEVO
 
-    public function __construct(ReservaEquipo $reserva, $notifiableId, $pagina = 1)
+    public function __construct(ReservaEquipo $reserva, $notifiableId, $pagina = 1, $creadorId = null)
     {
         $this->reserva = $reserva->load(['user', 'equipos.tipoEquipo', 'aula', 'tipoReserva']);
         $this->notifiableId = $notifiableId;
-        $this->pagina = $pagina; // ✅ NUEVO
+        $this->pagina = $pagina;
+        $this->creadorId = $creadorId;
     }
 
     public function via($notifiable)
@@ -43,13 +45,19 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
             ? $this->reserva->user->first_name . ' ' . $this->reserva->user->last_name
             : 'Usuario desconocido';
 
+        $esCreadorAdmin = $this->creadorId && $this->creadorId !== $this->reserva->user->id;
+
         return [
             'type' => 'nueva_reserva',
-            'title' => 'Nueva reserva de equipo recibida',
-            'message' => "Nueva reserva de equipo recibida del usuario {$usuarioNombre}.",
+            'title' => $esCreadorAdmin
+                ? 'Se ha realizado una reserva de equipo'
+                : 'Nueva reserva de equipo recibida',
+            'message' => $esCreadorAdmin
+                ? "Nueva reserva realizada por administración."
+                : "Nueva reserva de equipo recibida del usuario {$usuarioNombre}.",
             'reserva' => [
                 'id' => $this->reserva->id,
-                'pagina' => $this->pagina, // ✅ NUEVO
+                'pagina' => $this->pagina,
                 'user' => $usuarioNombre,
                 'aula' => $this->reserva->aula?->nombre ?? $this->reserva->aula,
                 'fecha_reserva' => $this->reserva->fecha_reserva,
@@ -65,6 +73,7 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
             ]
         ];
     }
+
 
     public function broadcastOn()
     {
@@ -82,10 +91,18 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
             ? $this->reserva->user->first_name . ' ' . $this->reserva->user->last_name
             : 'Usuario desconocido';
 
+        $esCreadorAdmin = $this->creadorId && $this->creadorId !== $this->reserva->user->id;
+
         return [
+            'title' => $esCreadorAdmin
+                ? 'Se ha realizado una reserva de equipo'
+                : 'Nueva reserva de equipo recibida',
+            'message' => $esCreadorAdmin
+                ? "Nueva reserva realizada por administración."
+                : "Nueva reserva de equipo recibida del usuario {$usuarioNombre}.",
             'reserva' => [
                 'id' => $this->reserva->id,
-                'pagina' => $this->pagina, // ✅ NUEVO
+                'pagina' => $this->pagina,
                 'user' => $usuarioNombre,
                 'aula' => $this->reserva->aula?->nombre ?? $this->reserva->aula,
                 'fecha_reserva' => $this->reserva->fecha_reserva,
@@ -101,4 +118,5 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
             ]
         ];
     }
+
 }

@@ -166,7 +166,7 @@ class ReservaEquipoController extends Controller
     {
         // Validar datos
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
+            'user_id' => 'nullable|exists:users,id',
             'equipo' => 'required|array',
             'equipo.*.id' => 'required|exists:equipos,id',
             'equipo.*.cantidad' => 'required|integer|min:1',
@@ -249,15 +249,25 @@ class ReservaEquipoController extends Controller
             ], 422);
         }
 
-        // 📂 Guardar archivo si se subió
+        // Guardar archivo si se subió
         $documentoPath = null;
         if ($request->hasFile('documento_evento')) {
             $documentoPath = $request->file('documento_evento')->store('eventos', 'public');
         }
 
+        $usuarioAutenticado = $request->user();
+
+        // Si es administrador o encargado y viene el user_id, usarlo
+        if (in_array($usuarioAutenticado->role->nombre, ['Administrador', 'Encargado']) && $request->filled('user_id')) {
+            $userIdReserva = $validated['user_id'];
+        } else {
+            // Si es prestamista (u otro), usar su propio ID
+            $userIdReserva = $usuarioAutenticado->id;
+        }
+
         // Crear la reserva
         $reserva = ReservaEquipo::create([
-            'user_id' => $validated['user_id'],
+            'user_id' => $userIdReserva,
             'fecha_reserva' => Carbon::parse($validated['fecha_reserva'] . ' ' . $validated['startTime']),
             'fecha_entrega' => Carbon::parse($validated['fecha_reserva'] . ' ' . $validated['endTime']),
             'aula' => $validated['aula'],
@@ -308,17 +318,22 @@ class ReservaEquipoController extends Controller
             ->get();
         Log::info('Responsables encontrados:', $responsables->pluck('id')->toArray());
 
-        foreach ($responsables as $responsable) {
-            // Evitar duplicar notificación si el responsable es quien hizo la reserva
-            if ($responsable->id === $reserva->user->id) {
-                continue;
-            }
 
-            // Enviar notificación real-time (broadcast + db)
-            $responsable->notify(new NuevaReservaNotification($reserva, $responsable->id, $pagina));
-            Log::info("Notificación enviada");
-            // Enviar correo personalizado
-            //$responsable->notify(new NotificarResponsableReserva($reserva));
+        $esAdminOEncargado = in_array($usuarioAutenticado->role->nombre, ['Administrador', 'Encargado']);
+        $esMismaPersona = $usuarioAutenticado->id === $reserva->user->id;
+
+        if ($esAdminOEncargado && !$esMismaPersona) {
+            // 🔔 Si un admin/encargado hizo la reserva para un prestamista, notificar al prestamista
+            $reserva->user->notify(new NuevaReservaNotification($reserva, $reserva->user->id, $pagina, $usuarioAutenticado->id));
+            Log::info("Notificación enviada al prestamista {$reserva->user->id}");
+        } elseif (!$esAdminOEncargado) {
+            // 🔔 Si un prestamista hizo la reserva, notificar a todos los responsables
+            foreach ($responsables as $responsable) {
+                $responsable->notify(new NuevaReservaNotification($reserva, $responsable->id, $pagina, $usuarioAutenticado->id));
+                Log::info("Notificación enviada a responsable {$responsable->id}");
+                // Enviar correo personalizado
+                //$responsable->notify(new NotificarResponsableReserva($reserva));
+            }
         }
         // Notificación por correo al usuario
         //$reserva->user->notify(new ConfirmarReservaUsuario($reserva));

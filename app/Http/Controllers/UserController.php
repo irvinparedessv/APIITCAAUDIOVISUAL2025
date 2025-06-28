@@ -275,4 +275,16 @@ class UserController extends Controller
 
         return response()->json(['message' => 'Contraseña actualizada y cuenta activada']);
     }
+
+    public function getUsuariosPorRol($nombreRol)
+    {
+        $usuarios = User::whereHas('role', function ($query) use ($nombreRol) {
+            $query->where('nombre', $nombreRol);
+        })
+        ->where('estado', 1)
+        ->select('id', 'first_name', 'last_name', 'email')
+        ->get();
+
+        return response()->json($usuarios);
+    }
 }
