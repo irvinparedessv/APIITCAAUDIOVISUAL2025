@@ -52,10 +52,6 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador'])->group(function (
     Route::apiResource('tipoEquipos', TipoEquipoController::class);
 });
 
-// Route::middleware(['auth:sanctum', 'checkrole:Encargado'])->group(function () {
-//     Route::put('/reservas-equipo/{id}/estado', [ReservaEquipoController::class, 'actualizarEstado']);
-//     Route::put('/reservas-aula/{id}/estado', [ReservaAulaController::class, 'actualizarEstado']);
-// });
 
 
 Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador'])->group(function () {
@@ -87,7 +83,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->grou
 });
 
 //👉Aqui podemos ver el perfil de los usuarios de acuerdo a roles
-Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamista'])->group(function () {
+Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamista,EspacioEncargado'])->group(function () {
     Route::put('/user/profile', [ProfileController::class, 'update']);
     Route::get('/user/profile', [ProfileController::class, 'show']);
     Route::get('/equiposPorTipo/{tipoReservaId}', [EquipoController::class, 'getEquiposPorTipoReserva']);
