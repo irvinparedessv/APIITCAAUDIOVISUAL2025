@@ -80,7 +80,7 @@ class ReservaAulaController extends Controller
             'estado' => $request->estado ?? 'Pendiente',
         ]);
 
-         // Calcular en qué página cae esta reserva (según paginación de 10 por página)
+        // Calcular en qué página cae esta reserva (según paginación de 10 por página)
         $pagina = $this->calcularPaginaReserva($reserva->id, 10);
 
         // Cargar relaciones para notificaciones
@@ -103,24 +103,79 @@ class ReservaAulaController extends Controller
 
         //$reserva->user->notify(new ConfirmarReservaAulaUsuario($reserva));
 
-    return response()->json([
-        'message' => 'Reserva de aula creada exitosamente',
-        'reserva' => [
-            'id' => $reserva->id,
-            'aula_id' => $reserva->aula_id,
-            'fecha' => $reserva->fecha->format('Y-m-d'), // ✅ esto es lo que necesitas
-            'horario' => $reserva->horario,
-            'user_id' => $reserva->user_id,
-            'estado' => $reserva->estado,
-            'created_at' => $reserva->created_at->toDateTimeString(),
-            'updated_at' => $reserva->updated_at->toDateTimeString(),
-            'aula' => $reserva->aula,
-            'user' => $reserva->user,
-        ],
-        'pagina' => $pagina,
-    ], 201);        
-
+        return response()->json([
+            'message' => 'Reserva de aula creada exitosamente',
+            'reserva' => [
+                'id' => $reserva->id,
+                'aula_id' => $reserva->aula_id,
+                'fecha' => $reserva->fecha->format('Y-m-d'), // ✅ esto es lo que necesitas
+                'horario' => $reserva->horario,
+                'user_id' => $reserva->user_id,
+                'estado' => $reserva->estado,
+                'created_at' => $reserva->created_at->toDateTimeString(),
+                'updated_at' => $reserva->updated_at->toDateTimeString(),
+                'aula' => $reserva->aula,
+                'user' => $reserva->user,
+            ],
+            'pagina' => $pagina,
+        ], 201);
     }
+    public function update(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'aula_id' => 'required|exists:aulas,id',
+            'fecha' => 'required|date',
+            'horario' => 'required|string',
+            'user_id' => 'required|exists:users,id',
+            'estado' => 'nullable|string|in:pendiente,aprobado,cancelado,rechazado',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $reserva = ReservaAula::findOrFail($id);
+
+        // Validar duplicidad (no permitir solaparse con otra reserva del mismo usuario en la misma fecha y horario)
+        $existeReserva = ReservaAula::where('user_id', $request->user_id)
+            ->whereDate('fecha', $request->fecha)
+            ->where('horario', $request->horario)
+            ->whereIn('estado', ['Pendiente', 'Aprobado'])
+            ->where('id', '!=', $reserva->id) // excluir la reserva actual
+            ->exists();
+
+        if ($existeReserva) {
+            return response()->json([
+                'message' => 'El usuario ya tiene otra reserva para ese día y horario.'
+            ], 409);
+        }
+
+        $reserva->aula_id = $request->aula_id;
+        $reserva->fecha = $request->fecha;
+        $reserva->horario = $request->horario;
+        $reserva->user_id = $request->user_id;
+        $reserva->estado = $request->estado ?? $reserva->estado;
+        $reserva->save();
+
+        $reserva->load(['user', 'aula']);
+
+        return response()->json([
+            'message' => 'Reserva de aula actualizada exitosamente',
+            'reserva' => [
+                'id' => $reserva->id,
+                'aula_id' => $reserva->aula_id,
+                'fecha' => $reserva->fecha->format('Y-m-d'),
+                'horario' => $reserva->horario,
+                'user_id' => $reserva->user_id,
+                'estado' => $reserva->estado,
+                'created_at' => $reserva->created_at->toDateTimeString(),
+                'updated_at' => $reserva->updated_at->toDateTimeString(),
+                'aula' => $reserva->aula,
+                'user' => $reserva->user,
+            ],
+        ]);
+    }
+
 
     public function reservas(Request $request)
     {
@@ -215,12 +270,13 @@ class ReservaAulaController extends Controller
         return response()->json([
             'message' => 'Estado actualizado correctamente.',
             'reserva' => $reserva,
-        ]);return response()->json(['message' => 'Estado actualizado correctamente.']); 
+        ]);
+        return response()->json(['message' => 'Estado actualizado correctamente.']);
     }
 
 
 
-    
+
     public function show($id)
     {
         $reserva = ReservaAula::with(['aula', 'user'])->findOrFail($id);
@@ -248,6 +304,4 @@ class ReservaAulaController extends Controller
 
         }
     }
-
-
 }
