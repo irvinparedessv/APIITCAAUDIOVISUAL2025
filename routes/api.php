@@ -83,7 +83,6 @@ Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->grou
     Route::get('equiposReserva', [ReservaEquipoController::class, 'equiposReserva']);
     Route::post('/reservas', [ReservaEquipoController::class, 'store']);
     Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']); // Ver reserva por QR
-    Route::post('/reservasAula', [ReservaAulaController::class, 'store']);
     //Route::post('/reservas', [ReservaAulaController::class, 'store']);
 });
 
@@ -117,6 +116,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::put('/reservas-aula/{id}/estado', [ReservaAulaController::class, 'actualizarEstado']);
     Route::put('/reservas-equipo/{id}/estado', [ReservaEquipoController::class, 'actualizarEstado']);
     Route::get('/usuarios/rol/{nombreRol}', [UserController::class, 'getUsuariosPorRol']);
+    Route::post('/reservasAula', [ReservaAulaController::class, 'store']);
 });
 
 
