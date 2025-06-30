@@ -68,33 +68,67 @@ class AulaController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'day' => 'nullable|string|max:255',
-            'startTime' => 'nullable|string',
-            'endTime' => 'nullable|string',
-            'images.*' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'available_times' => 'nullable|string', // Viene como JSON string porque usas FormData
+            'render_images.*' => 'nullable|image|mimes:jpeg,png,jpg|max:14000',
         ]);
 
+        // Parsear available_times JSON manualmente
+        $availableTimes = [];
+        if ($request->filled('available_times')) {
+            $availableTimes = json_decode($request->available_times, true);
+
+            if (!is_array($availableTimes)) {
+                return response()->json([
+                    'message' => 'El campo available_times debe ser un array válido.'
+                ], 422);
+            }
+
+            // Validar cada objeto
+            foreach ($availableTimes as $time) {
+                if (
+                    empty($time['start_date']) ||
+                    empty($time['end_date']) ||
+                    empty($time['start_time']) ||
+                    empty($time['end_time']) ||
+                    empty($time['days']) || !is_array($time['days'])
+                ) {
+                    return response()->json([
+                        'message' => 'Cada horario debe tener start_date, end_date, start_time, end_time y days.'
+                    ], 422);
+                }
+            }
+        }
+
+        // Buscar aula
         $aula = Aula::findOrFail($id);
         $aula->name = $request->name;
         $aula->save();
 
-        // Actualizar horario
-        if ($request->filled(['day', 'startTime', 'endTime'])) {
-            // Puedes eliminar los existentes si es un horario único
-            $aula->horarioPersonalizado()->delete();
+        // Actualizar horarios: eliminar todos y recrear
+        $aula->horarios()->delete();
 
-            $aula->horarioPersonalizado()->create([
-                'dia' => $request->day,
-                'hora_inicio' => $request->startTime,
-                'hora_fin' => $request->endTime,
+        foreach ($availableTimes as $time) {
+            $aula->horarios()->create([
+                'start_date' => $time['start_date'],
+                'end_date' => $time['end_date'],
+                'start_time' => $time['start_time'],
+                'end_time' => $time['end_time'],
+                'days' => json_encode($time['days']),
             ]);
         }
+        foreach ($aula->imagenes as $img) {
+            $path = str_replace('/storage/', '', $img->image_path);
+            Storage::disk('public')->delete($path);
+            $img->delete();
+        }
 
-        // Guardar nuevas imágenes
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $img) {
+        // Reemplazar imágenes si vienen nuevas
+        if ($request->hasFile('render_images')) {
+            // Eliminar imágenes previas de disco y DB
+
+            // Guardar nuevas
+            foreach ($request->file('render_images') as $img) {
                 $path = $img->store('render_images', 'public');
-
                 $aula->imagenes()->create([
                     'image_path' => Storage::url($path),
                 ]);
@@ -103,6 +137,8 @@ class AulaController extends Controller
 
         return response()->json(['message' => 'Aula actualizada correctamente.']);
     }
+
+
 
     public function list(Request $request)
     {

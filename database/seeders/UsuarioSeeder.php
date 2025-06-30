@@ -60,5 +60,33 @@ class UsuarioSeeder extends Seeder
             'address'           => null,
             'image'             => null,
         ]);
+        User::create([
+            'first_name'        => 'Prestamista2',
+            'last_name'         => 'Ejemplo2',
+            'email'             => 'prestamista2@correo.com',
+            'email_verified_at' => now(),
+            'password'          => Hash::make('123'),
+            'estado'            => 1,
+            'is_deleted'        => false,
+            'remember_token'    => null,
+            'role_id'           => 3, // Prestamista
+            'phone'             => null,
+            'address'           => null,
+            'image'             => null,
+        ]);
+        User::create([
+            'first_name'        => 'Prestamista3',
+            'last_name'         => 'Ejemplo3',
+            'email'             => 'prestamista3@correo.com',
+            'email_verified_at' => now(),
+            'password'          => Hash::make('123'),
+            'estado'            => 1,
+            'is_deleted'        => false,
+            'remember_token'    => null,
+            'role_id'           => 3, // Prestamista
+            'phone'             => null,
+            'address'           => null,
+            'image'             => null,
+        ]);
     }
 }
