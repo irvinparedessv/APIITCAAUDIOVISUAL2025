@@ -53,9 +53,8 @@ class Equipo extends Model
             ->withPivot('cantidad');
     }
 
-    public function disponibilidadPorRango(\Carbon\CarbonInterface $inicio, \Carbon\CarbonInterface $fin)
+    public function disponibilidadPorRango(\Carbon\CarbonInterface $inicio, \Carbon\CarbonInterface $fin, $reservaExcluidaId = null)
     {
-        // Obtener reservas que coincida con el rango solicitado
         $reservas = $this->reservas()
             ->where(function ($query) use ($inicio, $fin) {
                 $query->where(function ($q) use ($inicio, $fin) {
@@ -63,10 +62,15 @@ class Equipo extends Model
                         ->where('fecha_entrega', '>', $inicio);
                 });
             })
-            ->whereIn('estado', ['Pendiente', 'Aprobado'])
-            ->get();
+            ->whereIn('estado', ['Pendiente', 'Aprobado']);
 
-        // Calcular cantidades usando sum en lugar de count para considerar las cantidades
+        // Excluir una reserva específica si se pasa como parámetro
+        if ($reservaExcluidaId) {
+            $reservas->where('reserva_equipos.id', '!=', $reservaExcluidaId);
+        }
+
+        $reservas = $reservas->get();
+
         $cantidadEnReserva = $reservas->where('estado', 'Pendiente')->sum('pivot.cantidad');
         $cantidadEntregada = $reservas->where('estado', 'Aprobado')->sum('pivot.cantidad');
 
@@ -79,4 +83,5 @@ class Equipo extends Model
             'cantidad_entregada' => $cantidadEntregada,
         ];
     }
+
 }

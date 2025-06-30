@@ -19,9 +19,10 @@ class EstadoReservaEquipoNotification extends Notification implements ShouldQueu
     protected $reserva;
     protected $notifiableId;
     public $id;
-    public $pagina; // ✅ NUEVO
+    public $pagina; 
+    protected $tipo;
 
-    public function __construct(ReservaEquipo $reserva, $notifiableId, $pagina = 1)
+    public function __construct(ReservaEquipo $reserva, $notifiableId, $pagina = 1, $tipo = 'estado')
     {
         if (!$reserva->user) {
             Log::error('No se puede crear notificación: Reserva sin usuario', ['reserva_id' => $reserva->id]);
@@ -30,8 +31,9 @@ class EstadoReservaEquipoNotification extends Notification implements ShouldQueu
 
         $this->reserva = $reserva->load(['user', 'equipos.tipoEquipo', 'tipoReserva']);
         $this->notifiableId = $notifiableId ?: $reserva->user->id;
-        $this->pagina = $pagina; // ✅ NUEVO
+        $this->pagina = $pagina;
         $this->id = (string) Str::uuid();
+        $this->tipo = $tipo;
 
         Log::info('Creando notificación de estado', [
             'reserva_id' => $reserva->id,
@@ -47,16 +49,26 @@ class EstadoReservaEquipoNotification extends Notification implements ShouldQueu
 
     public function toDatabase($notifiable)
     {
+        $esEdicion = $this->tipo === 'edicion';
+        $esResponsable = $notifiable->id !== $this->reserva->user->id;
         $fechaReserva = $this->reserva->fecha_reserva;
         $fechaEntrega = $this->reserva->fecha_entrega;
 
+        $title = $esEdicion
+            ? ($esResponsable ? 'Se ha actualizado una reserva de equipo' : 'Tu reserva de equipo ha sido actualizada')
+            : 'Estado de tu reserva de equipo actualizado';
+
+        $message = $esEdicion
+            ? "La reserva de equipo #{$this->reserva->id} fue modificada."
+            : "Tu reserva de equipo ha sido marcada como '{$this->reserva->estado}'.";
+
         return [
             'type' => 'estado_reserva',
-            'title' => 'Estado de tu reserva de equipo actualizada',
-            'message' => "Tu reserva de equipo ha sido marcada como '{$this->reserva->estado}'.",
+            'title' => $title,
+            'message' => $message,
             'reserva' => [
                 'id' => $this->reserva->id,
-                'pagina' => $this->pagina, // ✅ NUEVO
+                'pagina' => $this->pagina,
                 'aula' => $this->reserva->aula,
                 'tipo_reserva' => $this->reserva->tipoReserva?->nombre,
                 'equipos' => $this->reserva->equipos->map(function($equipo) {

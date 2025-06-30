@@ -23,6 +23,7 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 
@@ -348,6 +349,99 @@ class ReservaEquipoController extends Controller
         ], 201);
     }
 
+   public function update(Request $request, $id)
+{
+    $reserva = ReservaEquipo::with('equipos')->findOrFail($id);
+    $user = $request->user();
+
+    // Validar permisos
+    if (!in_array($user->role->nombre, ['Administrador', 'Encargado']) && $reserva->user_id !== $user->id) {
+        return response()->json(['message' => 'No autorizado.'], 403);
+    }
+
+    // Validar campos
+    $validated = $request->validate([
+        'aula' => 'required|string',
+        'equipo' => 'required|array|min:1',
+        'equipo.*.id' => 'required|exists:equipos,id',
+        'equipo.*.cantidad' => 'required|integer|min:1',
+        'documento_evento' => 'nullable|file|mimes:pdf,doc,docx|max:5120',
+    ]);
+
+    // Convertir fechas a objetos Carbon
+    $inicio = Carbon::parse($reserva->fecha_reserva);
+    $fin = Carbon::parse($reserva->fecha_entrega);
+
+    // Verificar disponibilidad por rango
+    foreach ($validated['equipo'] as $item) {
+        $equipo = Equipo::findOrFail($item['id']);
+        $disponibilidad = $equipo->disponibilidadPorRango($inicio, $fin, $reserva->id);
+
+        if ($item['cantidad'] > $disponibilidad['cantidad_disponible']) {
+            return response()->json([
+                'message' => "No hay suficientes unidades disponibles del equipo: {$equipo->nombre}.",
+                'equipo' => $equipo->nombre,
+                'disponible' => $disponibilidad['cantidad_disponible']
+            ], 400);
+        }
+    }
+
+    // Actualizar aula
+    $reserva->aula = $validated['aula'];
+
+    // Subir nuevo documento si se incluye
+    if ($request->hasFile('documento_evento')) {
+        // Eliminar archivo anterior si existía
+        if ($reserva->documento_evento && Storage::disk('public')->exists($reserva->documento_evento)) {
+            Storage::disk('public')->delete($reserva->documento_evento);
+        }
+
+        $nuevoDocumento = $request->file('documento_evento')->store('eventos', 'public');
+        $reserva->documento_evento = $nuevoDocumento;
+    }
+
+    $reserva->save();
+
+    // Sincronizar equipos
+    $equiposSync = [];
+    foreach ($validated['equipo'] as $item) {
+        $equiposSync[$item['id']] = ['cantidad' => $item['cantidad']];
+    }
+
+    $reserva->equipos()->sync($equiposSync);
+
+    // Obtener la página donde cae la reserva
+    $pagina = $this->calcularPaginaReserva($reserva->id);
+
+    // Obtener responsables (encargados y administradores), excluyendo al usuario dueño de la reserva
+    $responsables = User::whereHas('role', function ($q) {
+        $q->whereIn('nombre', ['Administrador', 'Encargado']);
+    })->where('id', '!=', $reserva->user_id)->get();
+
+    // Notificar dependiendo del rol
+    if (in_array($user->role->nombre, ['Administrador', 'Encargado'])) {
+        // Si el admin/encargado hizo el cambio, notificar solo al prestamista
+        if ($user->id !== $reserva->user_id && $reserva->user) {
+            $reserva->user->notify(new EstadoReservaEquipoNotification($reserva, $reserva->user->id, $pagina, 'edicion'));
+            Log::info("Notificación enviada al prestamista {$reserva->user->id} tras edición");
+        }
+    } else {
+        // Si el prestamista hizo el cambio, notificar a encargados y administradores
+        foreach ($responsables as $responsable) {
+            $responsable->notify(new EstadoReservaEquipoNotification($reserva, $responsable->id, $pagina, 'edicion'));
+            Log::info("Notificación enviada a responsable {$responsable->id} tras edición del prestamista");
+        }
+    }
+
+
+    return response()->json([
+        'message' => 'Reserva actualizada exitosamente',
+        'reserva' => [
+            ...$reserva->toArray(),
+            'documento_url' => $reserva->documento_evento ? asset('storage/' . $reserva->documento_evento) : null
+        ]
+    ]);
+}
 
 
     public function actualizarEstado(Request $request, $id)
@@ -422,6 +516,22 @@ class ReservaEquipoController extends Controller
             ], 500);
         }
     }
+
+    public function showById($id)
+    {
+        $reserva = ReservaEquipo::with(['user', 'equipos', 'codigoQr', 'tipoReserva'])
+            ->find($id);
+
+        if (!$reserva) {
+            return response()->json(['message' => 'Reserva no encontrada'], 404);
+        }
+
+        return response()->json([
+            ...$reserva->toArray(),
+            'documento_url' => $reserva->documento_evento ? asset('storage/' . $reserva->documento_evento) : null,
+        ]);
+    }
+
 
     public function getNotificaciones(Request $request)
     {
