@@ -34,7 +34,15 @@ class PrediccionEquipoService
         $regresionLineal = new LeastSquares();
         $regresionLineal->train($samples, $targets);
 
-        $svr = new SVR(Kernel::RBF, 3.0, 0.1, 0.001, 0.001, 100);
+        // Ajuste de parámetros para SVR con kernel RBF
+        $svr = new SVR(
+            Kernel::RBF,
+            10.0,    // C (mayor regularización para ajuste más fino)
+            0.001,   // epsilon (más sensible a errores pequeños)
+            0.1,     // gamma (kernel más localizado)
+            0.001,   // tol
+            100      // max_passes
+        );
         $svr->train($samples, $targets);
 
         // Realizar predicciones
@@ -147,73 +155,81 @@ class PrediccionEquipoService
     }
 
     public function predecirReservasMensualesPorEquipo(int $mesesAPredecir = 6, int $equipoId)
-{
-    // Obtener datos históricos filtrados por equipo
-    [$datosHistoricos, $primerMesReal] = $this->obtenerDatosHistoricosPorEquipo($equipoId);
+    {
+        // Obtener datos históricos filtrados por equipo
+        [$datosHistoricos, $primerMesReal] = $this->obtenerDatosHistoricosPorEquipo($equipoId);
 
-    if (count($datosHistoricos) < 3) {
-        throw new \Exception("No hay suficientes datos históricos para el equipo ID {$equipoId} (mínimo 3 meses requeridos)");
-    }
+        if (count($datosHistoricos) < 3) {
+            throw new \Exception("No hay suficientes datos históricos para el equipo ID {$equipoId} (mínimo 3 meses requeridos)");
+        }
 
-    // Preparar datos
-    $samples = [];
-    $targets = [];
+        // Preparar datos
+        $samples = [];
+        $targets = [];
 
-    foreach ($datosHistoricos as $mes => $data) {
-        $samples[] = [$mes];
-        $targets[] = $data['total'];
-    }
+        foreach ($datosHistoricos as $mes => $data) {
+            $samples[] = [$mes];
+            $targets[] = $data['total'];
+        }
 
-    // Entrenar modelos
-    $regresionLineal = new LeastSquares();
-    $regresionLineal->train($samples, $targets);
+        // Entrenar modelos
+        $regresionLineal = new LeastSquares();
+        $regresionLineal->train($samples, $targets);
 
-    $svr = new SVR(Kernel::RBF, 3.0, 0.1, 0.001, 0.001, 100);
-    $svr->train($samples, $targets);
+        // Ajuste de parámetros para SVR con kernel RBF
+        $svr = new SVR(
+            Kernel::RBF,
+            10.0,    // C
+            0.001,   // epsilon
+            0.1,     // gamma
+            0.001,   // tol
+            100      // max_passes
+        );
+        $svr->train($samples, $targets);
 
-    // Generar predicciones
-    $predicciones = [];
-    $ultimoMes = max(array_keys($datosHistoricos));
+        // Generar predicciones
+        $predicciones = [];
+        $ultimoMes = max(array_keys($datosHistoricos));
 
-    for ($i = 1; $i <= $mesesAPredecir; $i++) {
-        $mesPrediccion = $ultimoMes + $i;
-        $prediccionRL = max(0, $regresionLineal->predict([$mesPrediccion]));
-        $prediccionSVR = max(0, $svr->predict([$mesPrediccion]));
-        $prediccionFinal = ($prediccionRL + $prediccionSVR) / 2;
+        for ($i = 1; $i <= $mesesAPredecir; $i++) {
+            $mesPrediccion = $ultimoMes + $i;
+            $prediccionRL = max(0, $regresionLineal->predict([$mesPrediccion]));
+            $prediccionSVR = max(0, $svr->predict([$mesPrediccion]));
+            $prediccionFinal = ($prediccionRL + $prediccionSVR) / 2;
 
-        $predicciones[$mesPrediccion] = [
-            'prediccion' => round($prediccionFinal),
-            'regresion_lineal' => round($prediccionRL),
-            'svr' => round($prediccionSVR),
-            'mes' => $this->convertirNumeroAMes($mesPrediccion, $primerMesReal),
+            $predicciones[$mesPrediccion] = [
+                'prediccion' => round($prediccionFinal),
+                'regresion_lineal' => round($prediccionRL),
+                'svr' => round($prediccionSVR),
+                'mes' => $this->convertirNumeroAMes($mesPrediccion, $primerMesReal),
+            ];
+        }
+
+        return [
+            'historico' => $datosHistoricos,
+            'predicciones' => $predicciones,
+            'precision' => $this->evaluarModelo($regresionLineal, $samples, $targets),
         ];
     }
 
-    return [
-        'historico' => $datosHistoricos,
-        'predicciones' => $predicciones,
-        'precision' => $this->evaluarModelo($regresionLineal, $samples, $targets),
-    ];
-}
-protected function obtenerDatosHistoricosPorEquipo(int $equipoId): array
-{
-    $fechaInicio = Carbon::now()->subMonths(24);
-    $fechaFin = Carbon::now();
+    protected function obtenerDatosHistoricosPorEquipo(int $equipoId): array
+    {
+        $fechaInicio = Carbon::now()->subMonths(24);
+        $fechaFin = Carbon::now();
 
-    $reservasPorMes = ReservaEquipo::whereBetween('fecha_reserva', [$fechaInicio, $fechaFin])
-        ->whereIn('reserva_equipos.estado', ['Aprobado', 'Completado'])
-        ->whereHas('equipos', function ($query) use ($equipoId) {
-            $query->where('equipos.id', $equipoId);
-        })
-        ->selectRaw('YEAR(fecha_reserva) as year, MONTH(fecha_reserva) as month, SUM(equipo_reserva.cantidad) as total')
-        ->join('equipo_reserva', 'reserva_equipos.id', '=', 'equipo_reserva.reserva_equipo_id')
-        ->join('equipos', 'equipo_reserva.equipo_id', '=', 'equipos.id')
-        ->groupBy('year', 'month')
-        ->orderBy('year')
-        ->orderBy('month')
-        ->get();
+        $reservasPorMes = ReservaEquipo::whereBetween('fecha_reserva', [$fechaInicio, $fechaFin])
+            ->whereIn('reserva_equipos.estado', ['Aprobado', 'Completado'])
+            ->whereHas('equipos', function ($query) use ($equipoId) {
+                $query->where('equipos.id', $equipoId);
+            })
+            ->selectRaw('YEAR(fecha_reserva) as year, MONTH(fecha_reserva) as month, SUM(equipo_reserva.cantidad) as total')
+            ->join('equipo_reserva', 'reserva_equipos.id', '=', 'equipo_reserva.reserva_equipo_id')
+            ->join('equipos', 'equipo_reserva.equipo_id', '=', 'equipos.id')
+            ->groupBy('year', 'month')
+            ->orderBy('year')
+            ->orderBy('month')
+            ->get();
 
-    return $this->procesarDatosHistoricos($reservasPorMes);
-}
-
+        return $this->procesarDatosHistoricos($reservasPorMes);
+    }
 }

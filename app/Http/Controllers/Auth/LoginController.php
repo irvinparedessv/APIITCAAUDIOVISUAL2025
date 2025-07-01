@@ -55,9 +55,8 @@ class LoginController extends Controller
     public function logout(Request $request)
     {
         // Eliminar todos los tokens del usuario
-        $request->user()->tokens->each(function ($token) {
-            $token->delete();
-        });
+        $request->user()->tokens()->delete();
+
 
         return response()->json(['message' => 'Sesión cerrada']);
     }
