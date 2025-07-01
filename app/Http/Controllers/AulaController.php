@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Aula;
+use App\Models\User;
 use App\Models\ImagenesAula;
 use App\Models\HorarioAulas;
 use Illuminate\Support\Facades\Storage;
@@ -142,8 +143,9 @@ class AulaController extends Controller
 
     public function list(Request $request)
     {
-        // Traemos solo el conteo de imágenes, no las imágenes en sí
-        $query = Aula::withCount('imagenes');
+        // Incluye encargados con relación hasMany o belongsToMany según tu modelo
+        $query = Aula::withCount('imagenes')
+            ->with('encargados'); // 👈 Incluye encargados
 
         if ($search = $request->input('search')) {
             $query->where('name', 'like', "%$search%");
@@ -152,14 +154,19 @@ class AulaController extends Controller
         $perPage = $request->input('perPage', 5);
         $aulas = $query->paginate($perPage);
 
-        // Convertimos los items para agregar una propiedad booleana si tiene imágenes
         $aulasTransformadas = $aulas->getCollection()->map(function ($aula) {
             return [
                 'id' => $aula->id,
                 'name' => $aula->name,
-                // otras propiedades que necesitas devolver...
                 'count_images' => $aula->imagenes_count,
                 'has_images' => $aula->imagenes_count > 0,
+                'encargados' => $aula->encargados->map(function ($encargado) {
+                    return [
+                        'id' => $encargado->id,
+                        'first_name' => $encargado->first_name,
+                        'last_name' => $encargado->last_name,
+                    ];
+                }),
             ];
         });
 
@@ -169,6 +176,7 @@ class AulaController extends Controller
             'last_page' => $aulas->lastPage(),
         ]);
     }
+
     public function destroy($id)
     {
         $aula = Aula::findOrFail($id);
@@ -197,6 +205,34 @@ class AulaController extends Controller
     {
         $aula = Aula::with(['imagenes', 'horarios'])->findOrFail($id);
 
+        return response()->json($aula);
+    }
+    public function asignarEncargados(Request $request, Aula $aula)
+    {
+        $request->validate([
+            'user_ids' => [
+                'required',
+                'array',
+                function ($attribute, $value, $fail) {
+                    $invalidUsers = User::whereIn('id', $value)
+                        ->whereHas('role', fn($q) => $q->where('nombre', '!=', 'EspacioEncargado'))
+                        ->pluck('id')
+                        ->toArray();
+
+                    if (!empty($invalidUsers)) {
+                        $fail('Solo usuarios con rol EspacioEncargado pueden ser asignados. IDs inválidos: ' . implode(', ', $invalidUsers));
+                    }
+                },
+            ],
+        ]);
+
+        $aula->encargados()->sync($request->user_ids);
+
+        return response()->json(['message' => 'Encargados asignados correctamente']);
+    }
+    public function encargados($id)
+    {
+        $aula = Aula::with('encargados')->findOrFail($id);
         return response()->json($aula);
     }
 }

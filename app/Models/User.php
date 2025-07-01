@@ -76,9 +76,19 @@ class User extends Authenticatable
     {
         return $this->image ? asset('storage/' . $this->image) : null;
     }
+    public function aulasEncargadas()
+    {
+        return $this->belongsToMany(Aula::class, 'aula_user');
+    }
 
     public function notifications()
     {
-         return $this->morphMany(Notification::class, 'notifiable')->whereNull('deleted_at');
+        return $this->morphMany(Notification::class, 'notifiable')->whereNull('deleted_at');
+    }
+    public function scopeEncargadosAula($query)
+    {
+        return $query->whereHas('role', function ($q) {
+            $q->where('nombre', 'EspacioEncargado');
+        });
     }
 }

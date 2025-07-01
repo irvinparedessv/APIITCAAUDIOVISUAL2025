@@ -25,4 +25,8 @@ class Aula extends Model
     {
         return $this->hasOne(ImagenesAula::class, 'aula_id')->orderBy('id');
     }
+    public function encargados()
+    {
+        return $this->belongsToMany(User::class, 'aula_user');
+    }
 }

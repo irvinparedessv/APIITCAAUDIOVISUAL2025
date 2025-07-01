@@ -116,6 +116,11 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::put('/reservas-equipo/{id}', [ReservaEquipoController::class, 'update']);
     Route::get('/reserva-id/{id}', [ReservaEquipoController::class, 'showById']);  // Obtener reserva individual por id
     Route::put('/reservas-aula/{id}', [ReservaAulaController::class, 'update']);
+    Route::post('/aulas/{aula}/encargados', [AulaController::class, 'asignarEncargados']);
+    Route::get('/aulas/{id}/encargados', [AulaController::class, 'encargados']);
+    Route::get('/encargados', function () {
+        return \App\Models\User::encargadosAula()->get();
+    });
 });
 
 
