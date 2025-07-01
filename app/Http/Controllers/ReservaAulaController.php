@@ -207,10 +207,13 @@ class ReservaAulaController extends Controller
 
     public function reservas(Request $request)
     {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
         $from = $request->query('from');
         $to = $request->query('to');
         $status = $request->query('status');
-        $search = $request->query('search'); // nuevo parámetro para buscar por aula o usuario
+        $search = $request->query('search');
         $perPage = $request->query('per_page', 10);
         $page = $request->query('page', 1);
 
@@ -235,7 +238,21 @@ class ReservaAulaController extends Controller
             });
         }
 
-        $reservas = $query->orderBy('fecha', 'desc')->paginate($perPage, ['*'], 'page', $page);
+        // ✅ Filtrar según rol
+        if (strtolower($user->role->nombre) === 'espacioencargado') {
+            $aulasIds = $user->aulasEncargadas()->pluck('aulas.id');
+
+            if ($aulasIds->isEmpty()) {
+                return response()->json([
+                    'message' => 'No tienes aulas asignadas para mostrar reservas.'
+                ], 403);
+            }
+
+            $query->whereIn('aula_id', $aulasIds);
+        }
+
+        $reservas = $query->orderBy('fecha', 'desc')
+            ->paginate($perPage, ['*'], 'page', $page);
 
         return response()->json($reservas);
     }
