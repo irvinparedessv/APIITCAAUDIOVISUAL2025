@@ -20,9 +20,9 @@ class EstadoReservaAulaNotification extends Notification implements ShouldQueue,
     protected $notifiableId;
     public $id;
     protected $pagina;
+    protected $tipo; // 'estado' o 'edicion'
 
-
-    public function __construct(ReservaAula $reserva, $notifiableId = null, $pagina = 1)
+    public function __construct(ReservaAula $reserva, $notifiableId = null, $pagina = 1, $tipo = 'estado')
     {
         if (!$reserva->user) {
             Log::error('No se puede crear notificación: Reserva de aula sin usuario', ['reserva_id' => $reserva->id]);
@@ -33,19 +33,14 @@ class EstadoReservaAulaNotification extends Notification implements ShouldQueue,
         $this->notifiableId = $notifiableId ?: $reserva->user->id;
         $this->id = (string) Str::uuid();
         $this->pagina = $pagina;
-        
-        Log::info('Creando notificación de estado de aula', [
+        $this->tipo = $tipo;
+
+        Log::info('Creando notificación de aula', [
             'reserva_id' => $reserva->id,
             'user_id' => $this->notifiableId,
-            'estado' => $reserva->estado
+            'estado' => $reserva->estado,
+            'tipo' => $tipo,
         ]);
-
-        Log::debug('Debug aula en notificación', [
-            'aula_id' => $reserva->aula_id,
-            'aula' => $reserva->aula,
-            'reserva' => $reserva->toArray(),
-        ]);
-
     }
 
     public function via($notifiable)
@@ -55,11 +50,22 @@ class EstadoReservaAulaNotification extends Notification implements ShouldQueue,
 
     public function toDatabase($notifiable)
     {
+        $esEdicion = $this->tipo === 'edicion';
+        $esResponsable = $notifiable->id !== $this->reserva->user->id;
+
+        $title = $esEdicion
+            ? ($esResponsable ? 'Se ha actualizado una reserva de aula' : 'Tu reserva de aula ha sido actualizada')
+            : 'Estado de tu reserva de aula actualizado';
+
+        $message = $esEdicion
+            ? "La reserva de aula #{$this->reserva->id} fue modificada."
+            : "Tu reserva para el aula {$this->reserva->aula->name} ha sido marcada como '{$this->reserva->estado}'.";
+
         return [
             'type' => 'estado_reserva_aula',
-            'title' => 'Estado de tu reserva de aula actualizado',
-            'message' => "Tu reserva para el aula {$this->reserva->aula->name} ha sido marcada como '{$this->reserva->estado}'.",
-            'pagina' => $this->pagina, // ✅ Aquí
+            'title' => $title,
+            'message' => $message,
+            'pagina' => $this->pagina,
             'reserva' => [
                 'id' => $this->reserva->id,
                 'aula' => $this->reserva->aula->name,
@@ -70,7 +76,6 @@ class EstadoReservaAulaNotification extends Notification implements ShouldQueue,
             ]
         ];
     }
-
 
     public function toBroadcast($notifiable)
     {

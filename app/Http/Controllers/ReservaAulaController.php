@@ -9,6 +9,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Notifications\CancelarReservaAulaPrestamista;
 use App\Notifications\ConfirmarReservaAulaUsuario;
+use App\Notifications\EmailEdicionReservaAula;
 use App\Notifications\EmailEstadoAulaNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -120,6 +121,7 @@ class ReservaAulaController extends Controller
             'pagina' => $pagina,
         ], 201);
     }
+
     public function update(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
@@ -136,12 +138,12 @@ class ReservaAulaController extends Controller
 
         $reserva = ReservaAula::findOrFail($id);
 
-        // Validar duplicidad (no permitir solaparse con otra reserva del mismo usuario en la misma fecha y horario)
+        // Validar duplicidad
         $existeReserva = ReservaAula::where('user_id', $request->user_id)
             ->whereDate('fecha', $request->fecha)
             ->where('horario', $request->horario)
             ->whereIn('estado', ['Pendiente', 'Aprobado'])
-            ->where('id', '!=', $reserva->id) // excluir la reserva actual
+            ->where('id', '!=', $reserva->id)
             ->exists();
 
         if ($existeReserva) {
@@ -150,6 +152,9 @@ class ReservaAulaController extends Controller
             ], 409);
         }
 
+        $estadoAnterior = $reserva->estado;
+
+        // Actualizar datos
         $reserva->aula_id = $request->aula_id;
         $reserva->fecha = $request->fecha;
         $reserva->horario = $request->horario;
@@ -158,6 +163,29 @@ class ReservaAulaController extends Controller
         $reserva->save();
 
         $reserva->load(['user', 'aula']);
+
+        // 🔔 Notificación lógica basada en rol
+        $usuario = Auth::user();
+        $pagina = $this->calcularPaginaReserva($reserva->id, 10);
+
+        if (strtolower($usuario->role->nombre) === 'prestamista') {
+            // Prestamista edita → Notificar a encargados y admin
+            $rolesResponsables = Role::whereIn('nombre', ['encargado', 'administrador'])->pluck('id');
+            $responsables = User::whereIn('role_id', $rolesResponsables)
+                ->where('id', '!=', $usuario->id)
+                ->get();
+
+            foreach ($responsables as $responsable) {
+                $responsable->notify(new EstadoReservaAulaNotification($reserva, $responsable->id, $pagina, 'edicion'));
+                //$responsable->notify(new EmailEdicionReservaAula($reserva));
+            }
+        } else {
+            // Encargado o admin edita → Notificar al prestamista
+            if ($reserva->user) {
+                $reserva->user->notify(new EstadoReservaAulaNotification($reserva, $reserva->user->id, $pagina, 'edicion'));
+                //$reserva->user->notify(new EmailEdicionReservaAula($reserva));
+            }
+        }
 
         return response()->json([
             'message' => 'Reserva de aula actualizada exitosamente',
