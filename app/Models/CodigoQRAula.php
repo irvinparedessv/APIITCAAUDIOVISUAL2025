@@ -5,8 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class CodigoQRAula extends Model
+class CodigoQrAula extends Model
 {
     /** @use HasFactory<\Database\Factories\CodigoQRAulaFactory> */
     use HasFactory;
+
+    protected $fillable = [
+        'id',
+        'reserva_id',
+    ];
+
+    public $incrementing = false; // Muy importante para UUID manual
+    protected $keyType = 'string'; // UUID es string
 }

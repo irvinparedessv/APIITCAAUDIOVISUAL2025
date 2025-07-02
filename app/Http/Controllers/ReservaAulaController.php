@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\BitacoraHelper;
 use App\Models\Aula;
+use App\Models\CodigoQrAula;
 use App\Models\ReservaAula;
 use App\Models\Role;
 use App\Models\User;
@@ -17,7 +18,10 @@ use App\Notifications\EstadoReservaAulaNotification;
 use App\Notifications\NotificarResponsableReservaAula;
 use App\Notifications\NuevaReservaAulaNotification;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+
 
 class ReservaAulaController extends Controller
 {
@@ -80,7 +84,10 @@ class ReservaAulaController extends Controller
             'user_id' => $request->user_id,
             'estado' => $request->estado ?? 'Pendiente',
         ]);
-
+        CodigoQrAula::create([
+            'id' => (string) Str::uuid(),
+            'reserva_id' => $reserva->id,
+        ]);
         // Calcular en qué página cae esta reserva (según paginación de 10 por página)
         $pagina = $this->calcularPaginaReserva($reserva->id, 10);
 
@@ -88,12 +95,19 @@ class ReservaAulaController extends Controller
         $reserva->load(['user', 'aula']);
 
         // Obtener responsables (encargados y administradores), excluyendo al usuario que hizo la reserva
-        $responsableRoleIds = Role::whereIn('nombre', ['encargado', 'administrador'])->pluck('id');
-        $responsables = User::whereIn('role_id', $responsableRoleIds)
-            ->where('id', '!=', $reserva->user_id) // Excluye al usuario que hizo la reserva
-            ->get();
+        $adminId = User::whereHas('role', function ($q) {
+            $q->where('nombre', 'administrador');
+        })
+            ->where('id', '!=', $reserva->user_id)
+            ->value('id');
+        $encargadosIds = DB::table('aula_user')
+            ->where('aula_id', $reserva->aula_id)
+            ->where('user_id', '!=', $reserva->user_id)
+            ->pluck('user_id');
+        $responsablesIds = $encargadosIds->push($adminId)->filter()->unique()->values();
 
-        Log::info('Responsables encontrados para aula:', $responsables->pluck('id')->toArray());
+        Log::info('Responsables encontrados:', $responsablesIds->toArray());
+        $responsables = User::whereIn('id', $responsablesIds)->get();
 
         foreach ($responsables as $responsable) {
             // Enviar notificación real-time (broadcast + db)
