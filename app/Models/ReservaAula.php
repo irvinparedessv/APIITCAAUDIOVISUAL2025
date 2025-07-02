@@ -32,4 +32,8 @@ class ReservaAula extends Model
     {
         return $this->belongsTo(User::class);
     }
+    public function codigoQr()
+    {
+        return $this->hasOne(CodigoQrAula::class, 'reserva_id');
+    }
 }

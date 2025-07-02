@@ -231,7 +231,7 @@ class ReservaAulaController extends Controller
         $perPage = $request->query('per_page', 10);
         $page = $request->query('page', 1);
 
-        $query = ReservaAula::with(['aula', 'user']);
+        $query = ReservaAula::with(['aula', 'user', 'codigoQr',]);
 
         if ($from && $to) {
             $query->whereBetween('fecha', [$from, $to]);
