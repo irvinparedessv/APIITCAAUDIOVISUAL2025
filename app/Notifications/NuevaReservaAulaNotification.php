@@ -19,19 +19,20 @@ class NuevaReservaAulaNotification extends Notification implements ShouldQueue, 
     public $reserva;
     public $notifiableId;
     public $pagina;
+    public $creadorId;
 
-    public function __construct(ReservaAula $reserva, $notifiableId, int $pagina = 1)
+    public function __construct(ReservaAula $reserva, $notifiableId, int $pagina = 1, $creadorId = null)
     {
-        $this->reserva = $reserva;
-        $this->reserva->load(['user', 'aula']); 
+        $this->reserva = $reserva->load(['user', 'aula']);
         $this->notifiableId = $notifiableId;
-        $this->pagina = $pagina; // Guardar página
+        $this->pagina = $pagina;
+        $this->creadorId = $creadorId;
     }
 
     public function via($notifiable)
     {
         Log::info('Método via() ejecutado para notificaciones de aula');
-        return ['database', 'broadcast']; 
+        return ['database', 'broadcast'];
     }
 
     public function toBroadcast($notifiable)
@@ -42,17 +43,29 @@ class NuevaReservaAulaNotification extends Notification implements ShouldQueue, 
             'last_name' => $this->reserva->user ? $this->reserva->user->last_name : null,
         ]);
 
-        return new BroadcastMessage([
+        $usuarioNombre = $this->reserva->user
+            ? $this->reserva->user->first_name . ' ' . $this->reserva->user->last_name
+            : 'Usuario desconocido';
+
+        $esCreadorAdmin = $this->creadorId && $this->creadorId !== $this->reserva->user->id;
+
+        return [
+            'title' => $esCreadorAdmin
+                ? 'Reserva de aula realizada por administración'
+                : 'Nueva reserva de aula recibida',
+            'message' => $esCreadorAdmin
+                ? "Nueva reserva realizada por administración."
+                : "Nueva reserva de aula recibida del usuario {$usuarioNombre}.",
             'reserva' => [
                 'id' => $this->reserva->id,
                 'pagina' => $this->pagina,
-                'user' => $this->reserva->user ? $this->reserva->user->first_name . ' ' . $this->reserva->user->last_name : null,
+                'user' => $usuarioNombre,
                 'aula' => $this->reserva->aula->name,
                 'fecha' => $this->reserva->fecha->format('Y-m-d'),
                 'horario' => $this->reserva->horario,
                 'estado' => $this->reserva->estado,
             ]
-        ]);
+        ];
     }
 
     public function toDatabase($notifiable)
@@ -61,10 +74,16 @@ class NuevaReservaAulaNotification extends Notification implements ShouldQueue, 
             ? $this->reserva->user->first_name . ' ' . $this->reserva->user->last_name
             : 'Usuario desconocido';
 
+        $esCreadorAdmin = $this->creadorId && $this->creadorId !== $this->reserva->user->id;
+
         return [
             'type' => 'nueva_reserva_aula',
-            'title' => 'Nueva reserva de aula recibida',
-            'message' => "Nueva reserva de aula recibida del usuario {$usuarioNombre}.",
+            'title' => $esCreadorAdmin
+                ? 'Reserva de aula realizada por administración'
+                : 'Nueva reserva de aula recibida',
+            'message' => $esCreadorAdmin
+                ? "Nueva reserva realizada por administración."
+                : "Nueva reserva de aula recibida del usuario {$usuarioNombre}.",
             'reserva' => [
                 'id' => $this->reserva->id,
                 'pagina' => $this->pagina,

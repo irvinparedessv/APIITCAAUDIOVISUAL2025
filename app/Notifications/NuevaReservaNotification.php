@@ -50,7 +50,7 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
         return [
             'type' => 'nueva_reserva',
             'title' => $esCreadorAdmin
-                ? 'Se ha realizado una reserva de equipo'
+                ? 'Reserva de equipo realizada por administración'
                 : 'Nueva reserva de equipo recibida',
             'message' => $esCreadorAdmin
                 ? "Nueva reserva realizada por administración."
@@ -95,7 +95,7 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
 
         return [
             'title' => $esCreadorAdmin
-                ? 'Se ha realizado una reserva de equipo'
+                ? 'Reserva de equipo realizada por administración'
                 : 'Nueva reserva de equipo recibida',
             'message' => $esCreadorAdmin
                 ? "Nueva reserva realizada por administración."
@@ -118,5 +118,4 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
             ]
         ];
     }
-
 }
