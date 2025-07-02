@@ -176,14 +176,13 @@ class ReservaAulaController extends Controller
         $fechaHoraInicio = \Carbon\Carbon::createFromFormat('Y-m-d H:i', "{$request->fecha} {$horaInicioStr}");
         $ahora = \Carbon\Carbon::now();
 
-        if ($fechaHoraInicio->diffInMinutes($ahora, false) <= 60) {
+        // Validar que solo si es el mismo día y falta <= 60 min se bloquee
+        if ($fechaHoraInicio->isToday() && $fechaHoraInicio->diffInMinutes($ahora, false) <= 60) {
             return response()->json([
                 'message' => 'No se puede editar esta reserva porque falta menos de una hora para que inicie.'
             ], 403);
         }
 
-        // ✅ Guardar valores originales para comparar
-        $original = $reserva->only(['aula_id', 'fecha', 'horario', 'user_id', 'estado']);
 
         // Actualizar datos
         $reserva->aula_id = $request->aula_id;
