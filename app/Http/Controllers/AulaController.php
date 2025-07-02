@@ -18,6 +18,7 @@ class AulaController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'render_images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp',
+            'render_images_is360.*' => 'nullable|boolean',
             'available_times' => 'required|json',
         ]);
 
@@ -31,13 +32,14 @@ class AulaController extends Controller
 
             // 2. Guardar imágenes
             if ($request->hasFile('render_images')) {
-                foreach ($request->file('render_images') as $file) {
+                foreach ($request->file('render_images') as $index => $file) {
                     // Guarda en storage/app/public/render_images
                     $path = $file->store('render_images', 'public');
-
+                    $is360 = $request->input("render_images_is360.$index") ? true : false;
                     ImagenesAula::create([
                         'aula_id' => $aula->id,
                         'image_path' => 'storage/' . $path, // Ruta accesible públicamente
+                        'is360' => $is360,
                     ]);
                 }
             }
@@ -71,6 +73,7 @@ class AulaController extends Controller
             'name' => 'required|string|max:255',
             'available_times' => 'nullable|string', // Viene como JSON string porque usas FormData
             'render_images.*' => 'nullable|image|mimes:jpeg,png,jpg|max:14000',
+            'render_images_is360.*' => 'nullable|boolean',
         ]);
 
         // Parsear available_times JSON manualmente
@@ -128,8 +131,15 @@ class AulaController extends Controller
             // Eliminar imágenes previas de disco y DB
 
             // Guardar nuevas
-            foreach ($request->file('render_images') as $img) {
+            foreach ($request->file('render_images') as $index => $img) {
+
                 $path = $img->store('render_images', 'public');
+                $is360 = $request->input("render_images_is360.$index") ? true : false;
+                ImagenesAula::create([
+                    'aula_id' => $aula->id,
+                    'image_path' => 'storage/' . $path, // Ruta accesible públicamente
+                    'is360' => $is360,
+                ]);
                 $aula->imagenes()->create([
                     'image_path' => Storage::url($path),
                 ]);

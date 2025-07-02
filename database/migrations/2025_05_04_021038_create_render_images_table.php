@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('aula_id')->constrained('aulas')->onDelete('cascade');
             $table->string('image_path');
+            $table->boolean('is360');
             $table->timestamps();
         });
     }

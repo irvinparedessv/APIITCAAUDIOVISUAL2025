@@ -6,6 +6,7 @@ use App\Helpers\BitacoraHelper;
 use App\Mail\EstadoReservaMailable;
 use App\Mail\ReservaEditadaMailable;
 use App\Models\Bitacora;
+use App\Models\CodigoQrAula;
 use App\Models\CodigoQrReserva;
 use App\Models\CodigoQrReservaEquipo;
 use App\Models\EquipmentReservation;
@@ -64,28 +65,28 @@ class ReservaEquipoController extends Controller
         // Filtro de búsqueda por texto
         if ($request->has('search') && !empty($request->search)) {
             $searchTerm = $request->search;
-            $query->where(function($q) use ($searchTerm) {
+            $query->where(function ($q) use ($searchTerm) {
                 // Campos directos de reserva_equipos
                 $q->where('aula', 'LIKE', "%{$searchTerm}%")
-                ->orWhere('estado', 'LIKE', "%{$searchTerm}%")
-                ->orWhere('comentario', 'LIKE', "%{$searchTerm}%")
-                
-                // Búsqueda en relación con usuario
-                ->orWhereHas('user', function($q) use ($searchTerm) {
-                    $q->where('first_name', 'LIKE', "%{$searchTerm}%")
-                        ->orWhere('last_name', 'LIKE', "%{$searchTerm}%")
-                        ->orWhere('email', 'LIKE', "%{$searchTerm}%");
-                })
-                
-                // Búsqueda en relación con tipo de reserva
-                ->orWhereHas('tipoReserva', function($q) use ($searchTerm) {
-                    $q->where('nombre', 'LIKE', "%{$searchTerm}%");
-                })
-                
-                // Búsqueda en relación con equipos
-                ->orWhereHas('equipos', function($q) use ($searchTerm) {
-                    $q->where('nombre', 'LIKE', "%{$searchTerm}%");
-                });
+                    ->orWhere('estado', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('comentario', 'LIKE', "%{$searchTerm}%")
+
+                    // Búsqueda en relación con usuario
+                    ->orWhereHas('user', function ($q) use ($searchTerm) {
+                        $q->where('first_name', 'LIKE', "%{$searchTerm}%")
+                            ->orWhere('last_name', 'LIKE', "%{$searchTerm}%")
+                            ->orWhere('email', 'LIKE', "%{$searchTerm}%");
+                    })
+
+                    // Búsqueda en relación con tipo de reserva
+                    ->orWhereHas('tipoReserva', function ($q) use ($searchTerm) {
+                        $q->where('nombre', 'LIKE', "%{$searchTerm}%");
+                    })
+
+                    // Búsqueda en relación con equipos
+                    ->orWhereHas('equipos', function ($q) use ($searchTerm) {
+                        $q->where('nombre', 'LIKE', "%{$searchTerm}%");
+                    });
             });
         }
 
@@ -97,7 +98,7 @@ class ReservaEquipoController extends Controller
         // Filtro por tipo de reserva
         if ($request->has('tipo_reserva') && $request->tipo_reserva !== 'Todos') {
             $tipoReserva = $request->tipo_reserva;
-            $query->whereHas('tipoReserva', function($q) use ($tipoReserva) {
+            $query->whereHas('tipoReserva', function ($q) use ($tipoReserva) {
                 $q->where('nombre', $tipoReserva);
             });
         }
@@ -137,25 +138,52 @@ class ReservaEquipoController extends Controller
 
     public function show($idQr)
     {
-        $codigoQr = CodigoQrReservaEquipo::with('reserva')->where('id', $idQr)->first();
+        $user = Auth::user();
 
-        if (!$codigoQr || !$codigoQr->reserva) {
-            return response()->json(['message' => 'Reserva no encontrada'], 404);
+        if (strtolower($user->role->nombre) === 'encargado') {
+            // Caso encargado: igual que ahora
+            $codigoQr = CodigoQrReservaEquipo::with('reserva')->where('id', $idQr)->first();
+
+            if (!$codigoQr || !$codigoQr->reserva) {
+                return response()->json(['message' => 'Reserva no encontrada'], 404);
+            }
+
+            $reserva = $codigoQr->reserva;
+
+            return response()->json([
+                'usuario' => $reserva->user->first_name . ' ' . $reserva->user->last_name,
+                'equipo' => $reserva->equipos->pluck('nombre')->toArray(),
+                'aula' => $reserva->aula,
+                'dia' => $reserva->dia,
+                'horaSalida' => $reserva->fecha_reserva,
+                'horaEntrada' => $reserva->fecha_entrega,
+                'estado' => $reserva->estado,
+                'tipoReserva' => $reserva->tipoReserva->nombre ?? null,
+                'isRoom' => false
+            ]);
+        } elseif (strtolower($user->role->nombre) === 'espacioencargado') {
+            // Caso EspacioEncargado: usar CodigoQrAula
+            $codigoQrAula = CodigoQrAula::with('reserva')->where('id', $idQr)->first();
+
+            if (!$codigoQrAula || !$codigoQrAula->reserva) {
+                return response()->json(['message' => 'Reserva de aula no encontrada'], 404);
+            }
+
+            $reservaAula = $codigoQrAula->reserva;
+
+            return response()->json([
+                'usuario' => $reservaAula->user->first_name . ' ' . $reservaAula->user->last_name,
+                'aula' => $reservaAula->aula, // Relación aula
+                'dia' => $reservaAula->fecha,
+                'horario' => $reservaAula->horario,
+                'estado' => $reservaAula->estado,
+                'isRoom' => true
+            ]);
+        } else {
+            return response()->json(['message' => 'No autorizado'], 403);
         }
-
-        $reserva = $codigoQr->reserva;
-
-        return response()->json([
-            'usuario' => $reserva->user->first_name . ' ' . $reserva->user->last_name,
-            'equipo' => $reserva->equipos->pluck('nombre')->toArray(), // Relación equipos
-            'aula' => $reserva->aula, // Relación aula
-            'dia' => $reserva->dia,
-            'horaSalida' => $reserva->fecha_reserva,
-            'horaEntrada' => $reserva->fecha_entrega,
-            'estado' => $reserva->estado,
-            'tipoReserva' => $reserva->tipoReserva->nombre ?? null,
-        ]);
     }
+
 
     public function equiposReserva()
     {
@@ -163,7 +191,7 @@ class ReservaEquipoController extends Controller
 
         return $equipos;
     }
-    
+
     public function store(Request $request)
     {
         // Validar datos
@@ -179,7 +207,7 @@ class ReservaEquipoController extends Controller
             'tipo_reserva_id' => 'required|exists:tipo_reservas,id',
             'documento_evento' => 'nullable|file|mimes:pdf,doc,docx|max:5120',
         ]);
-        
+
 
         // Obtener fecha y hora actual
         $now = Carbon::now();
@@ -187,7 +215,7 @@ class ReservaEquipoController extends Controller
         $horaInicio = Carbon::parse($validated['fecha_reserva'] . ' ' . $validated['startTime']);
 
         Log::info('Ahora: ' . $now);
-        Log::info('Hora inicio reserva: ' . $horaInicio);   
+        Log::info('Hora inicio reserva: ' . $horaInicio);
 
         // Validar que no sea más de 7 días de anticipación
         if ($fechaReserva->isAfter($now->copy()->addDays(7))) {
@@ -199,7 +227,7 @@ class ReservaEquipoController extends Controller
         // Validar si es para el mismo día
         if ($fechaReserva->isToday()) {
             Log::info("Hora actual: $now, hora inicio: $horaInicio");
-        
+
             $minAnticipacion = 30;
 
             $minutosDiferencia = $now->copy()->startOfMinute()->diffInMinutes($horaInicio->copy()->startOfMinute(), false);
@@ -212,7 +240,7 @@ class ReservaEquipoController extends Controller
                 ], 422);
             }
         }
-       
+
         // Verificar disponibilidad
         foreach ($validated['equipo'] as $equipo) {
             $equipoModel = Equipo::find($equipo['id']);
@@ -239,7 +267,7 @@ class ReservaEquipoController extends Controller
 
                 $query->where(function ($q) use ($inicioNueva, $finNueva) {
                     $q->where('fecha_reserva', '<', $finNueva)
-                    ->where('fecha_entrega', '>', $inicioNueva);
+                        ->where('fecha_entrega', '>', $inicioNueva);
                 });
             })
             ->whereIn('estado', ['Pendiente', 'Aprobado']) // solo si aún está activa
@@ -340,7 +368,7 @@ class ReservaEquipoController extends Controller
         // Notificación por correo al usuario
         //$reserva->user->notify(new ConfirmarReservaUsuario($reserva));
 
-       return response()->json([
+        return response()->json([
             'message' => 'Reserva creada exitosamente',
             'reserva' => [
                 ...$reserva->toArray(),
@@ -502,7 +530,7 @@ class ReservaEquipoController extends Controller
         $pagina = $this->calcularPaginaReserva($reserva->id);
 
         try {
-           if (strtolower($user->role->nombre) === 'prestamista' && strtolower($request->estado) === 'cancelado') {
+            if (strtolower($user->role->nombre) === 'prestamista' && strtolower($request->estado) === 'cancelado') {
                 // El prestamista cancela → notificar solo a admins y encargados
                 $this->notificarResponsablesPorCancelacionEquipo($user, $reserva, $pagina);
             } else {
@@ -556,7 +584,7 @@ class ReservaEquipoController extends Controller
 
         // Obtener solo las notificaciones NO archivadas
         $notificaciones = $user->notifications()
-            ->where('is_archived', false) 
+            ->where('is_archived', false)
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -666,7 +694,7 @@ class ReservaEquipoController extends Controller
 
         // Si minutos están entre 31 y 59, subir a la próxima hora exacta
         return $dateTime->copy()->addHour()->minute(0)->second(0);
-    }   
+    }
 
     private function notificarResponsablesPorCancelacionEquipo(User $prestamista, ReservaEquipo $reserva, int $pagina)
     {
@@ -680,5 +708,4 @@ class ReservaEquipoController extends Controller
             //Mail::to($responsable->email)->queue(new EstadoReservaMailable($reserva));
         }
     }
-
 }

@@ -54,7 +54,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador'])->group(function (
 
 
 
-Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador'])->group(function () {
+Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEncargado'])->group(function () {
     //Route::apiResource('equipos', EquipoController::class);
     Route::get('/reservas', [ReservaEquipoController::class, 'index']); // Ver todas las reservas
     Route::post('/reservas', [ReservaEquipoController::class, 'store']);
