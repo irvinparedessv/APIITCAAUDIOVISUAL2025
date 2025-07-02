@@ -390,10 +390,6 @@ class ReservaEquipoController extends Controller
 
         $ahora = now();
         $inicioReserva = Carbon::parse($reserva->fecha_reserva);
-
-        $ahora = now();
-        $inicioReserva = Carbon::parse($reserva->fecha_reserva);
-
         $minutosFaltantes = $ahora->diffInMinutes($inicioReserva, false); // con signo
 
         if ($minutosFaltantes <= 60) {
@@ -401,7 +397,6 @@ class ReservaEquipoController extends Controller
                 'message' => 'No puedes modificar la reserva porque falta menos de una hora para que inicie.'
             ], 422);
         }
-
 
         // Validar campos
         $validated = $request->validate([
@@ -430,12 +425,40 @@ class ReservaEquipoController extends Controller
             }
         }
 
+        // Verificar si hubo cambios
+        $cambios = false;
+
+        // Cambio en aula
+        if ($reserva->aula !== $validated['aula']) {
+            $cambios = true;
+        }
+
+        // Cambio en equipos
+        $equiposActuales = $reserva->equipos->pluck('pivot.cantidad', 'id')->toArray();
+        $equiposNuevos = [];
+        foreach ($validated['equipo'] as $item) {
+            $equiposNuevos[$item['id']] = $item['cantidad'];
+        }
+        if ($equiposActuales != $equiposNuevos) {
+            $cambios = true;
+        }
+
+        // Cambio en documento
+        if ($request->hasFile('documento_evento')) {
+            $cambios = true;
+        }
+
+        if (!$cambios) {
+            return response()->json([
+                'message' => 'No se detectaron cambios en la reserva.'
+            ], 200);
+        }
+
         // Actualizar aula
         $reserva->aula = $validated['aula'];
 
         // Subir nuevo documento si se incluye
         if ($request->hasFile('documento_evento')) {
-            // Eliminar archivo anterior si existía
             if ($reserva->documento_evento && Storage::disk('public')->exists($reserva->documento_evento)) {
                 Storage::disk('public')->delete($reserva->documento_evento);
             }
@@ -468,14 +491,12 @@ class ReservaEquipoController extends Controller
             if ($user->id !== $reserva->user_id && $reserva->user) {
                 $reserva->user->notify(new EstadoReservaEquipoNotification($reserva, $reserva->user->id, $pagina, 'edicion'));
                 Log::info("Notificación enviada al prestamista {$reserva->user->id} tras edición");
-                //Mail::to($reserva->user->email)->queue(new ReservaEditadaMailable($reserva, false));
             }
         } else {
             // Si el prestamista hizo el cambio, notificar a encargados y administradores
             foreach ($responsables as $responsable) {
                 $responsable->notify(new EstadoReservaEquipoNotification($reserva, $responsable->id, $pagina, 'edicion'));
                 Log::info("Notificación enviada a responsable {$responsable->id} tras edición del prestamista");
-                //Mail::to($responsable->email)->queue(new ReservaEditadaMailable($reserva, true));
             }
         }
 
