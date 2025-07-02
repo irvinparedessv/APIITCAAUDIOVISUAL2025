@@ -21,13 +21,13 @@ class EquipoController extends Controller
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('nombre', 'like', "%$search%")
-                ->orWhere('descripcion', 'like', "%$search%")
-                // Buscar en nombre del tipoEquipo (relación)
-                ->orWhereHas('tipoEquipo', function($q2) use ($search) {
-                    $q2->where('nombre', 'like', "%$search%");
-                })
-                // Buscar en estado convertido a texto
-                ->orWhereRaw("CASE WHEN estado = 1 THEN 'Disponible' ELSE 'No Disponible' END LIKE ?", ["%$search%"]);
+                    ->orWhere('descripcion', 'like', "%$search%")
+                    // Buscar en nombre del tipoEquipo (relación)
+                    ->orWhereHas('tipoEquipo', function ($q2) use ($search) {
+                        $q2->where('nombre', 'like', "%$search%");
+                    })
+                    // Buscar en estado convertido a texto
+                    ->orWhereRaw("CASE WHEN estado = 1 THEN 'Disponible' ELSE 'No Disponible' END LIKE ?", ["%$search%"]);
             });
         }
 
@@ -64,7 +64,7 @@ class EquipoController extends Controller
     }
 
 
-    
+
     public function obtenerEquipos(Request $request)
     {
         $query = Equipo::where('is_deleted', false)->where('estado', true);
@@ -80,9 +80,19 @@ class EquipoController extends Controller
         }
 
         // Selección de campos y paginación
-        $equipos = $query->select('id', 'nombre', 'descripcion', 'cantidad', 'tipo_equipo_id')
-                        ->orderBy('nombre')
-                        ->paginate(10); // Cambia 10 por la cantidad que desees por página
+        $equipos = $query->select('id', 'nombre', 'descripcion', 'cantidad', 'tipo_equipo_id', 'imagen')
+            ->orderBy('nombre')
+            ->paginate(10); // Cambia 10 por la cantidad que desees por página
+
+        // Transformar la colección para incluir la URL de la imagen
+        $equipos->getCollection()->transform(function ($equipo) {
+            // Agregar la URL completa de la imagen
+            $equipo->imagen_url = $equipo->imagen
+                ? asset('storage/equipos/' . $equipo->imagen)
+                : asset('storage/equipos/default.png');
+
+            return $equipo;
+        });
 
         return response()->json($equipos);
     }
@@ -195,9 +205,9 @@ class EquipoController extends Controller
     public function getEquiposPorTipoReserva($tipoReservaId)
     {
         $equipos = Equipo::where('tipo_reserva_id', $tipoReservaId)
-                        ->where('estado', true)
-                        ->where('is_deleted', false)
-                        ->get(['id', 'nombre', 'tipo_equipo_id']); 
+            ->where('estado', true)
+            ->where('is_deleted', false)
+            ->get(['id', 'nombre', 'tipo_equipo_id']);
 
         return response()->json($equipos);
     }
