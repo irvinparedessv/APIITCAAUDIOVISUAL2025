@@ -78,7 +78,6 @@ Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->grou
     Route::apiResource('Obtenerequipos', EquipoController::class);
     Route::get('equiposReserva', [ReservaEquipoController::class, 'equiposReserva']);
     Route::post('/reservas', [ReservaEquipoController::class, 'store']);
-    Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']); // Ver reserva por QR
     //Route::post('/reservas', [ReservaAulaController::class, 'store']);
 });
 
@@ -128,12 +127,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/logout', [LoginController::class, 'logout']);
 });
-Route::get('/verificar-rol', function () {
-    return Auth::user();
-});
 
-//RESERVAS EQUIPO
-// Route::get('/Obtenerequipos', [EquipoController::class, 'obtenerEquipos']);
-// Route::post('/reservas', [ReservaEquipoController::class, 'store']);
-// Route::get('/reservas/{id}', [ReservaEquipoController::class, 'getByUser']);
-// Route::get('/reservasQR/{idQr}', [ReservaEquipoController::class, 'show']); 
+Route::middleware('auth:sanctum')->get('/verificar-rol', function () {
+    return response()->json([
+        'role' => Auth::user()->role->nombre,
+        'user' => Auth::user(),
+    ]);
+});

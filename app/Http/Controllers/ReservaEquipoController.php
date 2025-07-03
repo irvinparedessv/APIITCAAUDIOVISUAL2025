@@ -139,50 +139,71 @@ class ReservaEquipoController extends Controller
     public function show($idQr)
     {
         $user = Auth::user();
+        $rol = strtolower($user->role->nombre);
 
-        if (strtolower($user->role->nombre) === 'encargado') {
-            // Caso encargado: igual que ahora
+        if ($rol === 'encargado' || $rol === 'administrador') {
+            // 1️⃣ Busca primero como equipo
             $codigoQr = CodigoQrReservaEquipo::with('reserva')->where('id', $idQr)->first();
 
-            if (!$codigoQr || !$codigoQr->reserva) {
-                return response()->json(['message' => 'Reserva no encontrada'], 404);
+            if ($codigoQr && $codigoQr->reserva) {
+                $reserva = $codigoQr->reserva;
+
+                return response()->json([
+                    'usuario' => $reserva->user->first_name . ' ' . $reserva->user->last_name,
+                    'equipo' => $reserva->equipos->pluck('nombre')->toArray(),
+                    'aula' => $reserva->aula,
+                    'dia' => $reserva->dia,
+                    'horaSalida' => $reserva->fecha_reserva,
+                    'horaEntrada' => $reserva->fecha_entrega,
+                    'estado' => $reserva->estado,
+                    'tipoReserva' => $reserva->tipoReserva->nombre ?? null,
+                    'id'  => $reserva->id,
+                    'isRoom' => false
+                ]);
             }
 
-            $reserva = $codigoQr->reserva;
-
-            return response()->json([
-                'usuario' => $reserva->user->first_name . ' ' . $reserva->user->last_name,
-                'equipo' => $reserva->equipos->pluck('nombre')->toArray(),
-                'aula' => $reserva->aula,
-                'dia' => $reserva->dia,
-                'horaSalida' => $reserva->fecha_reserva,
-                'horaEntrada' => $reserva->fecha_entrega,
-                'estado' => $reserva->estado,
-                'tipoReserva' => $reserva->tipoReserva->nombre ?? null,
-                'isRoom' => false
-            ]);
-        } elseif (strtolower($user->role->nombre) === 'espacioencargado') {
-            // Caso EspacioEncargado: usar CodigoQrAula
+            // 2️⃣ Si no, intenta como aula
             $codigoQrAula = CodigoQrAula::with('reserva')->where('id', $idQr)->first();
 
-            if (!$codigoQrAula || !$codigoQrAula->reserva) {
-                return response()->json(['message' => 'Reserva de aula no encontrada'], 404);
+            if ($codigoQrAula && $codigoQrAula->reserva) {
+                $reservaAula = $codigoQrAula->reserva;
+
+                return response()->json([
+                    'usuario' => $reservaAula->user->first_name . ' ' . $reservaAula->user->last_name,
+                    'espacio' => $reservaAula->aula,
+                    'id'  => $reservaAula->id,
+                    'dia' => $reservaAula->fecha,
+                    'horario' => $reservaAula->horario,
+                    'estado' => $reservaAula->estado,
+                    'isRoom' => true
+                ]);
             }
 
-            $reservaAula = $codigoQrAula->reserva;
+            return response()->json(['message' => 'Reserva no encontrada'], 404);
+        } elseif ($rol === 'espacioencargado') {
+            // Solo busca aulas
+            $codigoQrAula = CodigoQrAula::with('reserva')->where('id', $idQr)->first();
 
-            return response()->json([
-                'usuario' => $reservaAula->user->first_name . ' ' . $reservaAula->user->last_name,
-                'aula' => $reservaAula->aula, // Relación aula
-                'dia' => $reservaAula->fecha,
-                'horario' => $reservaAula->horario,
-                'estado' => $reservaAula->estado,
-                'isRoom' => true
-            ]);
-        } else {
-            return response()->json(['message' => 'No autorizado'], 403);
+            if ($codigoQrAula && $codigoQrAula->reserva) {
+                $reservaAula = $codigoQrAula->reserva;
+
+                return response()->json([
+                    'usuario' => $reservaAula->user->first_name . ' ' . $reservaAula->user->last_name,
+                    'espacio' => $reservaAula->aula,
+                    'dia' => $reservaAula->fecha,
+                    'id'  => $reservaAula->id,
+                    'horario' => $reservaAula->horario,
+                    'estado' => $reservaAula->estado,
+                    'isRoom' => true
+                ]);
+            }
+
+            return response()->json(['message' => 'Reserva de aula no encontrada'], 404);
         }
+
+        return response()->json(['message' => 'No autorizados'], 403);
     }
+
 
 
     public function equiposReserva()

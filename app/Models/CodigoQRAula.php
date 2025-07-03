@@ -17,4 +17,10 @@ class CodigoQrAula extends Model
 
     public $incrementing = false; // Muy importante para UUID manual
     protected $keyType = 'string'; // UUID es string
+
+
+    public function reserva()
+    {
+        return $this->belongsTo(ReservaAula::class, 'reserva_id');
+    }
 }
