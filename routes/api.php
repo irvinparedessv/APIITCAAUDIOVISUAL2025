@@ -18,6 +18,7 @@ use App\Http\Controllers\BitacoraController;
 use App\Http\Controllers\ChatGPTController;
 use App\Http\Controllers\PrediccionEquipoController;
 use App\Http\Controllers\ProfileController;  // ✅ Para Perfil Usuario    
+use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\ReservaAulaController;
 use App\Http\Controllers\TipoReservaController;
 
@@ -78,6 +79,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->grou
     Route::apiResource('Obtenerequipos', EquipoController::class);
     Route::get('equiposReserva', [ReservaEquipoController::class, 'equiposReserva']);
     Route::post('/reservas', [ReservaEquipoController::class, 'store']);
+    Route::get('/reportes/reservas-rango', [ReporteController::class, 'reporteReservasPorRango']);
     //Route::post('/reservas', [ReservaAulaController::class, 'store']);
 });
 
