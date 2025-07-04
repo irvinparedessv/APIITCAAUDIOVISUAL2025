@@ -18,7 +18,8 @@ class BitacoraHelper
             'nombre_usuario' => $user ? "{$user->first_name} {$user->last_name}" : 'Sistema',
             'accion' => 'Cambio de estado a ' . $estadoLegibleNuevo,
             'modulo' => 'Reserva Equipo',
-            'descripcion' => "{$user->first_name} cambió el estado de la reserva de {$nombrePrestamista} de '{$estadoLegibleAnterior}' a '{$estadoLegibleNuevo}' (ID Reserva: {$reservaId})",
+            'descripcion' => ($user ? "{$user->first_name}" : 'Sistema') .
+                " cambió el estado de la reserva de {$nombrePrestamista} de '{$estadoLegibleAnterior}' a '{$estadoLegibleNuevo}' (ID Reserva: {$reservaId})",
         ]);
     }
 
@@ -33,7 +34,8 @@ class BitacoraHelper
             'nombre_usuario' => $user ? "{$user->first_name} {$user->last_name}" : 'Sistema',
             'accion' => 'Cambio de estado a ' . $estadoLegibleNuevo,
             'modulo' => 'Reserva Aula',
-            'descripcion' => "{$user->first_name} cambió el estado de la reserva de aula de {$nombrePrestamista} de '{$estadoLegibleAnterior}' a '{$estadoLegibleNuevo}' (ID Reserva: {$reservaId})",
+            'descripcion' => ($user ? "{$user->first_name}" : 'Sistema') .
+                " cambió el estado de la reserva de aula de {$nombrePrestamista} de '{$estadoLegibleAnterior}' a '{$estadoLegibleNuevo}' (ID Reserva: {$reservaId})",
         ]);
     }
 
