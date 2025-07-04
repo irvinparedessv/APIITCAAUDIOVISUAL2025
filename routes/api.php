@@ -73,13 +73,20 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/prediccion/reservas/top5', [PrediccionEquipoController::class, 'top5EquiposConPrediccion']);
 
     Route::get('/reservas/dia', [ReservaEquipoController::class, 'reservasDelDia']);
+
+    Route::get('/reportes/reservas-rango', [ReporteController::class, 'reporteReservasPorRango']);
+    Route::get('/reportes/reservas-por-usuario', [ReporteController::class, 'reporteReservasPorUsuario']);
+    Route::get('/reportes/uso-aulas', [ReporteController::class, 'reporteUsoAulas']);
+    Route::get('/reportes/uso-equipos', [ReporteController::class, 'reporteUsoEquipos']);
+    Route::get('/reportes/horarios-solicitados', [ReporteController::class, 'reporteHorariosSolicitados']);
+    Route::get('/reportes/inventario-equipos', [ReporteController::class, 'reporteInventarioEquipos']);
+
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->group(function () {
     Route::apiResource('Obtenerequipos', EquipoController::class);
     Route::get('equiposReserva', [ReservaEquipoController::class, 'equiposReserva']);
     Route::post('/reservas', [ReservaEquipoController::class, 'store']);
-    Route::get('/reportes/reservas-rango', [ReporteController::class, 'reporteReservasPorRango']);
     //Route::post('/reservas', [ReservaAulaController::class, 'store']);
 });
 
