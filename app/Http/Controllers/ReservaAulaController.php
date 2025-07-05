@@ -107,8 +107,16 @@ class ReservaAulaController extends Controller
                 ->where('aula_id', $reserva->aula_id)
                 ->where('user_id', '!=', $reserva->user_id)
                 ->pluck('user_id');
+            $espacioEncargadosIds = User::whereHas('role', fn($q) => $q->where('nombre', 'espacioencargado'))
+                ->where('id', '!=', $reserva->user_id)
+                ->pluck('id');
 
-            $responsablesIds = $encargadosIds->push($adminId)->filter()->unique()->values();
+            $responsablesIds = $encargadosIds
+                ->merge($espacioEncargadosIds)
+                ->push($adminId)
+                ->filter()
+                ->unique()
+                ->values();
             $responsables = User::whereIn('id', $responsablesIds)->get();
 
             foreach ($responsables as $responsable) {
@@ -208,7 +216,7 @@ class ReservaAulaController extends Controller
         $pagina = $this->calcularPaginaReserva($reserva->id, 10);
 
         if (strtolower($usuario->role->nombre) === 'prestamista') {
-            $rolesResponsables = Role::whereIn('nombre', ['encargado', 'administrador'])->pluck('id');
+            $rolesResponsables = Role::whereIn('nombre', ['espacioencargado', 'administrador'])->pluck('id');
             $responsables = User::whereIn('role_id', $rolesResponsables)
                 ->where('id', '!=', $usuario->id)
                 ->get();
