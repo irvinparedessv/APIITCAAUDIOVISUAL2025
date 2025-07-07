@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 use App\Models\Equipo;
 use App\Models\TipoEquipo;
 use App\Services\PrediccionEquipoService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class PrediccionEquipoController extends Controller
@@ -20,7 +21,7 @@ class PrediccionEquipoController extends Controller
         try {
             $mesesAPredecir = $request->input('meses', 6);
             $tipoEquipoId = $request->input('tipo_equipo_id');
-            
+
             $resultado = $predictor->predecirReservasMensuales($mesesAPredecir, $tipoEquipoId);
 
             return response()->json([
@@ -70,52 +71,54 @@ class PrediccionEquipoController extends Controller
         }
     }
 
-   public function buscarEquipos(Request $request)
-{
-    $request->validate([
-        'search' => 'sometimes|string|max:100',
-        'limit' => 'sometimes|integer|min:1|max:50'
-    ]);
+    public function buscarEquipos(Request $request)
+    {
+        $request->validate([
+            'search' => 'sometimes|string|max:100',
+            'limit' => 'sometimes|integer|min:1|max:50'
+        ]);
 
-    $query = Equipo::where('is_deleted', false)
-        ->with('tipoEquipo')
-        ->orderBy('nombre');
+        $query = Equipo::where('is_deleted', false)
+            ->where('estado', 1) // <-- Se filtra por equipos disponibles
+            ->with('tipoEquipo')
+            ->orderBy('nombre');
 
-    if ($request->has('search')) {
-        $query->where('nombre', 'like', '%'.$request->search.'%');
-    }
+        if ($request->has('search')) {
+            $query->where('nombre', 'like', '%' . $request->search . '%');
+        }
 
-    $equipos = $query->limit($request->input('limit', 10))->get();
+        $equipos = $query->limit($request->input('limit', 10))->get();
 
-    return response()->json([
-        'success' => true,
-        'data' => $equipos->map(function ($equipo) {
-            return [
-                'id' => $equipo->id,
-                'nombre' => $equipo->nombre,
-                'tipo' => $equipo->tipoEquipo->nombre ?? 'Sin tipo'
-            ];
-        })
-    ]);
-}
-
-public function prediccionPorEquipo($id, PrediccionEquipoService $predictor)
-{
-    try {
-        $prediccion = $predictor->predecirReservasMensualesPorEquipo(6, $id);
-        
         return response()->json([
             'success' => true,
-            'data' => $this->formatearParaFrontend($prediccion),
-            'equipo' => Equipo::findOrFail($id)->only('id', 'nombre', 'codigo')
+            'data' => $equipos->map(function ($equipo) {
+                return [
+                    'id' => $equipo->id,
+                    'nombre' => $equipo->nombre,
+                    'tipo' => $equipo->tipoEquipo->nombre ?? 'Sin tipo'
+                ];
+            })
         ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => $e->getMessage()
-        ], 400);
     }
-}
+
+
+    public function prediccionPorEquipo($id, PrediccionEquipoService $predictor)
+    {
+        try {
+            $prediccion = $predictor->predecirReservasMensualesPorEquipo(6, $id);
+
+            return response()->json([
+                'success' => true,
+                'data' => $this->formatearParaFrontend($prediccion),
+                'equipo' => Equipo::findOrFail($id)->only('id', 'nombre', 'codigo')
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
+        }
+    }
 
     protected function formatearParaFrontend(array $resultado): array
     {
@@ -151,48 +154,55 @@ public function prediccionPorEquipo($id, PrediccionEquipoService $predictor)
         ];
     }
 
+
+
+
     public function top5EquiposConPrediccion(PrediccionEquipoService $predictor)
-{
-    try {
-        $equipos = Equipo::where('is_deleted', false)
-            ->withCount(['reservas as total_reservas' => function ($query) {
-                $query->whereIn('estado', ['Aprobado', 'Completado']);
-            }])
-            ->orderByDesc('total_reservas')
-            ->take(5)
-            ->get();
+    {
+        try {
+            $fechaInicio = Carbon::now()->subMonths(6); // Hace 6 meses
 
-        $resultados = [];
+            $equipos = Equipo::where('is_deleted', false)
+                ->where('estado', 1) // Solo equipos activos
+                ->withCount(['reservas as total_reservas' => function ($query) use ($fechaInicio) {
+                    $query->whereIn('estado', ['Aprobado', 'Completado'])
+                        ->where('fecha_reserva', '>=', $fechaInicio); // Solo reservas recientes
+                }])
+                ->orderByDesc('total_reservas')
+                ->take(5)
+                ->get();
 
-        foreach ($equipos as $equipo) {
-            try {
-                $prediccion = $predictor->predecirReservasMensualesPorEquipo(6, $equipo->id);
-                $resultados[] = [
-                    'equipo' => $equipo,
-                    'prediccion' => $this->formatearParaFrontend($prediccion),
-                ];
-            } catch (\Exception $e) {
-                $resultados[] = [
-                    'equipo' => $equipo,
-                    'error' => $e->getMessage(),
-                ];
+            $resultados = [];
+
+            foreach ($equipos as $equipo) {
+                try {
+                    $prediccion = $predictor->predecirReservasMensualesPorEquipo(6, $equipo->id);
+                    $resultados[] = [
+                        'equipo' => [
+                            'id' => $equipo->id,
+                            'nombre' => $equipo->nombre,
+                            'total_reservas' => $equipo->total_reservas,
+                        ],
+                        'prediccion' => $this->formatearParaFrontend($prediccion),
+                    ];
+                } catch (\Exception $e) {
+                    $resultados[] = [
+                        'equipo' => $equipo,
+                        'error' => $e->getMessage(),
+                    ];
+                }
             }
+
+            return response()->json([
+                'success' => true,
+                'data' => $resultados,
+                'message' => 'Top 5 equipos activos con predicción (últimos 6 meses)',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'data' => $resultados,
-            'message' => 'Top 5 equipos con predicción generada',
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => $e->getMessage()
-        ], 500);
     }
-}
-
-
-
-    
 }

@@ -166,7 +166,6 @@ class ReporteController extends Controller
             'total' => $reservasPaginadas->total(),
         ]);
     }
-
     public function reporteUsoEquipos(Request $request)
     {
         $from = $request->input('from');
@@ -182,6 +181,7 @@ class ReporteController extends Controller
                 'tipo_equipos.nombre as tipo_equipo',
                 DB::raw('SUM(equipo_reserva.cantidad) as total_cantidad')
             )
+            ->where('equipos.estado', 1) // <- FILTRO DE EQUIPOS ACTIVOS
             ->groupBy('equipos.id', 'equipos.nombre', 'tipo_equipos.nombre')
             ->orderByDesc('total_cantidad');
 
@@ -189,7 +189,6 @@ class ReporteController extends Controller
             $query->whereBetween('reserva_equipos.fecha_reserva', [$from, $to]);
         }
 
-        // FILTRO POR TIPO DE EQUIPO
         if ($tipoEquipo) {
             $query->where('tipo_equipos.nombre', $tipoEquipo);
         }
