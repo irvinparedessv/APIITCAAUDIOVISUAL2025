@@ -38,7 +38,7 @@ class ImagenesAulaSeeder extends Seeder
             ImagenesAula::create([
                 'aula_id' => $aula->id,
                 // Ruta relativa accesible, sin "public/"
-                'image_path' => "render_images/{$filename}",
+                'image_path' => "storage/render_images/{$filename}",
                 'is360' => in_array($aula->id, [1, 2]),
             ]);
         }
