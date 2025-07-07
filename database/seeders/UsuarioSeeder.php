@@ -88,19 +88,5 @@ class UsuarioSeeder extends Seeder
             'address'           => null,
             'image'             => null,
         ]);
-        User::create([
-            'first_name'        => 'EncargadoEspacio',
-            'last_name'         => 'EspacioLast',
-            'email'             => 'espacioe@correo.com',
-            'email_verified_at' => now(),
-            'password'          => Hash::make('123'),
-            'estado'            => 1,
-            'is_deleted'        => false,
-            'remember_token'    => null,
-            'role_id'           => 4, // Encargado Espacio
-            'phone'             => null,
-            'address'           => null,
-            'image'             => null,
-        ]);
     }
 }
