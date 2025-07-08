@@ -115,6 +115,7 @@ class ReporteController extends Controller
             'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
             'estado' => 'nullable|string',
             'search' => 'nullable|string',
+            'usuario_id' => 'nullable|integer|exists:users,id', // <-- ya validado
             'per_page' => 'nullable|integer|min:1|max:100',
             'page' => 'nullable|integer|min:1',
         ]);
@@ -123,6 +124,7 @@ class ReporteController extends Controller
         $fechaFin = $request->input('fecha_fin');
         $estado = $request->input('estado');
         $search = $request->input('search');
+        $usuarioId = $request->input('usuario_id'); // <-- nuevo
         $perPage = $request->input('per_page', 20);
         $page = $request->input('page', 1);
 
@@ -131,6 +133,11 @@ class ReporteController extends Controller
 
         if ($estado && strtolower($estado) !== 'todos') {
             $query->where('estado', $estado);
+        }
+
+        // ✅ NUEVO: filtro por usuario_id si viene del request
+        if ($usuarioId) {
+            $query->where('user_id', $usuarioId);
         }
 
         if ($search) {
@@ -166,6 +173,8 @@ class ReporteController extends Controller
             'total' => $reservasPaginadas->total(),
         ]);
     }
+
+
     public function reporteUsoEquipos(Request $request)
     {
         $from = $request->input('from');

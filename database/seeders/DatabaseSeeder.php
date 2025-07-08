@@ -22,8 +22,8 @@ class DatabaseSeeder extends Seeder
             ReservaEquipoSeeder::class,
             HorarioAulasSeeder::class,
             ImagenesAulaSeeder::class,
-            UsuariosEncargadosSeeder::class
-
+            UsuariosEncargadosSeeder::class,
+            ReservaAulaSeeder::class
         ]);
     }
 }
