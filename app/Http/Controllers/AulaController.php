@@ -158,8 +158,23 @@ class AulaController extends Controller
             ->with('encargados'); // 👈 Incluye encargados
 
         if ($search = $request->input('search')) {
-            $query->where('name', 'like', "%$search%");
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%$search%")
+                    ->orWhereHas('encargados', function ($subquery) use ($search) {
+                        $subquery->where('first_name', 'like', "%$search%")
+                            ->orWhere('last_name', 'like', "%$search%");
+                    });
+            });
         }
+
+
+        if ($request->has('has_images')) {
+            $value = filter_var($request->input('has_images'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($value !== null) {
+                $query->has('imagenes', $value ? '>' : '=', 0);
+            }
+        }
+
 
         $perPage = $request->input('perPage', 5);
         $aulas = $query->paginate($perPage);
