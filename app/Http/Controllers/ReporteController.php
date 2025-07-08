@@ -174,6 +174,58 @@ class ReporteController extends Controller
         ]);
     }
 
+    // En tu controlador ReporteController o similar
+
+    public function reporteUsoPorAula(Request $request)
+    {
+        $request->validate([
+            'fecha_inicio' => 'required|date',
+            'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
+            'aula_id' => 'required|integer|exists:aulas,id',
+            'estado' => 'nullable|string',
+            'per_page' => 'nullable|integer|min:1|max:100',
+            'page' => 'nullable|integer|min:1',
+        ]);
+
+        $fechaInicio = $request->input('fecha_inicio');
+        $fechaFin = $request->input('fecha_fin');
+        $estado = $request->input('estado');
+        $aulaId = $request->input('aula_id');
+        $perPage = $request->input('per_page', 20);
+        $page = $request->input('page', 1);
+
+        $query = ReservaAula::with(['aula', 'user'])
+            ->whereBetween('fecha', [$fechaInicio, $fechaFin])
+            ->where('aula_id', $aulaId);
+
+        if ($estado && strtolower($estado) !== 'todos') {
+            $query->where('estado', $estado);
+        }
+
+        $reservasPaginadas = $query->orderBy('fecha', 'desc')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        $reservas = $reservasPaginadas->getCollection()->map(function ($reserva) {
+            return [
+                'id' => $reserva->id,
+                'aula' => $reserva->aula->name ?? '',
+                'usuario' => $reserva->user ? ($reserva->user->first_name . ' ' . $reserva->user->last_name) : '',
+                'fecha' => $reserva->fecha->format('Y-m-d'),
+                'horario' => $reserva->horario,
+                'estado' => $reserva->estado,
+            ];
+        });
+
+        return response()->json([
+            'data' => $reservas,
+            'current_page' => $reservasPaginadas->currentPage(),
+            'last_page' => $reservasPaginadas->lastPage(),
+            'per_page' => $reservasPaginadas->perPage(),
+            'total' => $reservasPaginadas->total(),
+        ]);
+    }
+
+
 
     public function reporteUsoEquipos(Request $request)
     {

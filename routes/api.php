@@ -77,6 +77,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/reportes/reservas-rango', [ReporteController::class, 'reporteReservasPorRango']);
     Route::get('/reportes/reservas-por-usuario', [ReporteController::class, 'reporteReservasPorUsuario']);
     Route::get('/reportes/uso-aulas', [ReporteController::class, 'reporteUsoAulas']);
+    Route::get('/reportes/reservas-por-aula', [ReporteController::class, 'reporteUsoPorAula']);
     Route::get('/reportes/uso-equipos', [ReporteController::class, 'reporteUsoEquipos']);
     Route::get('/reportes/horarios-solicitados', [ReporteController::class, 'reporteHorariosSolicitados']);
     Route::get('/reportes/inventario-equipos', [ReporteController::class, 'reporteInventarioEquipos']);
