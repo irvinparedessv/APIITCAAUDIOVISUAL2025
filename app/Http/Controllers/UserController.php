@@ -20,9 +20,11 @@ class UserController extends Controller
     public function index(Request $request)
 {
     $perPage = $request->input('per_page', 10);
-    $query = User::with('role');
+    
+    // Excluir registros marcados como eliminados
+    $query = User::with('role')->where('is_deleted', 0);
 
-    // Filtros individuales que ya tenías
+    // Filtros individuales
     if ($request->has('first_name')) {
         $query->where('first_name', 'like', '%' . $request->first_name . '%');
     }
@@ -47,7 +49,7 @@ class UserController extends Controller
         $query->where('phone', 'like', '%' . $request->phone . '%');
     }
 
-    // Filtro adicional de búsqueda general (opcional)
+    // Filtro de búsqueda general
     if ($request->has('search') && !empty($request->search)) {
         $search = $request->search;
         $query->where(function ($q) use ($search) {
@@ -60,6 +62,7 @@ class UserController extends Controller
 
     return response()->json($usuarios);
 }
+
 
 
 
@@ -191,11 +194,10 @@ class UserController extends Controller
             'estado' => ['required', Rule::in([0, 1, 3])], // <-- VALIDACIÓN CORRECTA
         ]);
 
-        // Si se incluye el campo 'estado', actualizar también 'is_deleted'
         if (isset($validated['estado'])) {
-            $usuario->estado = $validated['estado'];
-            $usuario->is_deleted = $validated['estado'] == 0;
-        }
+    $usuario->estado = $validated['estado'];
+}
+
 
         // Actualizar otros campos
         $usuario->fill($validated);
