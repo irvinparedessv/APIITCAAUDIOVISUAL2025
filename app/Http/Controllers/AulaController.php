@@ -17,7 +17,7 @@ class AulaController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'render_images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp',
+            'render_images.*' => 'nullable|file',
             'render_images_is360.*' => 'nullable|boolean',
             'available_times' => 'required|json',
         ]);
@@ -35,7 +35,10 @@ class AulaController extends Controller
                 foreach ($request->file('render_images') as $index => $file) {
                     // Guarda en storage/app/public/render_images
                     $path = $file->store('render_images', 'public');
-                    $is360 = $request->input("render_images_is360.$index") ? true : false;
+                    $is360 = filter_var($request->input("render_images_is360.$index"), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+                    if (is_null($is360)) {
+                        $is360 = false;
+                    }
                     ImagenesAula::create([
                         'aula_id' => $aula->id,
                         'image_path' => 'storage/' . $path, // Ruta accesible públicamente
@@ -139,9 +142,6 @@ class AulaController extends Controller
                     'aula_id' => $aula->id,
                     'image_path' => 'storage/' . $path, // Ruta accesible públicamente
                     'is360' => $is360,
-                ]);
-                $aula->imagenes()->create([
-                    'image_path' => Storage::url($path),
                 ]);
             }
         }

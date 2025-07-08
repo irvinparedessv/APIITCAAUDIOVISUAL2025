@@ -11,7 +11,7 @@ class ImagenesAula extends Model
 
     protected $table = 'imagenes_aula';
 
-    protected $fillable = ['aula_id', 'image_path'];
+    protected $fillable = ['aula_id', 'image_path', 'is360'];
 
     public function aula()
     {
