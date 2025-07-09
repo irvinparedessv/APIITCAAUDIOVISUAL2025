@@ -10,12 +10,18 @@ class TipoEquipoController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        // Obtener todos los tipos de equipo que no han sido eliminados
         $tiposEquipos = TipoEquipo::where('is_deleted', false)->get();
         return response()->json($tiposEquipos);
     }
+
+    public function obtenerTipo(Request $request)
+    {
+        $tiposEquipos = TipoEquipo::where('is_deleted', false)->paginate(10);
+        return response()->json($tiposEquipos);
+    }
+
 
     /**
      * Store a newly created resource in storage.

@@ -52,6 +52,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador'])->group(function (
     Route::apiResource('users', UserController::class);
     Route::apiResource('equipos', EquipoController::class);
     Route::apiResource('tipoEquipos', TipoEquipoController::class);
+    Route::get('/obtenerTipo', [TipoEquipoController::class, 'obtenerTipo']);
 });
 
 
