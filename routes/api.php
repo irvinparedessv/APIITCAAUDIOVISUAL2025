@@ -16,6 +16,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\BitacoraController;
 use App\Http\Controllers\ChatGPTController;
+use App\Http\Controllers\PrediccionAulaController;
 use App\Http\Controllers\PrediccionEquipoController;
 use App\Http\Controllers\ProfileController;  // ✅ Para Perfil Usuario    
 use App\Http\Controllers\ReporteController;
@@ -72,8 +73,10 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/prediccion/equipos/{id}', [PrediccionEquipoController::class, 'prediccionPorEquipo']);
     Route::get('/prediccion/reservas/top5', [PrediccionEquipoController::class, 'top5EquiposConPrediccion']);
 
-    Route::get('/reservas/dia', [ReservaEquipoController::class, 'reservasDelDia']);
+    Route::get('/prediccion/aula/{aulaId}', [PrediccionAulaController::class, 'predecir']);
+    Route::get('/prediccion/aulas/general', [PrediccionAulaController::class, 'prediccionGeneralAulas']);
 
+    Route::get('/reservas/dia', [ReservaEquipoController::class, 'reservasDelDia']);
     Route::get('/reportes/reservas-rango', [ReporteController::class, 'reporteReservasPorRango']);
     Route::get('/reportes/reservas-por-usuario', [ReporteController::class, 'reporteReservasPorUsuario']);
     Route::get('/reportes/uso-aulas', [ReporteController::class, 'reporteUsoAulas']);
