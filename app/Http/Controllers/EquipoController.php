@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Equipo;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
@@ -203,12 +204,17 @@ class EquipoController extends Controller
     }
 
     public function getEquiposPorTipoReserva($tipoReservaId)
-    {
-        $equipos = Equipo::where('tipo_reserva_id', $tipoReservaId)
-            ->where('estado', true)
-            ->where('is_deleted', false)
-            ->get(['id', 'nombre', 'tipo_equipo_id']);
+{
+    $equipos = DB::table('equipos')
+        ->join('tipo_equipos', 'equipos.tipo_equipo_id', '=', 'tipo_equipos.id')
+        ->where('equipos.tipo_reserva_id', $tipoReservaId)
+        ->where('equipos.estado', true)
+        ->where('equipos.is_deleted', false)
+        ->where('tipo_equipos.is_deleted', false)
+        ->select('equipos.id', 'equipos.nombre', 'equipos.tipo_equipo_id')
+        ->get();
 
-        return response()->json($equipos);
-    }
+    return response()->json($equipos);
+}
+
 }
