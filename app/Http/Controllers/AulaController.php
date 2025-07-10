@@ -209,6 +209,99 @@ class AulaController extends Controller
         return response()->json(['message' => 'Aula eliminada']);
     }
 
+    public function getaulas(Request $request)
+    {
+        $query = Aula::with('primeraImagen');
+
+        if ($request->has('buscar') && $request->buscar) {
+            $query->where('name', 'LIKE', '%' . $request->buscar . '%');
+        }
+
+        $aulas = $query->paginate(10);
+
+        $result = $aulas->map(function ($aula) {
+            return [
+                'id' => $aula->id,
+                'nombre' => $aula->name,
+                'capacidad' => 0, // pon la capacidad si tienes un campo, si no deja fijo o agrégalo después
+            ];
+        });
+
+        return response()->json([
+            'data' => $result,
+            'last_page' => $aulas->lastPage(),
+        ]);
+    }
+
+    // AulaController.php
+    public function disponibilidad(Request $request, Aula $aula)
+    {
+        $rangos = $aula->horarios;
+
+        $resultados = [];
+
+        $filterStart = $request->query('startDate');
+        $filterEnd = $request->query('endDate');
+
+        foreach ($rangos as $rango) {
+            $days = $rango->days ?? [];
+            if (is_string($days)) {
+                $days = json_decode($days, true);
+            }
+
+            // Rango real intersectado
+            $start_date = max($rango->start_date, $filterStart);
+            $end_date = min($rango->end_date, $filterEnd);
+
+            if ($start_date > $end_date) {
+                continue; // no hay intersección, saltar
+            }
+
+            $start = strtotime($rango->start_time);
+            $end = strtotime($rango->end_time);
+            $bloquesPorDia = floor(($end - $start) / (2 * 60 * 60));
+
+            $periodo = new \DatePeriod(
+                new \DateTime($start_date),
+                new \DateInterval('P1D'),
+                (new \DateTime($end_date))->modify('+1 day')
+            );
+
+            $diasValidos = [];
+            foreach ($periodo as $date) {
+                if (in_array($date->format('l'), $days)) {
+                    $diasValidos[] = $date->format('Y-m-d');
+                }
+            }
+
+            $bloquesTotales = $bloquesPorDia * count($diasValidos);
+
+            $reservas = \App\Models\ReservaAula::where('aula_id', $aula->id)
+                ->whereBetween('fecha', [$start_date, $end_date])
+                ->whereTime('horario', '>=', $rango->start_time)
+                ->whereTime('horario', '<=', $rango->end_time)
+                ->count();
+
+            $resultados[] = [
+                'rango' => [
+                    'start_date' => $start_date,
+                    'end_date' => $end_date,
+                    'start_time' => $rango->start_time,
+                    'end_time' => $rango->end_time,
+                    'days' => $days,
+                ],
+                'bloques_totales' => $bloquesTotales,
+                'cupos_ocupados' => $reservas,
+                'cupos_libres' => max($bloquesTotales - $reservas, 0),
+            ];
+        }
+
+        return response()->json(['resultados' => $resultados]);
+    }
+
+
+
+
     public function index(): JsonResponse
     {
         $aulas = Aula::with(['primeraImagen'])

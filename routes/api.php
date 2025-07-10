@@ -85,7 +85,6 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/reportes/uso-equipos', [ReporteController::class, 'reporteUsoEquipos']);
     Route::get('/reportes/horarios-solicitados', [ReporteController::class, 'reporteHorariosSolicitados']);
     Route::get('/reportes/inventario-equipos', [ReporteController::class, 'reporteInventarioEquipos']);
-
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->group(function () {
@@ -113,6 +112,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::put('/notificaciones/archivar-todas', [NotificationController::class, 'archiveAll']);
     Route::get('/notificaciones/historial', [NotificationController::class, 'history']);
     Route::delete('/notifications', [NotificationController::class, 'destroyAll']);
+    Route::get('/getaulas', [AulaController::class, 'getaulas']);
     Route::apiResource('equipos', EquipoController::class);
     Route::get('/reservas/{id}', [ReservaEquipoController::class, 'getByUser']); // Ver reservas de un usuario
     Route::get('/reservas-aula/{id}', [ReservaAulaController::class, 'show']);
@@ -131,6 +131,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::put('/reservas-aula/{id}', [ReservaAulaController::class, 'update']);
     Route::post('/aulas/{aula}/encargados', [AulaController::class, 'asignarEncargados']);
     Route::get('/aulas/{id}/encargados', [AulaController::class, 'encargados']);
+    Route::get('/aulas/{aula}/disponibilidad', [AulaController::class, 'disponibilidad']);
     Route::get('/encargados', function () {
         return \App\Models\User::encargadosAula()->get();
     });
