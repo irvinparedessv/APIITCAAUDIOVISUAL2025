@@ -18,12 +18,12 @@ class HorarioAulasSeeder extends Seeder
         $aulas = Aula::all();
 
         // Rango de fechas
-        $startDate = '2025-06-01';
+        $startDate = '2025-07-01';
         $endDate = '2025-11-30';
 
-        // Horario: 8:00 AM a 5:00 PM
-        $startTime = '08:00:00';
-        $endTime = '17:00:00';
+        // Horario: 7:00 AM a 5:00 PM
+        $startTime = '07:00:00';
+        $endTime = '20:00:00';
 
         // Días de lunes a viernes
         $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];

@@ -29,4 +29,8 @@ class Aula extends Model
     {
         return $this->belongsToMany(User::class, 'aula_user');
     }
+    public function reservas()
+    {
+        return $this->hasMany(ReservaAula::class, 'aula_id');
+    }
 }

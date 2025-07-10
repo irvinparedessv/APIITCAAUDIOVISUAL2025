@@ -120,6 +120,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::get('/equipos/{id}/disponibilidad', [ReservaEquipoController::class, 'verificarDisponibilidad']);
     Route::get('/obtenerEquipos', [EquipoController::class, 'obtenerEquipos']);
     Route::get('/aulasEquipos', [AulaController::class, 'index']);
+    Route::get('/aulas/{id}/horarios', [ReservaAulaController::class, 'horariosDisponibles']);
     Route::get('/aulas', [ReservaAulaController::class, 'aulas']);
     Route::apiResource('tipoEquipos', TipoEquipoController::class);
     Route::put('/reservas-aula/{id}/estado', [ReservaAulaController::class, 'actualizarEstado']);

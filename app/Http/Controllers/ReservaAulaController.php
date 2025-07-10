@@ -26,39 +26,71 @@ use Illuminate\Support\Str;
 class ReservaAulaController extends Controller
 {
     public function aulas()
-{
-    $usuario = Auth::user();
+    {
+        $usuario = Auth::user();
 
-    $query = Aula::with(['primeraImagen', 'horarios']);
+        $query = Aula::with(['primeraImagen', 'horarios']);
 
-    // Filtrar si es espacio encargado
-    if ($usuario->role->nombre === 'EspacioEncargado') {
-        $query->whereHas('encargados', function ($q) use ($usuario) {
-            $q->where('user_id', $usuario->id);
+        // Filtrar si es espacio encargado
+        if ($usuario->role->nombre === 'EspacioEncargado') {
+            $query->whereHas('encargados', function ($q) use ($usuario) {
+                $q->where('user_id', $usuario->id);
+            });
+        }
+
+        $aulas = $query->get()->map(function ($aula) {
+            return [
+                'id' => $aula->id,
+                'name' => $aula->name,
+                'image_path' => $aula->primeraImagen
+                    ? url($aula->primeraImagen->image_path)
+                    : null,
+                'horarios' => $aula->horarios->map(function ($horario) {
+                    return [
+                        'start_date' => $horario->start_date,
+                        'end_date' => $horario->end_date,
+                        'start_time' => $horario->start_time,
+                        'end_time' => $horario->end_time,
+                        'days' => json_decode($horario->days),
+                    ];
+                }),
+            ];
         });
+
+        return response()->json($aulas);
     }
 
-    $aulas = $query->get()->map(function ($aula) {
-        return [
-            'id' => $aula->id,
-            'name' => $aula->name,
-            'image_path' => $aula->primeraImagen
-                ? url($aula->primeraImagen->image_path)
-                : null,
-            'horarios' => $aula->horarios->map(function ($horario) {
-                return [
-                    'start_date' => $horario->start_date,
-                    'end_date' => $horario->end_date,
-                    'start_time' => $horario->start_time,
-                    'end_time' => $horario->end_time,
-                    'days' => json_decode($horario->days),
-                ];
-            }),
-        ];
-    });
+    public function horariosDisponibles($id)
+    {
+        $aula = Aula::with([
+            'horarios',
+            'reservas' => function ($q) {
+                $q->whereIn('estado', ['Aprobado', 'Pendiente']);
+            }
+        ])->findOrFail($id);
 
-    return response()->json($aulas);
-}
+        $result = $aula->horarios->map(function ($horario) use ($aula) {
+            return [
+                'start_date' => $horario->start_date,
+                'end_date' => $horario->end_date,
+                'start_time' => $horario->start_time,
+                'end_time' => $horario->end_time,
+                'days' => json_decode($horario->days),
+            ];
+        });
+
+        $reservas = $aula->reservas->map(function ($r) {
+            return [
+                'fecha' => $r->fecha,
+                'horario' => $r->horario,
+            ];
+        });
+
+        return response()->json([
+            'horarios' => $result,
+            'reservas' => $reservas,
+        ]);
+    }
 
     public function store(Request $request)
     {
