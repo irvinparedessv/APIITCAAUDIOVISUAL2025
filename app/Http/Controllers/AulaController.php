@@ -278,6 +278,7 @@ class AulaController extends Controller
 
             $reservas = \App\Models\ReservaAula::where('aula_id', $aula->id)
                 ->whereBetween('fecha', [$start_date, $end_date])
+                ->whereIn('estado', ['Pendiente', 'Aprobado'])
                 ->whereTime('horario', '>=', $rango->start_time)
                 ->whereTime('horario', '<=', $rango->end_time)
                 ->count();
