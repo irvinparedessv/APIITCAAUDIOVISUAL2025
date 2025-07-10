@@ -85,6 +85,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/reportes/uso-equipos', [ReporteController::class, 'reporteUsoEquipos']);
     Route::get('/reportes/horarios-solicitados', [ReporteController::class, 'reporteHorariosSolicitados']);
     Route::get('/reportes/inventario-equipos', [ReporteController::class, 'reporteInventarioEquipos']);
+
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->group(function () {
@@ -136,6 +137,8 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::get('/encargados', function () {
         return \App\Models\User::encargadosAula()->get();
     });
+
+    Route::post('/user/update-password', [PasswordResetController::class, 'updatePassword']);
 });
 
 
