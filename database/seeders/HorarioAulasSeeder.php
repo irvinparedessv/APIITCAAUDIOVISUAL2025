@@ -21,9 +21,9 @@ class HorarioAulasSeeder extends Seeder
         $startDate = '2025-07-01';
         $endDate = '2025-11-30';
 
-        // Horario: 7:00 AM a 5:00 PM
+        // Horario: 7:00 AM a 8:20 PM
         $startTime = '07:00:00';
-        $endTime = '20:00:00';
+        $endTime = '20:20:00';
 
         // Días de lunes a viernes
         $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
