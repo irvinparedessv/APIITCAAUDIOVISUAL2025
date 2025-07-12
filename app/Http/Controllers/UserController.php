@@ -58,10 +58,14 @@ class UserController extends Controller
         });
     }
 
+    // Ordenar por fecha de creación descendente para mostrar los últimos registros primero
+    $query->orderBy('created_at', 'desc');
+
     $usuarios = $query->paginate($perPage);
 
     return response()->json($usuarios);
 }
+
 
 
 
@@ -179,32 +183,52 @@ class UserController extends Controller
     }
 
     // Actualizar datos de un usuario
-    public function update(UpdateUserRequest $request, string $id)
-    {
-        $usuario = User::findOrFail($id);
+    // Actualizar datos de un usuario
+public function update(UpdateUserRequest $request, string $id)
+{
+    $usuario = User::findOrFail($id);
 
-        // Validación de los campos permitidos
-        $validated = $request->validate([
-            'first_name' => 'sometimes|required|string|max:255',
-            'last_name' => 'sometimes|required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $usuario->id,
-            'role_id' => 'sometimes|required|exists:roles,id',
-            'phone' => 'nullable|string|max:20',
-            'address' => 'nullable|string|max:255',
-            'estado' => ['required', Rule::in([0, 1, 3])], // <-- VALIDACIÓN CORRECTA
-        ]);
+    // Validación de los campos permitidos
+    $validated = $request->validate([
+        'first_name' => 'sometimes|required|string|max:255',
+        'last_name' => 'sometimes|required|string|max:255',
+        'email' => 'required|email|unique:users,email,' . $usuario->id,
+        'role_id' => 'sometimes|required|exists:roles,id',
+        'phone' => 'nullable|string|max:20',
+        'address' => 'nullable|string|max:255',
+        'estado' => ['required', Rule::in([0, 1, 3])],
+        'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+    ]);
 
-        if (isset($validated['estado'])) {
-    $usuario->estado = $validated['estado'];
+    // Procesar la imagen solo si se envía
+    if ($request->hasFile('image')) {
+        // Eliminar imagen anterior si existe
+        if ($usuario->image && Storage::exists('public/' . $usuario->image)) {
+            Storage::delete('public/' . $usuario->image);
+        }
+
+        // Subir la nueva imagen
+        try {
+            $imagePath = $request->file('image')->store('user_images', 'public');
+            $validated['image'] = $imagePath; // Agregar la nueva ruta de imagen a los datos validados
+        } catch (\Exception $e) {
+            Log::error("Error al subir la imagen: " . $e->getMessage());
+            return response()->json([
+                'error' => 'image_upload_error',
+                'message' => 'No se pudo subir la imagen del usuario'
+            ], 500);
+        }
+    } else {
+        // Mantener la imagen existente si no se envía una nueva
+        $validated['image'] = $usuario->image;
+    }
+
+    // Actualizar campos
+    $usuario->update($validated);
+
+    return response()->json($usuario);
 }
 
-
-        // Actualizar otros campos
-        $usuario->fill($validated);
-        $usuario->save();
-
-        return response()->json($usuario);
-    }
 
 
     // Eliminar usuario (solo si está desactivado)
