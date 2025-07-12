@@ -279,5 +279,7 @@ return [
         'winner'                   => 'ganador',
         'work'                     => 'trabajo',
         'year'                     => 'año',
+        'new_password'  => 'nueva contraseña',
+        'new_password_confirmation' => 'confirmación de la nueva contraseña',
     ],
 ];

@@ -1,4 +1,5 @@
 @component('mail::message')
+{{-- Estilos inline para mejor compatibilidad con clientes de correo --}}
 <style>
     h1 {
         font-family: 'Georgia', serif;
@@ -28,36 +29,19 @@
     }
 </style>
 
-# Confirmación de Cuenta - {{ config('app.name') }}
+# Estimado/a {{ $user->first_name }} {{ $user->last_name }},
 
-Hola {{ $user->first_name }} {{ $user->last_name }},
-
-Se ha creado tu cuenta con las siguientes credenciales temporales:
-
-@component('mail::panel')
-<span style="color: rgb(139, 0, 0); font-weight: bold;">
-**Email:** {{ $user->email }}<br>
-**Contraseña Temporal:** {{ $password }}
-</span>
-@endcomponent
-
-**Por favor sigue estos pasos:**
-<ol>
-    <li>Haz clic en el botón para confirmar tu cuenta</li>
-    <li>Inicia sesión con las credenciales temporales</li>
-    <li>Establece una nueva contraseña segura</li>
-</ol>
+Hemos recibido una solicitud para restablecer la contraseña de tu cuenta. Para continuar con el proceso, haz clic en el siguiente botón:
 
 <div style="text-align: center;">
-    <a href="{{ $confirmationUrl }}" class="custom-button">Confirmar Mi Cuenta</a>
+    <a href="{{ $url }}" class="custom-button">Restablecer Contraseña</a>
 </div>
 
-@component('mail::subcopy')
-Si tienes problemas con el botón, copia y pega esta URL en tu navegador:  
-<p style="word-break: break-all; color: rgb(139, 0, 0);">
-    <a href="{{ $confirmationUrl }}" style="color: rgb(139, 0, 0);">{{ $confirmationUrl }}</a>
-</p>
-@endcomponent
+> **Este enlace será válido por 60 minutos.**
+
+Si tú no realizaste esta solicitud, puedes ignorar este mensaje con total seguridad. Tu cuenta seguirá protegida.
+
+Gracias por tu atención,<br>
 
 @slot('subcopy')
 <span class="footer">
