@@ -18,57 +18,57 @@ use Illuminate\Support\Facades\Mail;
 class UserController extends Controller
 {
     public function index(Request $request)
-{
-    $perPage = $request->input('per_page', 10);
-    
-    // Excluir registros marcados como eliminados
-    $query = User::with('role')->where('is_deleted', 0);
+    {
+        $perPage = $request->input('per_page', 10);
 
-    // Filtros individuales
-    if ($request->has('first_name')) {
-        $query->where('first_name', 'like', '%' . $request->first_name . '%');
+        // Excluir registros marcados como eliminados
+        $query = User::with('role')->where('is_deleted', 0);
+
+        // Filtros individuales
+        if ($request->has('first_name')) {
+            $query->where('first_name', 'like', '%' . $request->first_name . '%');
+        }
+
+        if ($request->has('last_name')) {
+            $query->where('last_name', 'like', '%' . $request->last_name . '%');
+        }
+
+        if ($request->has('email')) {
+            $query->where('email', 'like', '%' . $request->email . '%');
+        }
+
+        if ($request->has('role_id')) {
+            $query->where('role_id', $request->role_id);
+        }
+
+        if ($request->has('estado')) {
+            $query->where('estado', $request->estado);
+        }
+
+        if ($request->has('phone')) {
+            $query->where('phone', 'like', '%' . $request->phone . '%');
+        }
+
+        // Filtro de búsqueda general
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->whereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"])
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        // Ordenar por fecha de creación descendente para mostrar los últimos registros primero
+        $query->orderBy('created_at', 'desc');
+
+        $usuarios = $query->paginate($perPage);
+
+        return response()->json($usuarios);
     }
 
-    if ($request->has('last_name')) {
-        $query->where('last_name', 'like', '%' . $request->last_name . '%');
-    }
-
-    if ($request->has('email')) {
-        $query->where('email', 'like', '%' . $request->email . '%');
-    }
-
-    if ($request->has('role_id')) {
-        $query->where('role_id', $request->role_id);
-    }
-
-    if ($request->has('estado')) {
-        $query->where('estado', $request->estado);
-    }
-
-    if ($request->has('phone')) {
-        $query->where('phone', 'like', '%' . $request->phone . '%');
-    }
-
-    // Filtro de búsqueda general
-    if ($request->has('search') && !empty($request->search)) {
-        $search = $request->search;
-        $query->where(function ($q) use ($search) {
-            $q->whereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"])
-              ->orWhere('email', 'like', "%{$search}%");
-        });
-    }
-
-    // Ordenar por fecha de creación descendente para mostrar los últimos registros primero
-    $query->orderBy('created_at', 'desc');
-
-    $usuarios = $query->paginate($perPage);
-
-    return response()->json($usuarios);
-}
 
 
-
-public function preferences(Request $request)
+    public function preferences(Request $request)
     {
         $user = $request->user();
 
@@ -156,8 +156,18 @@ public function preferences(Request $request)
             ]);
 
             // Generar URL de confirmación
-            $confirmationUrl = "http://localhost:5173/confirm-account/{$confirmationToken}";
+            $baseUrl = env('APP_MAIN', 'http://localhost:5173'); // si no existe usa localhost
+            $confirmationUrl = "{$baseUrl}/confirm-account/{$confirmationToken}";
             Log::info("URL de confirmación: {$confirmationUrl}");
+            Log::info('SMTP Config:', [
+                'MAIL_MAILER' => config('mail.default'),
+                'MAIL_HOST' => config('mail.mailers.smtp.host'),
+                'MAIL_PORT' => config('mail.mailers.smtp.port'),
+                'MAIL_USERNAME' => config('mail.mailers.smtp.username'),
+                'MAIL_FROM_ADDRESS' => config('mail.from.address'),
+                'MAIL_FROM_NAME' => config('mail.from.name'),
+            ]);
+
 
             // Envío de correo electrónico
             try {
@@ -178,14 +188,12 @@ public function preferences(Request $request)
                 'message' => 'Usuario creado y correo enviado correctamente.',
                 'usuario' => $usuario
             ], 201);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             // Captura errores de validación
             return response()->json([
                 'error' => 'validation_error',
                 'messages' => $e->errors()
             ], 422);
-            
         } catch (\Throwable $e) {
             Log::error("Error en el proceso de creación de usuario: " . $e->getMessage());
             return response()->json([
@@ -206,50 +214,50 @@ public function preferences(Request $request)
 
     // Actualizar datos de un usuario
     // Actualizar datos de un usuario
-public function update(UpdateUserRequest $request, string $id)
-{
-    $usuario = User::findOrFail($id);
+    public function update(UpdateUserRequest $request, string $id)
+    {
+        $usuario = User::findOrFail($id);
 
-    // Validación de los campos permitidos
-    $validated = $request->validate([
-        'first_name' => 'sometimes|required|string|max:255',
-        'last_name' => 'sometimes|required|string|max:255',
-        'email' => 'required|email|unique:users,email,' . $usuario->id,
-        'role_id' => 'sometimes|required|exists:roles,id',
-        'phone' => 'nullable|string|max:20',
-        'address' => 'nullable|string|max:255',
-        'estado' => ['required', Rule::in([0, 1, 3])],
-        'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-    ]);
+        // Validación de los campos permitidos
+        $validated = $request->validate([
+            'first_name' => 'sometimes|required|string|max:255',
+            'last_name' => 'sometimes|required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $usuario->id,
+            'role_id' => 'sometimes|required|exists:roles,id',
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:255',
+            'estado' => ['required', Rule::in([0, 1, 3])],
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
 
-    // Procesar la imagen solo si se envía
-    if ($request->hasFile('image')) {
-        // Eliminar imagen anterior si existe
-        if ($usuario->image && Storage::exists('public/' . $usuario->image)) {
-            Storage::delete('public/' . $usuario->image);
+        // Procesar la imagen solo si se envía
+        if ($request->hasFile('image')) {
+            // Eliminar imagen anterior si existe
+            if ($usuario->image && Storage::exists('public/' . $usuario->image)) {
+                Storage::delete('public/' . $usuario->image);
+            }
+
+            // Subir la nueva imagen
+            try {
+                $imagePath = $request->file('image')->store('user_images', 'public');
+                $validated['image'] = $imagePath; // Agregar la nueva ruta de imagen a los datos validados
+            } catch (\Exception $e) {
+                Log::error("Error al subir la imagen: " . $e->getMessage());
+                return response()->json([
+                    'error' => 'image_upload_error',
+                    'message' => 'No se pudo subir la imagen del usuario'
+                ], 500);
+            }
+        } else {
+            // Mantener la imagen existente si no se envía una nueva
+            $validated['image'] = $usuario->image;
         }
 
-        // Subir la nueva imagen
-        try {
-            $imagePath = $request->file('image')->store('user_images', 'public');
-            $validated['image'] = $imagePath; // Agregar la nueva ruta de imagen a los datos validados
-        } catch (\Exception $e) {
-            Log::error("Error al subir la imagen: " . $e->getMessage());
-            return response()->json([
-                'error' => 'image_upload_error',
-                'message' => 'No se pudo subir la imagen del usuario'
-            ], 500);
-        }
-    } else {
-        // Mantener la imagen existente si no se envía una nueva
-        $validated['image'] = $usuario->image;
+        // Actualizar campos
+        $usuario->update($validated);
+
+        return response()->json($usuario);
     }
-
-    // Actualizar campos
-    $usuario->update($validated);
-
-    return response()->json($usuario);
-}
 
 
 
@@ -329,9 +337,9 @@ public function update(UpdateUserRequest $request, string $id)
         $usuarios = User::whereHas('role', function ($query) use ($nombreRol) {
             $query->where('nombre', $nombreRol);
         })
-        ->where('estado', 1)
-        ->select('id', 'first_name', 'last_name', 'email')
-        ->get();
+            ->where('estado', 1)
+            ->select('id', 'first_name', 'last_name', 'email')
+            ->get();
 
         return response()->json($usuarios);
     }
