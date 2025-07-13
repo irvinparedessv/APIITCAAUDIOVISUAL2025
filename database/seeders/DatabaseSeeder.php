@@ -19,11 +19,13 @@ class DatabaseSeeder extends Seeder
             AulaSeeder::class,
             TipoEquipoSeeder::class,
             EquipoSeeder::class,
+            UbicacionSeeder::class,
             ReservaEquipoSeeder::class,
             HorarioAulasSeeder::class,
             ImagenesAulaSeeder::class,
             UsuariosEncargadosSeeder::class,
-            ReservaAulaSeeder::class
+            ReservaAulaSeeder::class,
+
         ]);
     }
 }

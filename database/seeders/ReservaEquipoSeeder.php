@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Equipo;
 use App\Models\ReservaEquipo;
+use App\Models\Ubicacion;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -13,6 +14,7 @@ class ReservaEquipoSeeder extends Seeder
     {
         $equipos = Equipo::all();
         $usuarios = User::all();
+        $ubicaciones = Ubicacion::all();
 
         if ($equipos->isEmpty() || $usuarios->isEmpty()) {
             $this->command->error('No hay equipos o usuarios para generar reservas.');
@@ -32,7 +34,7 @@ class ReservaEquipoSeeder extends Seeder
                 $fecha = now()->subMonths($mes)->startOfMonth()->addDays(rand(0, 27));
                 $horaInicio = $fecha->copy()->setTime(rand(7, 20), [0, 15, 30, 45][rand(0, 3)]);
                 $horaFin = $horaInicio->copy()->addHours(rand(1, 3));
-                $aula = 'A-' . rand(100, 200);
+                $aula =  $ubicaciones->random()->nombre;
                 $tipoReserva = rand(1, 3);
 
                 $reserva = ReservaEquipo::create([

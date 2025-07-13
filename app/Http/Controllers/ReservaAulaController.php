@@ -336,6 +336,8 @@ class ReservaAulaController extends Controller
             }
 
             $query->whereIn('aula_id', $aulasIds);
+        } elseif (strtolower($user->role->nombre) === 'prestamista') {
+            $query->where('user_id', $user->id);
         }
 
         $reservas = $query->orderBy('fecha', 'desc')
