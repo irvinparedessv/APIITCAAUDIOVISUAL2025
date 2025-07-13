@@ -408,12 +408,13 @@ class ReservaAulaController extends Controller
         return response()->json(['message' => 'Estado actualizado correctamente.']);
     }
 
-
-
-
     public function show($id)
     {
-        $reserva = ReservaAula::with(['aula', 'user'])->findOrFail($id);
+        $reserva = ReservaAula::with(['aula', 'user'])->find($id);
+
+        if (!$reserva) {
+            return response()->json(['message' => 'Reserva no encontrada.'], 404);
+        }
 
         return response()->json($reserva);
     }
