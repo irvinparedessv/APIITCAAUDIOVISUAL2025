@@ -9,6 +9,10 @@ class Ubicacion extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['nombre', 'descripcion'];
+    protected $fillable = ['nombre', 'descripcion', 'is_deleted'];
+
+    protected $casts = [
+        'is_deleted' => 'boolean',
+    ];
     protected $table = 'ubicaciones';
 }

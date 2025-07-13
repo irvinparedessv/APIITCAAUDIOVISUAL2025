@@ -13,6 +13,7 @@ return new class extends Migration
             $table->id();
             $table->string('nombre');
             $table->string('descripcion')->nullable();
+            $table->boolean('is_deleted')->default(false);
             $table->timestamps();
         });
     }

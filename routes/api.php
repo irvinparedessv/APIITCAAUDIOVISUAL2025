@@ -77,6 +77,14 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/prediccion/aula/{aulaId}', [PrediccionAulaController::class, 'predecir']);
     Route::get('/prediccion/aulas/general', [PrediccionAulaController::class, 'prediccionGeneralAulas']);
 
+    Route::post('/ubicaciones', [UbicacionController::class, 'store']);
+    Route::put('/ubicaciones/{id}', [UbicacionController::class, 'update']);
+    Route::delete('/ubicaciones/{id}', [UbicacionController::class, 'destroy']);
+    Route::get('/ubicaciones/paginate', [UbicacionController::class, 'paginate']);
+    Route::get('/ubicaciones/{id}', [UbicacionController::class, 'show']);
+
+
+
     Route::get('/reservas/dia', [ReservaEquipoController::class, 'reservasDelDia']);
     Route::get('/reportes/reservas-rango', [ReporteController::class, 'reporteReservasPorRango']);
     Route::get('/reportes/reservas-por-usuario', [ReporteController::class, 'reporteReservasPorUsuario']);
