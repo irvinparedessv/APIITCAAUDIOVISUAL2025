@@ -50,7 +50,7 @@ class RecordatorioDevolucionEquipoNotification extends Notification implements S
             'reserva' => [
                 'id' => $this->reserva->id,
                 'equipo' => $this->reserva->equipo->name,
-                'fecha_fin' => $this->reserva->fecha_hora_fin->format('Y-m-d H:i'),
+                'fecha_fin' => $this->reserva->fecha_entrega->format('Y-m-d H:i'),
                 'estado' => $this->reserva->estado,
             ]
         ];
@@ -77,7 +77,7 @@ class RecordatorioDevolucionEquipoNotification extends Notification implements S
             ->subject('Recordatorio: Devolución de equipo')
             ->line("Hola {$this->reserva->user->first_name},")
             ->line("Tu reserva para el equipo **{$this->reserva->equipo->name}** está a punto de finalizar.")
-            ->line('Hora de finalización: ' . $this->reserva->fecha_hora_fin->format('Y-m-d H:i'))
+            ->line('Hora de finalización: ' . $this->reserva->fecha_entrega->format('Y-m-d H:i'))
             ->line('Por favor, devuelve el equipo a tiempo para evitar inconvenientes.')
             ->line('Gracias.');
     }
