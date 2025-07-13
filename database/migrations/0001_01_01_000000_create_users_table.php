@@ -23,6 +23,7 @@ return new class extends Migration
             $table->integer('estado')->default(3); // Cambiado a integer para manejar 1, 0, 3
             $table->string('image')->nullable();
             $table->boolean('is_deleted')->default(false);
+            $table->boolean('dark_mode')->default(false); // 👈 Aquí se agrega
             $table->rememberToken();
             $table->timestamps();
         });

@@ -16,20 +16,22 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
-        'first_name',
-        'last_name',
-        'email',
-        'password',
-        'role_id', // Agrega role_id si no estaba
-        'phone',
-        'address',
-        'estado',  // 1 = activo, 0 = inactivo, 3 = pendiente
-        'change_password',
-        'image',
-        'is_deleted',
-        'confirmation_token',
-        'email_verified_at',
-    ];
+    'first_name',
+    'last_name',
+    'email',
+    'password',
+    'role_id',
+    'phone',
+    'address',
+    'estado',
+    'change_password',
+    'image',
+    'is_deleted',
+    'confirmation_token',
+    'email_verified_at',
+    'dark_mode', // 👈 Agregar esto
+];
+
 
     protected $hidden = [
         'password',
@@ -43,6 +45,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_deleted' => 'boolean',
             'estado' => 'integer',
+            'dark_mode' => 'boolean', // 👈 Agregar esto
         ];
     }
 

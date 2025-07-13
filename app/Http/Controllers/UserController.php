@@ -68,6 +68,28 @@ class UserController extends Controller
 
 
 
+public function preferences(Request $request)
+    {
+        $user = $request->user();
+
+        if ($request->isMethod('patch')) {
+            $request->validate([
+                'dark_mode' => 'required|boolean',
+            ]);
+
+            $user->dark_mode = $request->dark_mode;
+            $user->save();
+
+            return response()->json(['message' => 'Theme updated']);
+        }
+
+        // Método GET: devuelve la preferencia actual
+        return response()->json([
+            'darkMode' => $user->dark_mode,
+        ]);
+    }
+
+
 
 
     public function store(Request $request)

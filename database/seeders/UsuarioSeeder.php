@@ -27,6 +27,7 @@ class UsuarioSeeder extends Seeder
             'phone'             => null,
             'address'           => null,
             'image'             => null,
+            'dark_mode'         => false, // 👈 Nuevo campo
         ]);
 
         // Usuario encargado
@@ -43,6 +44,7 @@ class UsuarioSeeder extends Seeder
             'phone'             => null,
             'address'           => null,
             'image'             => null,
+            'dark_mode'         => false,
         ]);
 
         // Usuario prestamista
@@ -59,7 +61,9 @@ class UsuarioSeeder extends Seeder
             'phone'             => null,
             'address'           => null,
             'image'             => null,
+            'dark_mode'         => false,
         ]);
+
         User::create([
             'first_name'        => 'Prestamista2',
             'last_name'         => 'Ejemplo2',
@@ -73,7 +77,9 @@ class UsuarioSeeder extends Seeder
             'phone'             => null,
             'address'           => null,
             'image'             => null,
+            'dark_mode'         => false,
         ]);
+
         User::create([
             'first_name'        => 'Prestamista3',
             'last_name'         => 'Ejemplo3',
@@ -87,6 +93,7 @@ class UsuarioSeeder extends Seeder
             'phone'             => null,
             'address'           => null,
             'image'             => null,
+            'dark_mode'         => false,
         ]);
     }
 }

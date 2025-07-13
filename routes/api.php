@@ -102,6 +102,10 @@ Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->grou
     //Route::post('/reservas', [ReservaAulaController::class, 'store']);
 });
 
+Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador'])->group(function () {
+    Route::post('/reservas', [ReservaEquipoController::class, 'store']);
+});
+
 //👉Aqui podemos ver el perfil de los usuarios de acuerdo a roles
 Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamista,EspacioEncargado'])->group(function () {
     Route::put('/user/profile', [ProfileController::class, 'update']);
@@ -147,6 +151,8 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     });
 
     Route::post('/user/update-password', [PasswordResetController::class, 'updatePassword']);
+
+    Route::match(['get', 'patch'], '/user/preferences', [UserController::class, 'preferences']);
 });
 
 
