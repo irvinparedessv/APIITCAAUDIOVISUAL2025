@@ -19,7 +19,7 @@ class RecordatorioDevolucionEquipos extends Command
         $enQuinceMinutos = $ahora->copy()->addMinutes(15);
 
         $reservas = ReservaEquipo::where('estado', 'Aprobado')
-            ->whereBetween('fecha_hora_fin', [$ahora, $enQuinceMinutos])
+            ->whereBetween('fecha_entrega', [$ahora, $enQuinceMinutos])
             ->get();
 
         foreach ($reservas as $reserva) {
