@@ -33,8 +33,6 @@ class HorarioAulasSeeder extends Seeder
                 'aula_id' => $aula->id,
                 'start_date' => $startDate,
                 'end_date' => $endDate,
-                'start_time' => $startTime,
-                'end_time' => $endTime,
                 'days' => json_encode($days),
             ]);
         }

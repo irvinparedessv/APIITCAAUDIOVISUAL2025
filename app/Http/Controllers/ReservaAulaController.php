@@ -42,15 +42,16 @@ class ReservaAulaController extends Controller
             return [
                 'id' => $aula->id,
                 'name' => $aula->name,
-                'image_path' => $aula->primeraImagen
-                    ? url($aula->primeraImagen->image_path)
-                    : null,
+                'imagenes' => $aula->imagenes->map(function ($img) {
+                    return [
+                        'url' => url($img->image_path),
+                        'is_360' => (bool) $img->is360,
+                    ];
+                }),
                 'horarios' => $aula->horarios->map(function ($horario) {
                     return [
                         'start_date' => $horario->start_date,
                         'end_date' => $horario->end_date,
-                        'start_time' => $horario->start_time,
-                        'end_time' => $horario->end_time,
                         'days' => json_decode($horario->days),
                     ];
                 }),
@@ -59,6 +60,7 @@ class ReservaAulaController extends Controller
 
         return response()->json($aulas);
     }
+
 
     public function horariosDisponibles($id)
     {

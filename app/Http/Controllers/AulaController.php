@@ -55,8 +55,6 @@ class AulaController extends Controller
                     'aula_id' => $aula->id,
                     'start_date' => $time['start_date'],
                     'end_date' => $time['end_date'],
-                    'start_time' => $time['start_time'],
-                    'end_time' => $time['end_time'],
                     'days' => json_encode($time['days']),
                 ]);
             }
@@ -95,12 +93,10 @@ class AulaController extends Controller
                 if (
                     empty($time['start_date']) ||
                     empty($time['end_date']) ||
-                    empty($time['start_time']) ||
-                    empty($time['end_time']) ||
                     empty($time['days']) || !is_array($time['days'])
                 ) {
                     return response()->json([
-                        'message' => 'Cada horario debe tener start_date, end_date, start_time, end_time y days.'
+                        'message' => 'Cada horario debe tener start_date, end_date, y days.'
                     ], 422);
                 }
             }
@@ -118,8 +114,6 @@ class AulaController extends Controller
             $aula->horarios()->create([
                 'start_date' => $time['start_date'],
                 'end_date' => $time['end_date'],
-                'start_time' => $time['start_time'],
-                'end_time' => $time['end_time'],
                 'days' => json_encode($time['days']),
             ]);
         }
@@ -233,72 +227,7 @@ class AulaController extends Controller
         ]);
     }
 
-    // AulaController.php
-    public function disponibilidad(Request $request, Aula $aula)
-    {
-        $rangos = $aula->horarios;
 
-        $resultados = [];
-
-        $filterStart = $request->query('startDate');
-        $filterEnd = $request->query('endDate');
-
-        foreach ($rangos as $rango) {
-            $days = $rango->days ?? [];
-            if (is_string($days)) {
-                $days = json_decode($days, true);
-            }
-
-            // Rango real intersectado
-            $start_date = max($rango->start_date, $filterStart);
-            $end_date = min($rango->end_date, $filterEnd);
-
-            if ($start_date > $end_date) {
-                continue; // no hay intersección, saltar
-            }
-
-            $start = strtotime($rango->start_time);
-            $end = strtotime($rango->end_time);
-            $bloquesPorDia = floor(($end - $start) / (2 * 60 * 60));
-
-            $periodo = new \DatePeriod(
-                new \DateTime($start_date),
-                new \DateInterval('P1D'),
-                (new \DateTime($end_date))->modify('+1 day')
-            );
-
-            $diasValidos = [];
-            foreach ($periodo as $date) {
-                if (in_array($date->format('l'), $days)) {
-                    $diasValidos[] = $date->format('Y-m-d');
-                }
-            }
-
-            $bloquesTotales = $bloquesPorDia * count($diasValidos);
-
-            $reservas = \App\Models\ReservaAula::where('aula_id', $aula->id)
-                ->whereBetween('fecha', [$start_date, $end_date])
-                ->whereIn('estado', ['Pendiente', 'Aprobado'])
-                ->whereTime('horario', '>=', $rango->start_time)
-                ->whereTime('horario', '<=', $rango->end_time)
-                ->count();
-
-            $resultados[] = [
-                'rango' => [
-                    'start_date' => $start_date,
-                    'end_date' => $end_date,
-                    'start_time' => $rango->start_time,
-                    'end_time' => $rango->end_time,
-                    'days' => $days,
-                ],
-                'bloques_totales' => $bloquesTotales,
-                'cupos_ocupados' => $reservas,
-                'cupos_libres' => max($bloquesTotales - $reservas, 0),
-            ];
-        }
-
-        return response()->json(['resultados' => $resultados]);
-    }
 
 
 

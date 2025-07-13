@@ -15,8 +15,6 @@ class HorarioAulas extends Model
         'aula_id',
         'start_date',
         'end_date',
-        'start_time',
-        'end_time',
         'days',
     ];
 
