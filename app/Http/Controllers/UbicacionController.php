@@ -40,7 +40,19 @@ class UbicacionController extends Controller
     public function paginate(Request $request)
     {
         $perPage = $request->query('per_page', 5);
-        $ubicaciones = Ubicacion::where('is_deleted', false)->paginate($perPage);
+        $search = $request->query('search');
+
+        $query = Ubicacion::where('is_deleted', false);
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('nombre', 'like', "%{$search}%")
+                    ->orWhere('descripcion', 'like', "%{$search}%");
+            });
+        }
+
+        $ubicaciones = $query->paginate($perPage);
+
         return response()->json($ubicaciones);
     }
 
