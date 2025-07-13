@@ -17,35 +17,52 @@ class PasswordResetController extends Controller
     // Enviar el enlace al correo
     public function sendResetLinkEmail(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email',
-        ]);
+        try {
+            $request->validate([
+                'email' => 'required|email',
+            ]);
 
-        $user = \App\Models\User::where('email', $request->email)
-            ->where('estado', 1)
-            ->first();
+            Log::info('Solicitud de enlace de restablecimiento recibida para: ' . $request->email);
 
-        if ($user) {
-            // Verificar si ya se envió un token recientemente
-            $recent = DB::table('password_reset_tokens')
-                ->where('email', $user->email)
-                ->where('created_at', '>', Carbon::now()->subMinutes(15)) // por ejemplo: 15 minutos
-                ->exists();
-            if ($recent) {
-                return response()->json([
-                    'message' => 'Ya se ha enviado un enlace recientemente. Por favor, espera unos minutos antes de intentarlo de nuevo.'
-                ], 429); // 429 Too Many Requests
+            $user = \App\Models\User::where('email', $request->email)
+                ->where('estado', 1)
+                ->first();
+
+            if ($user) {
+                Log::info('Usuario encontrado: ' . $user->email);
+
+                $recent = DB::table('password_reset_tokens')
+                    ->where('email', $user->email)
+                    ->where('created_at', '>', Carbon::now()->subMinutes(15))
+                    ->exists();
+
+                if ($recent) {
+                    Log::info('Se intentó enviar un enlace pero ya existe uno reciente para: ' . $user->email);
+                    return response()->json([
+                        'message' => 'Ya se ha enviado un enlace recientemente. Por favor, espera unos minutos antes de intentarlo de nuevo.'
+                    ], 429);
+                }
+
+                if (!$recent) {
+                    $token = Password::getRepository()->create($user);
+                    Log::info('Token generado para: ' . $user->email . ' | Token: ' . $token);
+
+                    $user->notify(new ResetPasswordNotification($token));
+                    Log::info('Notificación de restablecimiento enviada a: ' . $user->email);
+                }
+            } else {
+                Log::info('No se encontró usuario activo con el correo: ' . $request->email);
             }
 
-            if (!$recent) {
-                $token = Password::getRepository()->create($user);
-                $user->notify(new ResetPasswordNotification($token));
-            }
+            return response()->json([
+                'message' => 'Si el correo está registrado, se ha enviado un enlace para restablecer la contraseña.'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al enviar enlace de restablecimiento: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Ocurrió un error al procesar la solicitud.'
+            ], 500);
         }
-
-        return response()->json([
-            'message' => 'Si el correo está registrado, se ha enviado un enlace para restablecer la contraseña.'
-        ]);
     }
 
     // Cambiar la contraseña con el token

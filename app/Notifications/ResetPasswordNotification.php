@@ -5,6 +5,8 @@ namespace App\Notifications;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Auth\Notifications\ResetPassword as BaseReset;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
+
 
 class ResetPasswordNotification extends BaseReset
 {
@@ -14,6 +16,8 @@ class ResetPasswordNotification extends BaseReset
         $expiresAt = Carbon::now()->addMinutes($expirationMinutes)->timestamp;
         $baseUrl = env('APP_MAIN', 'http://localhost:5173');
         $resetUrl = "{$baseUrl}/reset-password?token={$this->token}&email=" . urlencode($notifiable->getEmailForPasswordReset()) . "&expires={$expiresAt}";
+        Log::info('Enviando correo de restablecimiento a: ' . $notifiable->getEmailForPasswordReset());
+        Log::info('URL generada: ' . $resetUrl);
         return (new MailMessage)
             ->subject('Restablecer contraseña')
             ->markdown('emails.reset-password', [
