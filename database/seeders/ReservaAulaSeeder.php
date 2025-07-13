@@ -6,6 +6,8 @@ use App\Models\User;
 use App\Models\Aula;
 use App\Models\ReservaAula;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class ReservaAulaSeeder extends Seeder
 {
@@ -48,7 +50,7 @@ class ReservaAulaSeeder extends Seeder
 
                 $horario = $bloquesHorario[array_rand($bloquesHorario)];
 
-                ReservaAula::create([
+                $reserva = ReservaAula::create([
                     'aula_id' => $aulas->random()->id,
                     'user_id' => $usuarios->random()->id,
                     'fecha' => $fecha->toDateString(),
@@ -56,9 +58,17 @@ class ReservaAulaSeeder extends Seeder
                     'estado' => $estados[array_rand($estados)],
                     'comentario' => fake()->boolean(30) ? fake()->sentence() : null,
                 ]);
+
+                // Generar QR para la reserva creada
+                DB::table('codigo_qr_aulas')->insert([
+                    'id' => Str::uuid(),
+                    'reserva_id' => $reserva->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
             }
         }
 
-        $this->command->info('Reservas de aula generadas exitosamente.');
+        $this->command->info('Reservas de aula y códigos QR generados exitosamente.');
     }
 }

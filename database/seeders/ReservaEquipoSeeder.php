@@ -7,6 +7,8 @@ use App\Models\ReservaEquipo;
 use App\Models\Ubicacion;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class ReservaEquipoSeeder extends Seeder
 {
@@ -46,6 +48,14 @@ class ReservaEquipoSeeder extends Seeder
                     'tipo_reserva_id' => $tipoReserva,
                 ]);
 
+                // 🚩 Crear QR relacionado
+                DB::table('codigo_qr_reserva_equipos')->insert([
+                    'id' => Str::uuid(),
+                    'reserva_id' => $reserva->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
                 // Selección de tipos sin repetir
                 $tiposSeleccionados = $equiposPorTipo->keys()
                     ->random(rand(1, min(4, $equiposPorTipo->count())));
@@ -67,6 +77,6 @@ class ReservaEquipoSeeder extends Seeder
             }
         }
 
-        $this->command->info('Reservas generadas exitosamente.');
+        $this->command->info('Reservas con QR generadas exitosamente.');
     }
 }
