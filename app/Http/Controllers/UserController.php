@@ -94,8 +94,10 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
+        DB::beginTransaction(); // ⬅️ Iniciar transacción
+
         try {
-            // Verificar primero si el email ya existe para dar un mensaje más específico
+            // Verificar primero si el email ya existe
             if (User::where('email', $request->email)->exists()) {
                 return response()->json([
                     'error' => 'email_exists',
@@ -103,12 +105,10 @@ class UserController extends Controller
                 ], 409); // 409 Conflict
             }
 
-            // Si no se envía estado, se asigna 'inactivo' (0) por defecto
             $request->merge([
                 'estado' => $request->estado ?? 0,
             ]);
 
-            // Validación de campos
             $validatedData = $request->validate([
                 'first_name' => 'required|string|max:255',
                 'last_name' => 'required|string|max:255',
@@ -134,12 +134,11 @@ class UserController extends Controller
                 }
             }
 
-            // Generar contraseña temporal y token
+            // Generar contraseña y token
             $tempPassword = Str::random(10);
             $confirmationToken = Str::uuid();
-            Log::info("Token generado para {$request->email}: {$confirmationToken}");
 
-            // Creación del usuario
+            // Crear usuario
             $usuario = User::create([
                 'first_name' => $validatedData['first_name'],
                 'last_name' => $validatedData['last_name'],
@@ -155,33 +154,25 @@ class UserController extends Controller
                 'change_password' => true,
             ]);
 
-            // Generar URL de confirmación
-            $baseUrl = env('APP_MAIN', 'http://localhost:5173'); // si no existe usa localhost
+            $baseUrl = env('APP_MAIN', 'http://localhost:5173');
             $confirmationUrl = "{$baseUrl}/confirm-account/{$confirmationToken}";
-            Log::info("URL de confirmación: {$confirmationUrl}");
-            Log::info('SMTP Config:', [
-                'MAIL_MAILER' => config('mail.default'),
-                'MAIL_HOST' => config('mail.mailers.smtp.host'),
-                'MAIL_PORT' => config('mail.mailers.smtp.port'),
-                'MAIL_USERNAME' => config('mail.mailers.smtp.username'),
-                'MAIL_FROM_ADDRESS' => config('mail.from.address'),
-                'MAIL_FROM_NAME' => config('mail.from.name'),
-            ]);
 
-
-            // Envío de correo electrónico
             try {
                 Mail::to($usuario->email)->send(new ConfirmAccountMail($usuario, $tempPassword, $confirmationUrl));
             } catch (\Throwable $e) {
                 Log::error("Error al enviar el correo a {$usuario->email}: " . $e->getMessage());
+
+                // Si falla el correo, hacer rollback y no guardar el usuario
+                DB::rollBack(); // ⬅️ Deshacer transacción
+
                 return response()->json([
-                    'success' => true,
-                    'message' => 'Usuario creado, pero no se pudo enviar el correo de confirmación. Contacte al administrador.',
-                    'usuario' => $usuario,
-                    'error_correo' => true,
+                    'error' => 'mail_error',
+                    'message' => 'No se pudo enviar el correo de confirmación. El usuario no fue creado.',
                     'mail_error' => $e->getMessage()
-                ], 201);
+                ], 500);
             }
+
+            DB::commit(); // ⬅️ Confirmar transacción solo si todo fue bien
 
             return response()->json([
                 'success' => true,
@@ -189,12 +180,12 @@ class UserController extends Controller
                 'usuario' => $usuario
             ], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            // Captura errores de validación
             return response()->json([
                 'error' => 'validation_error',
                 'messages' => $e->errors()
             ], 422);
         } catch (\Throwable $e) {
+            DB::rollBack(); // ⬅️ Asegura que se deshaga todo si ocurre cualquier otro error
             Log::error("Error en el proceso de creación de usuario: " . $e->getMessage());
             return response()->json([
                 'error' => 'server_error',
