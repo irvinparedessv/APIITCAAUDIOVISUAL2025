@@ -16,21 +16,21 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
-    'first_name',
-    'last_name',
-    'email',
-    'password',
-    'role_id',
-    'phone',
-    'address',
-    'estado',
-    'change_password',
-    'image',
-    'is_deleted',
-    'confirmation_token',
-    'email_verified_at',
-    'dark_mode', // 👈 Agregar esto
-];
+        'first_name',
+        'last_name',
+        'email',
+        'password',
+        'role_id',
+        'phone',
+        'address',
+        'estado',
+        'change_password',
+        'image',
+        'is_deleted',
+        'confirmation_token',
+        'email_verified_at',
+        'dark_mode', // 👈 Agregar esto
+    ];
 
 
     protected $hidden = [
@@ -93,5 +93,9 @@ class User extends Authenticatable
         return $query->whereHas('role', function ($q) {
             $q->where('nombre', 'EspacioEncargado');
         });
+    }
+    public function aulas()
+    {
+        return $this->belongsToMany(Aula::class, 'aula_user', 'user_id', 'aula_id');
     }
 }

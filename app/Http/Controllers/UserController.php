@@ -171,7 +171,7 @@ class UserController extends Controller
 
             // Envío de correo electrónico
             try {
-                Mail::to($usuario->email)->send(new ConfirmAccountMail($usuario, $tempPassword, $confirmationUrl));
+               // Mail::to($usuario->email)->send(new ConfirmAccountMail($usuario, $tempPassword, $confirmationUrl));
             } catch (\Throwable $e) {
                 Log::error("Error al enviar el correo a {$usuario->email}: " . $e->getMessage());
                 return response()->json([

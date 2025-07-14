@@ -61,34 +61,7 @@ class ReservaAulaController extends Controller
         return response()->json($aulas);
     }
 
-    public function getReservasPorMes(Request $request)
-    {
-        $user = Auth::user();
 
-        $mes = $request->input('mes'); // Formato: 2025-07
-        $aulaId = $request->input('aula_id');
-
-        $reservas = ReservaAula::whereYear('fecha', substr($mes, 0, 4))
-            ->whereMonth('fecha', substr($mes, 5, 2))
-            ->where('aula_id', $aulaId)
-            ->whereHas('aula.users', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
-            })
-            ->get();
-
-        return response()->json($reservas);
-    }
-
-    // Opcional: obtener aulas donde el usuario es encargado
-    public function getAulasEncargado()
-    {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-
-        $aulas = $user->aulasEncargadas()->get();
-
-        return response()->json($aulas);
-    }
     public function horariosDisponibles($id)
     {
         $aula = Aula::with([
@@ -170,30 +143,29 @@ class ReservaAulaController extends Controller
         $rolActual = strtolower($usuarioActual->role->nombre);
 
         if ($rolActual === 'prestamista') {
-            // 🔔 Prestamista hace reserva → notificar a encargados + admin
+            // 🔍 Encargados del aula (solo espacio encargados)
+            $encargadosIds = DB::table('aula_user')
+                ->join('users', 'aula_user.user_id', '=', 'users.id')
+                ->join('roles', 'users.role_id', '=', 'roles.id')
+                ->where('aula_user.aula_id', $reserva->aula_id)
+                ->where('roles.nombre', 'espacioencargado')
+                ->where('users.id', '!=', $reserva->user_id)
+                ->pluck('users.id');
+
             $adminId = User::whereHas('role', fn($q) => $q->where('nombre', 'administrador'))
                 ->where('id', '!=', $reserva->user_id)
                 ->value('id');
 
-            $encargadosIds = DB::table('aula_user')
-                ->where('aula_id', $reserva->aula_id)
-                ->where('user_id', '!=', $reserva->user_id)
-                ->pluck('user_id');
-            $espacioEncargadosIds = User::whereHas('role', fn($q) => $q->where('nombre', 'espacioencargado'))
-                ->where('id', '!=', $reserva->user_id)
-                ->pluck('id');
-
             $responsablesIds = $encargadosIds
-                ->merge($espacioEncargadosIds)
                 ->push($adminId)
                 ->filter()
                 ->unique()
                 ->values();
+
             $responsables = User::whereIn('id', $responsablesIds)->get();
 
             foreach ($responsables as $responsable) {
                 $responsable->notify(new NuevaReservaAulaNotification($reserva, $responsable->id, $pagina, Auth::id()));
-                //$responsable->notify(new NotificarResponsableReservaAula($reserva));
             }
         } else {
             // 🔔 Admin o encargado hace reserva → notificar al prestamista
@@ -256,13 +228,13 @@ class ReservaAulaController extends Controller
         $fechaHoraInicio = \Carbon\Carbon::createFromFormat('Y-m-d H:i', "{$request->fecha} {$horaInicioStr}");
         $ahora = \Carbon\Carbon::now();
 
-        // Validar que solo si es el mismo día y falta <= 60 min se bloquee
-        if ($fechaHoraInicio->isToday() && $fechaHoraInicio->diffInMinutes($ahora, false) <= 60) {
+        $minutosFaltantes = $ahora->diffInMinutes($fechaHoraInicio, false);
+
+        if ($fechaHoraInicio->isToday() && $minutosFaltantes <= 60) {
             return response()->json([
-                'message' => 'No se puede editar esta reserva porque falta menos de una hora para que inicie.'
+                'message' => 'No se puede editar esta reserva porque falta menos de una hora para que inicie o ya ha iniciado.'
             ], 403);
         }
-
 
         // Actualizar datos
         $reserva->aula_id = $request->aula_id;
@@ -283,21 +255,35 @@ class ReservaAulaController extends Controller
         $reserva->save();
         $reserva->load(['user', 'aula']);
 
-        // 🔔 Notificación lógica basada en rol
         $usuario = Auth::user();
         $pagina = $this->calcularPaginaReserva($reserva->id, 10);
 
         if (strtolower($usuario->role->nombre) === 'prestamista') {
-            $rolesResponsables = Role::whereIn('nombre', ['espacioencargado', 'administrador'])->pluck('id');
-            $responsables = User::whereIn('role_id', $rolesResponsables)
+            // 🔍 Encargados vinculados al aula y que sean 'espacioencargado'
+            $encargados = User::whereHas('aulas', function ($query) use ($reserva) {
+                $query->where('aula_id', $reserva->aula_id);
+            })
+                ->whereHas('role', function ($query) {
+                    $query->where('nombre', 'espacioencargado');
+                })
                 ->where('id', '!=', $usuario->id)
                 ->get();
+
+            // 🔍 Administradores (puedes cambiar a ->get() si quieres notificar a todos)
+            $administradores = User::whereHas('role', function ($query) {
+                $query->where('nombre', 'administrador');
+            })
+                ->where('id', '!=', $usuario->id)
+                ->get();
+
+            $responsables = $encargados->merge($administradores)->unique('id');
 
             foreach ($responsables as $responsable) {
                 $responsable->notify(new EstadoReservaAulaNotification($reserva, $responsable->id, $pagina, 'edicion'));
             }
         } else {
-            if ($reserva->user) {
+            // 🔔 Si no es prestamista, notificar al usuario que hizo la reserva (el prestamista)
+            if ($reserva->user && $reserva->user->id !== $usuario->id) {
                 $reserva->user->notify(new EstadoReservaAulaNotification($reserva, $reserva->user->id, $pagina, 'edicion'));
             }
         }
@@ -318,7 +304,6 @@ class ReservaAulaController extends Controller
             ],
         ]);
     }
-
 
 
     public function reservas(Request $request)
@@ -458,14 +443,29 @@ class ReservaAulaController extends Controller
 
     private function notificarResponsablesPorCancelacion($usuario, ReservaAula $reserva, int $pagina)
     {
-        $rolesResponsables = Role::whereIn('nombre', ['encargado', 'administrador'])->pluck('id');
-        $responsables = User::whereIn('role_id', $rolesResponsables)->get();
+        // 🔍 Espacio encargados del aula
+        $encargados = User::whereHas('aulas', function ($query) use ($reserva) {
+            $query->where('aula_id', $reserva->aula_id);
+        })
+            ->whereHas('role', function ($query) {
+                $query->where('nombre', 'espacioencargado');
+            })
+            ->where('id', '!=', $usuario->id) // No notificar al mismo usuario que canceló
+            ->get();
+
+        // 🔍 Administradores
+        $administradores = User::whereHas('role', function ($query) {
+            $query->where('nombre', 'administrador');
+        })
+            ->where('id', '!=', $usuario->id)
+            ->get();
+
+        // 🔁 Unificamos encargados y administradores sin duplicados
+        $responsables = $encargados->merge($administradores)->unique('id');
 
         foreach ($responsables as $responsable) {
             Log::info("Enviando notificación de cancelación al responsable ID: {$responsable->id}");
             $responsable->notify(new CancelarReservaAulaPrestamista($reserva, $responsable->id, $pagina));
-            //$responsable->notify(new EmailEstadoAulaNotification($reserva));
-
         }
     }
 }
