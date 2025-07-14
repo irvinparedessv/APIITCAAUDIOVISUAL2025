@@ -36,24 +36,20 @@ class PasswordResetController extends Controller
                     ->where('created_at', '>', Carbon::now()->subMinutes(15))
                     ->exists();
 
-                if ($recent) {
-                    Log::info('Se intentó enviar un enlace pero ya existe uno reciente para: ' . $user->email);
-                    return response()->json([
-                        'message' => 'Ya se ha enviado un enlace recientemente. Por favor, espera unos minutos antes de intentarlo de nuevo.'
-                    ], 429);
-                }
-
                 if (!$recent) {
                     $token = Password::getRepository()->create($user);
                     Log::info('Token generado para: ' . $user->email . ' | Token: ' . $token);
 
                     $user->notify(new ResetPasswordNotification($token));
                     Log::info('Notificación de restablecimiento enviada a: ' . $user->email);
+                } else {
+                    Log::info('Se intentó enviar un enlace pero ya existe uno reciente para: ' . $user->email);
                 }
             } else {
                 Log::info('No se encontró usuario activo con el correo: ' . $request->email);
             }
 
+            // Mensaje genérico para todos los casos
             return response()->json([
                 'message' => 'Si el correo está registrado, se ha enviado un enlace para restablecer la contraseña.'
             ]);
@@ -64,6 +60,7 @@ class PasswordResetController extends Controller
             ], 500);
         }
     }
+
 
     // Cambiar la contraseña con el token
     public function reset(Request $request)
