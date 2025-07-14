@@ -61,7 +61,34 @@ class ReservaAulaController extends Controller
         return response()->json($aulas);
     }
 
+    public function getReservasPorMes(Request $request)
+    {
+        $user = Auth::user();
 
+        $mes = $request->input('mes'); // Formato: 2025-07
+        $aulaId = $request->input('aula_id');
+
+        $reservas = ReservaAula::whereYear('fecha', substr($mes, 0, 4))
+            ->whereMonth('fecha', substr($mes, 5, 2))
+            ->where('aula_id', $aulaId)
+            ->whereHas('aula.users', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            })
+            ->get();
+
+        return response()->json($reservas);
+    }
+
+    // Opcional: obtener aulas donde el usuario es encargado
+    public function getAulasEncargado()
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        $aulas = $user->aulasEncargadas()->get();
+
+        return response()->json($aulas);
+    }
     public function horariosDisponibles($id)
     {
         $aula = Aula::with([

@@ -15,7 +15,10 @@ class Aula extends Model
     {
         return $this->hasMany(ImagenesAula::class);
     }
-
+    public function users()
+    {
+        return $this->belongsToMany(User::class, 'aula_user');
+    }
     public function horarios()
     {
         return $this->hasMany(HorarioAulas::class);
