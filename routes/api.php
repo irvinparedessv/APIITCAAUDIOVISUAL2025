@@ -95,17 +95,13 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/reportes/inventario-equipos', [ReporteController::class, 'reporteInventarioEquipos']);
 });
 
-Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->group(function () {
+Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador,Encargado'])->group(function () {
     Route::apiResource('Obtenerequipos', EquipoController::class);
     Route::get('equiposReserva', [ReservaEquipoController::class, 'equiposReserva']);
     Route::post('/reservas', [ReservaEquipoController::class, 'store']);
 
     Route::post('/BOTreservas', [ReservaEquipoController::class, 'store']);
     //Route::post('/reservas', [ReservaAulaController::class, 'store']);
-});
-
-Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador'])->group(function () {
-    Route::post('/reservas', [ReservaEquipoController::class, 'store']);
 });
 
 //👉Aqui podemos ver el perfil de los usuarios de acuerdo a roles
