@@ -98,6 +98,8 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador'])->group(function () {
     Route::apiResource('Obtenerequipos', EquipoController::class);
     Route::get('equiposReserva', [ReservaEquipoController::class, 'equiposReserva']);
+    Route::post('/reservas', [ReservaEquipoController::class, 'store']);
+
     Route::post('/BOTreservas', [ReservaEquipoController::class, 'store']);
     //Route::post('/reservas', [ReservaAulaController::class, 'store']);
 });
