@@ -17,6 +17,7 @@ class ReservaAula extends Model
         'horario',
         'user_id',
         'estado',
+        'comentario'
     ];
 
     protected $casts = [

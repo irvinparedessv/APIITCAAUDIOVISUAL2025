@@ -102,6 +102,7 @@ class ReservaAulaController extends Controller
             'horario' => 'required|string',
             'user_id' => 'required|exists:users,id',
             'estado' => 'nullable|string|in:pendiente,aprobado,cancelado,rechazado',
+            'comentario' => 'nullable|string|max:500',
         ]);
 
         if ($validator->fails()) {
@@ -128,6 +129,8 @@ class ReservaAulaController extends Controller
             'horario' => $request->horario,
             'user_id' => $request->user_id,
             'estado' => $request->estado ?? 'Pendiente',
+            'comentario' => $request->filled('comentario') ? $request->comentario : '-',
+
         ]);
         CodigoQrAula::create([
             'id' => (string) Str::uuid(),
@@ -201,6 +204,8 @@ class ReservaAulaController extends Controller
             'horario' => 'required|string',
             'user_id' => 'required|exists:users,id',
             'estado' => 'nullable|string|in:pendiente,aprobado,cancelado,rechazado',
+            'comentario' => 'nullable|string|max:500',
+
         ]);
 
         if ($validator->fails()) {
@@ -242,9 +247,10 @@ class ReservaAulaController extends Controller
         $reserva->horario = $request->horario;
         $reserva->user_id = $request->user_id;
         $reserva->estado = $request->estado ?? $reserva->estado;
+        $reserva->comentario = $request->filled('comentario') ? $request->comentario : '-';
 
         // ✅ Verificar si hubo cambios
-        $cambios = $reserva->isDirty(['aula_id', 'fecha', 'horario', 'user_id', 'estado']);
+        $cambios = $reserva->isDirty(['aula_id', 'fecha', 'horario', 'user_id', 'estado', 'comentario']);
 
         if (!$cambios) {
             return response()->json([
@@ -467,5 +473,33 @@ class ReservaAulaController extends Controller
             Log::info("Enviando notificación de cancelación al responsable ID: {$responsable->id}");
             $responsable->notify(new CancelarReservaAulaPrestamista($reserva, $responsable->id, $pagina));
         }
+    }
+    public function getReservasPorMes(Request $request)
+    {
+        $user = Auth::user();
+
+        $mes = $request->input('mes'); // Formato: 2025-07
+        $aulaId = $request->input('aula_id');
+
+        $reservas = ReservaAula::whereYear('fecha', substr($mes, 0, 4))
+            ->whereMonth('fecha', substr($mes, 5, 2))
+            ->where('aula_id', $aulaId)
+            ->whereHas('aula.users', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            })
+            ->get();
+
+        return response()->json($reservas);
+    }
+
+    // Opcional: obtener aulas donde el usuario es encargado
+    public function getAulasEncargado()
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        $aulas = $user->aulasEncargadas()->get();
+
+        return response()->json($aulas);
     }
 }

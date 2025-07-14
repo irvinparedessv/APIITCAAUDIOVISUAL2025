@@ -21,6 +21,37 @@ class ReservaAulaSeeder extends Seeder
             return;
         }
 
+        $materias = [
+            'POO',
+            'Calculo',
+            'BaseDatos',
+            'Redes',
+            'Fisica',
+            'Quimica',
+            'Estadistica',
+            'IA',
+            'SO',
+            'WebDev'
+        ];
+
+        $familias = [
+            'DS-29',
+            'DS-30',
+            'DS-31',
+            'DS-32',
+            'DS-33',
+            'DS-34',
+            'DS-35',
+            'DS-36',
+            'DS-37',
+            'DS-38'
+        ];
+
+        $grupos = [
+            'Teorico',
+            'Practica'
+        ];
+
         $mesesHistorial = 24;
         $estados = ['Aprobado', 'Pendiente', 'Rechazado'];
         $bloquesHorario = [
@@ -50,13 +81,19 @@ class ReservaAulaSeeder extends Seeder
 
                 $horario = $bloquesHorario[array_rand($bloquesHorario)];
 
+                $materia = $materias[array_rand($materias)];
+                $familia = $familias[array_rand($familias)];
+                $grupo = $grupos[array_rand($grupos)];
+
+                $comentario = "{$materia} {$familia} {$grupo}";
+
                 $reserva = ReservaAula::create([
                     'aula_id' => $aulas->random()->id,
                     'user_id' => $usuarios->random()->id,
                     'fecha' => $fecha->toDateString(),
                     'horario' => $horario,
                     'estado' => $estados[array_rand($estados)],
-                    'comentario' => fake()->boolean(30) ? fake()->sentence() : null,
+                    'comentario' => $comentario,
                 ]);
 
                 // Generar QR para la reserva creada
@@ -69,6 +106,6 @@ class ReservaAulaSeeder extends Seeder
             }
         }
 
-        $this->command->info('Reservas de aula y códigos QR generados exitosamente.');
+        $this->command->info('Reservas de aula con comentario y códigos QR generados exitosamente.');
     }
 }
