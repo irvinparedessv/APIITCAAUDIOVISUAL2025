@@ -13,6 +13,7 @@ class ReservaAulaSeeder extends Seeder
 {
     public function run(): void
     {
+
         $usuarios = User::all();
         $aulas = Aula::all();
 
@@ -49,7 +50,15 @@ class ReservaAulaSeeder extends Seeder
 
         $grupos = [
             'Teorico',
-            'Practica'
+            'Practica',
+            'Laboratorio',
+            'Seminario',
+            'Taller',
+            'Proyecto',
+            'Investigacion',
+            'Desarrollo',
+            'Revision',
+            'Consulta'
         ];
 
         $mesesHistorial = 24;
@@ -87,6 +96,9 @@ class ReservaAulaSeeder extends Seeder
 
                 $comentario = "{$materia} {$familia} {$grupo}";
 
+                // Si quieres un comentario aleatorio extra:
+                // $comentarioExtra = $faker->sentence();
+
                 $reserva = ReservaAula::create([
                     'aula_id' => $aulas->random()->id,
                     'user_id' => $usuarios->random()->id,
@@ -96,7 +108,6 @@ class ReservaAulaSeeder extends Seeder
                     'comentario' => $comentario,
                 ]);
 
-                // Generar QR para la reserva creada
                 DB::table('codigo_qr_aulas')->insert([
                     'id' => Str::uuid(),
                     'reserva_id' => $reserva->id,
