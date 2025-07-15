@@ -6,6 +6,7 @@ use App\Helpers\BitacoraHelper;
 use App\Models\Aula;
 use App\Models\CodigoQrAula;
 use App\Models\ReservaAula;
+use App\Models\ReservaAulaBloque;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\CancelarReservaAulaPrestamista;
@@ -18,6 +19,7 @@ use App\Notifications\EstadoReservaAulaNotification;
 use App\Notifications\NotificarResponsableReservaAula;
 use App\Notifications\NuevaReservaAulaNotification;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -98,114 +100,140 @@ class ReservaAulaController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'aula_id' => 'required|exists:aulas,id',
-            'fecha' => 'required|date',
+            'fecha' => 'required|date', // inicio
             'horario' => 'required|string',
+            'dias' => 'nullable|string', // "Lunes,Miércoles,Viernes"
+            'tipo' => 'required|in:evento,clase_recurrente,clase',
             'user_id' => 'required|exists:users,id',
             'estado' => 'nullable|string|in:pendiente,aprobado,cancelado,rechazado',
             'comentario' => 'nullable|string|max:500',
+            'fecha_fin' => ['required_if:tipo,clase_recurrente', 'nullable', 'date', 'after_or_equal:fecha'],
+            'dias' => ['required_if:tipo,clase_recurrente', 'array'],
+            'dias.*' => ['string'],
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
-        Log::info('Fecha recibida en request:', ['fecha' => $request->fecha]);
+        [$hora_inicio, $hora_fin] = explode('-', $request->horario);
 
-        // Validar que el usuario no tenga otra reserva para ese mismo día y horario
-        $existeReserva = ReservaAula::where('user_id', $request->user_id)
-            ->whereDate('fecha', $request->fecha)
-            ->where('horario', $request->horario)
-            ->whereIn('estado', ['Pendiente', 'Aprobado']) // solo reservas activas
-            ->exists();
+        if ($request->tipo === 'evento' || $request->tipo === 'clase') {
+            $conflicto = ReservaAula::where('aula_id', $request->aula_id)
+                ->whereDate('fecha', $request->fecha)
+                ->where(function ($q) use ($hora_inicio, $hora_fin) {
+                    $q->where('horario', 'like', "%$hora_inicio%")
+                        ->orWhere('horario', 'like', "%$hora_fin%");
+                })
+                ->whereIn('estado', ['pendiente', 'aprobado'])
+                ->exists();
 
-        if ($existeReserva) {
-            return response()->json([
-                'message' => 'El usuario ya tiene una reserva para ese día y horario.'
-            ], 409);
+            if ($conflicto) {
+                return response()->json([
+                    'message' => 'Conflicto: Ya existe una reserva para esta aula, fecha y horario.'
+                ], 409);
+            }
         }
 
+        if ($request->tipo === 'clase_recurrente') {
+            $dias = array_map('trim', explode(',', $request->dias));
+            $fechaInicio = Carbon::parse($request->fecha);
+            $fechaFin = Carbon::parse($request->fecha_fin);
+
+            for ($fecha = $fechaInicio->copy(); $fecha->lte($fechaFin); $fecha->addDay()) {
+                if (in_array($fecha->locale('es')->dayName, $dias)) {
+                    $conflicto = ReservaAulaBloque::whereHas('reserva', function ($q) use ($request) {
+                        $q->where('aula_id', $request->aula_id)
+                            ->whereIn('estado', ['pendiente', 'aprobado']);
+                    })
+                        ->whereDate('fecha_inicio', $fecha->toDateString())
+                        ->where(function ($q) use ($hora_inicio, $hora_fin) {
+                            $q->where(function ($q2) use ($hora_inicio, $hora_fin) {
+                                $q2->where('hora_inicio', '<', $hora_fin)
+                                    ->where('hora_fin', '>', $hora_inicio);
+                            });
+                        })
+                        ->exists();
+
+                    if ($conflicto) {
+                        return response()->json([
+                            'message' => 'Conflicto: Ya existe una reserva para el aula en fecha '
+                                . $fecha->toDateString() . ' y horario ' . $hora_inicio . '-' . $hora_fin
+                        ], 409);
+                    }
+                }
+            }
+        }
         $reserva = ReservaAula::create([
             'aula_id' => $request->aula_id,
             'fecha' => $request->fecha,
+            'fecha_fin' => $request->fecha_fin,
+            'dias' => $request->dias,
+            'tipo' => $request->tipo,
             'horario' => $request->horario,
             'user_id' => $request->user_id,
-            'estado' => $request->estado ?? 'Pendiente',
+            'estado' => $request->estado ?? 'pendiente',
             'comentario' => $request->filled('comentario') ? $request->comentario : '-',
-
         ]);
-        CodigoQrAula::create([
-            'id' => (string) Str::uuid(),
-            'reserva_id' => $reserva->id,
-        ]);
-        // Calcular en qué página cae esta reserva (según paginación de 10 por página)
-        $pagina = $this->calcularPaginaReserva($reserva->id, 10);
 
-        // Cargar relaciones para notificaciones
-        $reserva->load(['user', 'aula']);
+        if ($request->tipo === 'clase_recurrente') {
+            $dias = array_map('trim', explode(',', $request->dias));
+            [$hora_inicio, $hora_fin] = explode('-', $request->horario);
 
-        $usuarioActual = Auth::user();
-        $rolActual = strtolower($usuarioActual->role->nombre);
+            $fechaInicio = Carbon::parse($request->fecha);
+            $fechaFin = Carbon::parse($request->fecha_fin);
 
-        if ($rolActual === 'prestamista') {
-            // 🔍 Encargados del aula (solo espacio encargados)
-            $encargadosIds = DB::table('aula_user')
-                ->join('users', 'aula_user.user_id', '=', 'users.id')
-                ->join('roles', 'users.role_id', '=', 'roles.id')
-                ->where('aula_user.aula_id', $reserva->aula_id)
-                ->where('roles.nombre', 'espacioencargado')
-                ->where('users.id', '!=', $reserva->user_id)
-                ->pluck('users.id');
-
-            $adminId = User::whereHas('role', fn($q) => $q->where('nombre', 'administrador'))
-                ->where('id', '!=', $reserva->user_id)
-                ->value('id');
-
-            $responsablesIds = $encargadosIds
-                ->push($adminId)
-                ->filter()
-                ->unique()
-                ->values();
-
-            $responsables = User::whereIn('id', $responsablesIds)->get();
-
-            foreach ($responsables as $responsable) {
-                $responsable->notify(new NuevaReservaAulaNotification($reserva, $responsable->id, $pagina, Auth::id()));
-            }
-        } else {
-            // 🔔 Admin o encargado hace reserva → notificar al prestamista
-            if ($reserva->user_id !== $usuarioActual->id) {
-                $reserva->user->notify(new NuevaReservaAulaNotification($reserva, $reserva->user_id, $pagina, Auth::id()));
-                //$reserva->user->notify(new ConfirmarReservaAulaUsuario($reserva));
+            for ($fecha = $fechaInicio->copy(); $fecha->lte($fechaFin); $fecha->addDay()) {
+                if (in_array($fecha->locale('es')->dayName, $dias)) {
+                    $bloque = new ReservaAulaBloque([
+                        'fecha_inicio' => $fecha->toDateString(),
+                        'fecha_fin' => $fecha->toDateString(),
+                        'hora_inicio' => trim($hora_inicio),
+                        'hora_fin' => trim($hora_fin),
+                        'dia' => $fecha->locale('es')->dayName,
+                        'estado' => 'pendiente',
+                        'recurrente' => true
+                    ]);
+                    $reserva->bloques()->save($bloque);
+                }
             }
         }
 
+        // Si es única, puedes crear 1 bloque igual si quieres
+        if ($request->tipo === 'clase' || $request->tipo === 'evento') {
+            [$hora_inicio, $hora_fin] = explode('-', $request->horario);
+            $bloque = new ReservaAulaBloque([
+                'fecha_inicio' => $request->fecha,
+                'fecha_fin' => $request->fecha,
+                'hora_inicio' => trim($hora_inicio),
+                'hora_fin' => trim($hora_fin),
+                'dia' => Carbon::parse($request->fecha)->locale('es')->dayName,
+                'estado' => 'pendiente',
+                'recurrente' => false
+            ]);
+            $reserva->bloques()->save($bloque);
+        }
+
+        // Resto de tu lógica (QR, notificaciones, página, etc.)
         return response()->json([
-            'message' => 'Reserva de aula creada exitosamente',
-            'reserva' => [
-                'id' => $reserva->id,
-                'aula_id' => $reserva->aula_id,
-                'fecha' => $reserva->fecha->format('Y-m-d'), // ✅ esto es lo que necesitas
-                'horario' => $reserva->horario,
-                'user_id' => $reserva->user_id,
-                'estado' => $reserva->estado,
-                'created_at' => $reserva->created_at->toDateTimeString(),
-                'updated_at' => $reserva->updated_at->toDateTimeString(),
-                'aula' => $reserva->aula,
-                'user' => $reserva->user,
-            ],
-            'pagina' => $pagina,
-        ], 201);
+            'message' => 'Reserva creada con bloques',
+            'reserva' => $reserva->load('bloques'),
+        ]);
     }
 
     public function update(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
             'aula_id' => 'required|exists:aulas,id',
-            'fecha' => 'required|date',
+            'fecha' => 'required|date', // inicio
             'horario' => 'required|string',
+            'dias' => 'nullable|string', // "Lunes,Miércoles,Viernes"
+            'tipo' => 'required|in:evento,clase_recurrente,clase',
             'user_id' => 'required|exists:users,id',
             'estado' => 'nullable|string|in:pendiente,aprobado,cancelado,rechazado',
             'comentario' => 'nullable|string|max:500',
-
+            'fecha_fin' => ['required_if:tipo,clase_recurrente', 'nullable', 'date', 'after_or_equal:fecha'],
+            'dias' => ['required_if:tipo,clase_recurrente', 'array'],
+            'dias.*' => ['string'],
         ]);
 
         if ($validator->fails()) {
@@ -214,102 +242,81 @@ class ReservaAulaController extends Controller
 
         $reserva = ReservaAula::findOrFail($id);
 
-        // Validar duplicidad
-        $existeReserva = ReservaAula::where('user_id', $request->user_id)
-            ->whereDate('fecha', $request->fecha)
-            ->where('horario', $request->horario)
-            ->whereIn('estado', ['Pendiente', 'Aprobado'])
-            ->where('id', '!=', $reserva->id)
-            ->exists();
+        [$horaInicio, $horaFin] = explode('-', $request->horario);
 
-        if ($existeReserva) {
+        // 🚨 Verificar conflictos de BLOQUES
+        $bloquesExistentes = \App\Models\ReservaAulaBloque::whereHas('reserva', function ($q) use ($request, $id) {
+            $q->where('aula_id', $request->aula_id)->where('id', '!=', $id);
+        })->where(function ($q) use ($request, $horaInicio, $horaFin) {
+            $q->where(function ($query) use ($request, $horaInicio, $horaFin) {
+                $query->whereDate('fecha_inicio', '<=', $request->fecha_fin ?? $request->fecha)
+                    ->whereDate('fecha_fin', '>=', $request->fecha)
+                    ->where(function ($sub) use ($horaInicio, $horaFin) {
+                        $sub->whereBetween('hora_inicio', [$horaInicio, $horaFin])
+                            ->orWhereBetween('hora_fin', [$horaInicio, $horaFin]);
+                    });
+            });
+        })->exists();
+
+        if ($bloquesExistentes) {
             return response()->json([
-                'message' => 'El usuario ya tiene otra reserva para ese día y horario.'
+                'message' => 'Conflicto: ya existe otra reserva para ese aula y horario.'
             ], 409);
         }
 
-        // Validar que no se puede editar si falta menos de una hora
-        $horaInicioStr = substr($request->horario, 0, 5); // "HH:MM"
-        $fechaHoraInicio = \Carbon\Carbon::createFromFormat('Y-m-d H:i', "{$request->fecha} {$horaInicioStr}");
-        $ahora = \Carbon\Carbon::now();
+        // ✅ Actualizar reserva principal
+        $reserva->update([
+            'aula_id' => $request->aula_id,
+            'fecha' => $request->fecha,
+            'fecha_fin' => $request->fecha_fin,
+            'dias' => $request->dias ? json_encode($request->dias) : null,
+            'horario' => $request->horario,
+            'user_id' => $request->user_id,
+            'estado' => $request->estado ?? $reserva->estado,
+            'comentario' => $request->filled('comentario') ? $request->comentario : '-',
+        ]);
 
-        $minutosFaltantes = $ahora->diffInMinutes($fechaHoraInicio, false);
+        // 🔄 Borrar bloques viejos
+        $reserva->bloques()->delete();
 
-        if ($fechaHoraInicio->isToday() && $minutosFaltantes <= 60) {
-            return response()->json([
-                'message' => 'No se puede editar esta reserva porque falta menos de una hora para que inicie o ya ha iniciado.'
-            ], 403);
-        }
+        // 🔄 Crear nuevos bloques
+        $fechaInicio = \Carbon\Carbon::parse($request->fecha);
+        $fechaFin = $request->fecha_fin ? \Carbon\Carbon::parse($request->fecha_fin) : $fechaInicio;
 
-        // Actualizar datos
-        $reserva->aula_id = $request->aula_id;
-        $reserva->fecha = $request->fecha;
-        $reserva->horario = $request->horario;
-        $reserva->user_id = $request->user_id;
-        $reserva->estado = $request->estado ?? $reserva->estado;
-        $reserva->comentario = $request->filled('comentario') ? $request->comentario : '-';
-
-        // ✅ Verificar si hubo cambios
-        $cambios = $reserva->isDirty(['aula_id', 'fecha', 'horario', 'user_id', 'estado', 'comentario']);
-
-        if (!$cambios) {
-            return response()->json([
-                'message' => 'No se realizaron cambios en la reserva.'
-            ], 200);
-        }
-
-        $reserva->save();
-        $reserva->load(['user', 'aula']);
-
-        $usuario = Auth::user();
-        $pagina = $this->calcularPaginaReserva($reserva->id, 10);
-
-        if (strtolower($usuario->role->nombre) === 'prestamista') {
-            // 🔍 Encargados vinculados al aula y que sean 'espacioencargado'
-            $encargados = User::whereHas('aulas', function ($query) use ($reserva) {
-                $query->where('aula_id', $reserva->aula_id);
-            })
-                ->whereHas('role', function ($query) {
-                    $query->where('nombre', 'espacioencargado');
-                })
-                ->where('id', '!=', $usuario->id)
-                ->get();
-
-            // 🔍 Administradores (puedes cambiar a ->get() si quieres notificar a todos)
-            $administradores = User::whereHas('role', function ($query) {
-                $query->where('nombre', 'administrador');
-            })
-                ->where('id', '!=', $usuario->id)
-                ->get();
-
-            $responsables = $encargados->merge($administradores)->unique('id');
-
-            foreach ($responsables as $responsable) {
-                $responsable->notify(new EstadoReservaAulaNotification($reserva, $responsable->id, $pagina, 'edicion'));
+        if ($request->dias) {
+            for ($date = $fechaInicio->copy(); $date->lte($fechaFin); $date->addDay()) {
+                if (in_array($date->format('l'), $request->dias)) {
+                    $reserva->bloques()->create([
+                        'fecha_inicio' => $date->toDateString(),
+                        'fecha_fin' => $date->toDateString(),
+                        'hora_inicio' => $horaInicio,
+                        'hora_fin' => $horaFin,
+                        'dia' => $date->format('l'),
+                        'estado' => strtolower($reserva->estado),
+                        'recurrente' => true
+                    ]);
+                }
             }
         } else {
-            // 🔔 Si no es prestamista, notificar al usuario que hizo la reserva (el prestamista)
-            if ($reserva->user && $reserva->user->id !== $usuario->id) {
-                $reserva->user->notify(new EstadoReservaAulaNotification($reserva, $reserva->user->id, $pagina, 'edicion'));
-            }
+            $reserva->bloques()->create([
+                'fecha_inicio' => $fechaInicio->toDateString(),
+                'fecha_fin' => $fechaInicio->toDateString(),
+                'hora_inicio' => $horaInicio,
+                'hora_fin' => $horaFin,
+                'dia' => $fechaInicio->format('l'),
+                'estado' => strtolower($reserva->estado),
+                'recurrente' => false
+
+
+            ]);
         }
 
         return response()->json([
-            'message' => 'Reserva de aula actualizada exitosamente',
-            'reserva' => [
-                'id' => $reserva->id,
-                'aula_id' => $reserva->aula_id,
-                'fecha' => $reserva->fecha->format('Y-m-d'),
-                'horario' => $reserva->horario,
-                'user_id' => $reserva->user_id,
-                'estado' => $reserva->estado,
-                'created_at' => $reserva->created_at->toDateTimeString(),
-                'updated_at' => $reserva->updated_at->toDateTimeString(),
-                'aula' => $reserva->aula,
-                'user' => $reserva->user,
-            ],
+            'message' => 'Reserva actualizada correctamente.',
+            'reserva' => $reserva->load('bloques'),
         ]);
     }
+
 
 
     public function reservas(Request $request)
@@ -397,7 +404,8 @@ class ReservaAulaController extends Controller
         $reserva->estado = $request->estado;
         $reserva->comentario = $request->comentario;
         $reserva->save();
-
+        ReservaAulaBloque::where('reserva_aula_id', $id)
+            ->update(['estado' => $reserva->estado]);
         $pagina = $this->calcularPaginaReserva($id);
 
         // 🔥 Notificar dependiendo de quién realiza la acción
@@ -478,18 +486,28 @@ class ReservaAulaController extends Controller
     {
         $user = Auth::user();
 
-        $mes = $request->input('mes'); // Formato: 2025-07
+        $mes = $request->input('mes'); // Ejemplo: "2025-07"
         $aulaId = $request->input('aula_id');
 
-        $reservas = ReservaAula::whereYear('fecha', substr($mes, 0, 4))
-            ->whereMonth('fecha', substr($mes, 5, 2))
-            ->where('aula_id', $aulaId)
-            ->whereHas('aula.users', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
-            })
-            ->get();
+        // Parsear año y mes
+        $year = substr($mes, 0, 4);
+        $month = substr($mes, 5, 2);
 
-        return response()->json($reservas);
+        $bloques = ReservaAulaBloque::whereHas('reserva', function ($q) use ($year, $month, $aulaId, $user) {
+            $q->whereYear('fecha', $year)
+                ->whereMonth('fecha', $month)
+                ->where('aula_id', $aulaId)
+                ->whereHas('aula.users', function ($q2) use ($user) {
+                    $q2->where('user_id', $user->id);
+                });
+        })->with('reserva') // cargar la reserva principal
+            ->get()
+            ->map(function ($bloque) {
+                $bloque->title = $bloque->reservaAula->comentario ?? '';
+                return $bloque;
+            });
+
+        return response()->json($bloques);
     }
 
     // Opcional: obtener aulas donde el usuario es encargado

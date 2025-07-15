@@ -37,4 +37,8 @@ class ReservaAula extends Model
     {
         return $this->hasOne(CodigoQrAula::class, 'reserva_id');
     }
+    public function bloques()
+    {
+        return $this->hasMany(ReservaAulaBloque::class, 'reserva_id');
+    }
 }

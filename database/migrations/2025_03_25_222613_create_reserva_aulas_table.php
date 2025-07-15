@@ -17,7 +17,9 @@ return new class extends Migration
             $table->foreignId('aula_id')->constrained('aulas')->onDelete('cascade');
             $table->date('fecha');
             $table->string('horario');
-
+            $table->string('tipo')->default('evento');
+            $table->string('dias')->nullable();
+            $table->date('fecha_fin')->nullable();
             // Opcional: si usas autenticación y quieres guardar quién hizo la reserva
             $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
 
