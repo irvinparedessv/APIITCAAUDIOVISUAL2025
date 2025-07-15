@@ -16,7 +16,7 @@ class AulaController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255|unique:aulas,name',
             'render_images.*' => 'nullable|file',
             'render_images_is360.*' => 'nullable|boolean',
             'available_times' => 'required|json',
