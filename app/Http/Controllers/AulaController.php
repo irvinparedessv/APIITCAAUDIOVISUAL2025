@@ -7,6 +7,7 @@ use App\Models\Aula;
 use App\Models\User;
 use App\Models\ImagenesAula;
 use App\Models\HorarioAulas;
+use App\Models\ReservaAulaBloque;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
@@ -217,7 +218,7 @@ class AulaController extends Controller
             $end_date = min($rango->end_date, $filterEnd);
 
             if ($start_date > $end_date) {
-                continue; // no hay intersección
+                continue;
             }
 
             $periodo = new \DatePeriod(
@@ -235,21 +236,21 @@ class AulaController extends Controller
 
             $bloquesTotales = count($diasValidos);
 
-            // Reservas aprobadas con detalle orden descendente
-            $reservasAprobadas = \App\Models\ReservaAula::where('aula_id', $aula->id)
-                ->whereBetween('fecha', [$start_date, $end_date])
+            $bloquesAprobados = ReservaAulaBloque::whereHas('reserva', function ($q) use ($aula) {
+                $q->where('aula_id', $aula->id);
+            })
+                ->whereBetween('fecha_inicio', [$start_date, $end_date])
                 ->where('estado', 'Aprobado')
-                ->orderBy('fecha', 'desc')
-                ->orderBy('horario', 'desc')
-                ->get(['fecha', 'horario', 'estado']);
+                ->orderBy('fecha_inicio', 'desc')
+                ->get();
 
-            // Reservas pendientes con detalle orden descendente
-            $reservasPendientes = \App\Models\ReservaAula::where('aula_id', $aula->id)
-                ->whereBetween('fecha', [$start_date, $end_date])
+            $bloquesPendientes = ReservaAulaBloque::whereHas('reserva', function ($q) use ($aula) {
+                $q->where('aula_id', $aula->id);
+            })
+                ->whereBetween('fecha_inicio', [$start_date, $end_date])
                 ->where('estado', 'Pendiente')
-                ->orderBy('fecha', 'desc')
-                ->orderBy('horario', 'desc')
-                ->get(['fecha', 'horario', 'estado']);
+                ->orderBy('fecha_inicio', 'desc')
+                ->get();
 
             $resultados[] = [
                 'rango' => [
@@ -258,17 +259,16 @@ class AulaController extends Controller
                     'days' => $days,
                 ],
                 'bloques_totales' => $bloquesTotales,
-                'cupos_ocupados' => $reservasAprobadas->count(),
-                'cupos_pendientes' => $reservasPendientes->count(),
-                'cupos_libres' => max($bloquesTotales - $reservasAprobadas->count(), 0),
-                'reservas_aprobadas' => $reservasAprobadas,
-                'reservas_pendientes' => $reservasPendientes,
+                'cupos_ocupados' => $bloquesAprobados->count(),
+                'cupos_pendientes' => $bloquesPendientes->count(),
+                'cupos_libres' => max($bloquesTotales - $bloquesAprobados->count(), 0),
+                'reservas_aprobadas' => $bloquesAprobados,
+                'reservas_pendientes' => $bloquesPendientes,
             ];
         }
 
         return response()->json(['resultados' => $resultados]);
     }
-
 
     public function destroy($id)
     {
