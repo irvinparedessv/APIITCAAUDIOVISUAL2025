@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('aula_id')->constrained('aulas')->onDelete('cascade');
             $table->date('fecha');
             $table->string('horario');
-            $table->string('title');
+            $table->string('titulo');
 
             $table->string('tipo')->default('evento');
             $table->string('dias')->nullable();
