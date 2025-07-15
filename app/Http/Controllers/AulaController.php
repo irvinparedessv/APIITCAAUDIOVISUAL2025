@@ -272,13 +272,23 @@ class AulaController extends Controller
     public function destroy($id)
     {
         $aula = Aula::findOrFail($id);
-        $aula->delete();
-        return response()->json(['message' => 'Aula eliminada']);
+        $aula->deleted = true;
+        $aula->save();
+        $aula->reservas()
+            ->where(function ($query) {
+                $query->where('status', 'Pendiente')
+                    ->orWhere(function ($query) {
+                        $query->where('status', 'Aprobada')
+                            ->where('fecha', '>', now());
+                    });
+            })
+            ->update(['status' => 'Cancelada']);
+        return response()->json(['message' => 'Aula marcada como eliminada']);
     }
 
     public function getaulas(Request $request)
     {
-        $query = Aula::with('primeraImagen');
+        $query = Aula::with('primeraImagen')->where('deleted', false);
 
         if ($request->has('buscar') && $request->buscar) {
             $query->where('name', 'LIKE', '%' . $request->buscar . '%');

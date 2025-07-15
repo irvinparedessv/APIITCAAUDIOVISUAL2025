@@ -81,7 +81,7 @@ class User extends Authenticatable
     }
     public function aulasEncargadas()
     {
-        return $this->belongsToMany(Aula::class, 'aula_user');
+        return $this->belongsToMany(Aula::class, 'aula_user')->where('deleted', false);
     }
 
     public function notifications()
@@ -96,6 +96,6 @@ class User extends Authenticatable
     }
     public function aulas()
     {
-        return $this->belongsToMany(Aula::class, 'aula_user', 'user_id', 'aula_id');
+        return $this->belongsToMany(Aula::class, 'aula_user', 'user_id', 'aula_id')->where('deleted', false);
     }
 }

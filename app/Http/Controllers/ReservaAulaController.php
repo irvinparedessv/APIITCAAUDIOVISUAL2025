@@ -495,7 +495,7 @@ class ReservaAulaController extends Controller
         $reserva->estado = $request->estado;
         $reserva->comentario = $request->comentario;
         $reserva->save();
-        ReservaAulaBloque::where('reserva_aula_id', $id)
+        ReservaAulaBloque::where('reserva_id', $id)
             ->update(['estado' => $reserva->estado]);
         $pagina = $this->calcularPaginaReserva($id);
 
