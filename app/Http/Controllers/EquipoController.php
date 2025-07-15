@@ -99,46 +99,58 @@ class EquipoController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $request->validate([
-            'nombre' => 'required|string|max:255',
-            'descripcion' => 'nullable|string',
-            'estado' => 'required|boolean',
-            'cantidad' => 'required|integer',
-            'is_deleted' => 'required|boolean',
-            'tipo_equipo_id' => 'required|exists:tipo_equipos,id',
-            'tipo_reserva_id' => 'required|exists:tipo_reservas,id',
-            'imagen' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-        ]);
+{
+    $request->validate([
+        'nombre' => 'required|string|max:255',
+        'descripcion' => 'nullable|string',
+        'estado' => 'required|boolean',
+        'cantidad' => 'required|integer',
+        'is_deleted' => 'required|boolean',
+        'tipo_equipo_id' => 'required|exists:tipo_equipos,id',
+        'tipo_reserva_id' => 'required|exists:tipo_reservas,id',
+        'imagen' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+    ]);
 
-        $data = $request->only([
-            'nombre',
-            'descripcion',
-            'estado',
-            'cantidad',
-            'tipo_equipo_id',
-            'tipo_reserva_id',
-        ]);
+    $nombre = $request->input('nombre');
+    
+    // Validación case-insensitive
+    $existe = Equipo::whereRaw('LOWER(nombre) = ?', [strtolower($nombre)])
+        ->where('is_deleted', false)
+        ->exists();
 
-        $data['is_deleted'] = false;
-
-        if ($request->hasFile('imagen')) {
-            $image = $request->file('imagen');
-            Log::info("Nombre del archivo: " . $image->getClientOriginalName());
-            Log::info("Extensión del archivo: " . $image->getClientOriginalExtension());
-
-            $imageName = Str::random(20) . '.' . $image->getClientOriginalExtension();
-            $image->storeAs('equipos', $imageName, 'public');
-            $data['imagen'] = $imageName;
-        } else {
-            Log::info("No se ha subido una imagen.");
-            $data['imagen'] = 'default.png';
-        }
-
-        $equipo = Equipo::create($data);
-
-        return response()->json($equipo, 201);
+    if ($existe) {
+        return response()->json(['message' => 'Ya existe un equipo con ese nombre.'], 422);
     }
+
+    $data = $request->only([
+        'nombre',
+        'descripcion',
+        'estado',
+        'cantidad',
+        'tipo_equipo_id',
+        'tipo_reserva_id',
+    ]);
+
+    $data['is_deleted'] = false;
+
+    if ($request->hasFile('imagen')) {
+        $image = $request->file('imagen');
+        Log::info("Nombre del archivo: " . $image->getClientOriginalName());
+        Log::info("Extensión del archivo: " . $image->getClientOriginalExtension());
+
+        $imageName = Str::random(20) . '.' . $image->getClientOriginalExtension();
+        $image->storeAs('equipos', $imageName, 'public');
+        $data['imagen'] = $imageName;
+    } else {
+        Log::info("No se ha subido una imagen.");
+        $data['imagen'] = 'default.png';
+    }
+
+    $equipo = Equipo::create($data);
+
+    return response()->json($equipo, 201);
+}
+
 
     public function show(string $id)
     {
@@ -148,51 +160,67 @@ class EquipoController extends Controller
     }
 
     public function update(Request $request, string $id)
-    {
-        $equipo = Equipo::findOrFail($id);
+{
+    $equipo = Equipo::findOrFail($id);
 
-        $request->validate([
-            'nombre' => 'sometimes|required|string|max:255',
-            'descripcion' => 'nullable|string',
-            'estado' => 'sometimes|required|boolean',
-            'cantidad' => 'sometimes|required|integer',
-            'is_deleted' => 'sometimes|required|boolean',
-            'tipo_equipo_id' => 'sometimes|required|exists:tipo_equipos,id',
-            'tipo_reserva_id' => 'sometimes|required|exists:tipo_reservas,id',
-            'imagen' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-        ]);
+    $request->validate([
+        'nombre' => 'sometimes|required|string|max:255',
+        'descripcion' => 'nullable|string',
+        'estado' => 'sometimes|required|boolean',
+        'cantidad' => 'sometimes|required|integer',
+        'is_deleted' => 'sometimes|required|boolean',
+        'tipo_equipo_id' => 'sometimes|required|exists:tipo_equipos,id',
+        'tipo_reserva_id' => 'sometimes|required|exists:tipo_reservas,id',
+        'imagen' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+    ]);
 
-        $data = $request->only([
-            'nombre',
-            'descripcion',
-            'estado',
-            'cantidad',
-            'tipo_equipo_id',
-            'tipo_reserva_id',
-        ]);
+    $data = $request->only([
+        'nombre',
+        'descripcion',
+        'estado',
+        'cantidad',
+        'tipo_equipo_id',
+        'tipo_reserva_id',
+    ]);
 
-        if ($request->has('is_deleted')) {
-            $data['is_deleted'] = $request->input('is_deleted');
+    if ($request->has('nombre')) {
+        $nombreNuevo = $request->input('nombre');
+
+        $existe = Equipo::whereRaw('LOWER(nombre) = ?', [strtolower($nombreNuevo)])
+            ->where('id', '!=', $id)
+            ->where('is_deleted', false)
+            ->exists();
+
+        if ($existe) {
+            return response()->json(['message' => 'Ya existe un equipo con ese nombre.'], 422);
         }
 
-        if ($request->hasFile('imagen')) {
-            if ($equipo->imagen && $equipo->imagen !== 'default.png') {
-                Storage::disk('public')->delete('equipos/' . $equipo->imagen);
-            }
-
-            $image = $request->file('imagen');
-            Log::info("Nombre del archivo: " . $image->getClientOriginalName());
-            Log::info("Extensión del archivo: " . $image->getClientOriginalExtension());
-
-            $imageName = Str::random(20) . '.' . $image->getClientOriginalExtension();
-            $image->storeAs('equipos', $imageName, 'public');
-            $data['imagen'] = $imageName;
-        }
-
-        $equipo->update($data);
-
-        return response()->json($equipo);
+        $data['nombre'] = $nombreNuevo;
     }
+
+    if ($request->has('is_deleted')) {
+        $data['is_deleted'] = $request->input('is_deleted');
+    }
+
+    if ($request->hasFile('imagen')) {
+        if ($equipo->imagen && $equipo->imagen !== 'default.png') {
+            Storage::disk('public')->delete('equipos/' . $equipo->imagen);
+        }
+
+        $image = $request->file('imagen');
+        Log::info("Nombre del archivo: " . $image->getClientOriginalName());
+        Log::info("Extensión del archivo: " . $image->getClientOriginalExtension());
+
+        $imageName = Str::random(20) . '.' . $image->getClientOriginalExtension();
+        $image->storeAs('equipos', $imageName, 'public');
+        $data['imagen'] = $imageName;
+    }
+
+    $equipo->update($data);
+
+    return response()->json($equipo);
+}
+
 
     public function destroy(string $id)
     {

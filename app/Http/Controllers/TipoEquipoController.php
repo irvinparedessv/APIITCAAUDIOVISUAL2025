@@ -27,18 +27,32 @@ class TipoEquipoController extends Controller
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
-    {
-        $request->validate([
-            'nombre' => 'required|string|max:255',
-        ]);
+{
+    $request->validate([
+        'nombre' => 'required|string|max:255',
+    ]);
 
-        $tipoEquipo = TipoEquipo::create([
-            'nombre' => $request->input('nombre'),
-            'is_deleted' => false, // Asegurarse de que no esté marcado como eliminado
-        ]);
+    $nombre = $request->input('nombre');
 
-        return response()->json($tipoEquipo, 201);
+    // Comparación insensible a mayúsculas/minúsculas
+    $existe = TipoEquipo::whereRaw('LOWER(nombre) = ?', [strtolower($nombre)])
+        ->where('is_deleted', false)
+        ->exists();
+
+    if ($existe) {
+        return response()->json([
+            'message' => 'El nombre ya existe.'
+        ], 422); // Código HTTP 422: Unprocessable Entity
     }
+
+    $tipoEquipo = TipoEquipo::create([
+        'nombre' => $nombre,
+        'is_deleted' => false,
+    ]);
+
+    return response()->json($tipoEquipo, 201);
+}
+
 
     /**
      * Display the specified resource.
@@ -58,22 +72,35 @@ class TipoEquipoController extends Controller
      * Update the specified resource in storage.
      */
     public function update(Request $request, string $id)
-    {
-        $request->validate([
-            'nombre' => 'required|string|max:255',
-        ]);
+{
+    $request->validate([
+        'nombre' => 'required|string|max:255',
+    ]);
 
-        $tipoEquipo = TipoEquipo::where('id', $id)->where('is_deleted', false)->first();
+    $tipoEquipo = TipoEquipo::where('id', $id)->where('is_deleted', false)->first();
 
-        if (!$tipoEquipo) {
-            return response()->json(['error' => 'Tipo de equipo no encontrado'], 404);
-        }
-
-        $tipoEquipo->nombre = $request->input('nombre');
-        $tipoEquipo->save();
-
-        return response()->json($tipoEquipo);
+    if (!$tipoEquipo) {
+        return response()->json(['error' => 'Tipo de equipo no encontrado'], 404);
     }
+
+    $nombreNuevo = $request->input('nombre');
+
+    // Comparación insensible a mayúsculas/minúsculas, excluyendo el mismo ID
+    $existe = TipoEquipo::whereRaw('LOWER(nombre) = ?', [strtolower($nombreNuevo)])
+        ->where('id', '!=', $id)
+        ->where('is_deleted', false)
+        ->exists();
+
+    if ($existe) {
+        return response()->json(['message' => 'El nombre ya existe.'], 422);
+    }
+
+    $tipoEquipo->nombre = $nombreNuevo;
+    $tipoEquipo->save();
+
+    return response()->json($tipoEquipo);
+}
+
 
     /**
      * Remove the specified resource from storage (eliminado lógico).
