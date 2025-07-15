@@ -26,7 +26,7 @@ class HorarioAulasSeeder extends Seeder
         $endTime = '20:20:00';
 
         // Días de lunes a viernes
-        $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        $days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
         foreach ($aulas as $aula) {
             HorarioAulas::create([

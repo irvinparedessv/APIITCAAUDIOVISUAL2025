@@ -478,6 +478,8 @@ class ReservaAulaController extends Controller
         $request->validate([
             'estado' => 'required|in:Aprobado,Cancelado,Rechazado',
             'comentario' => 'nullable|string',
+            'blockId' => 'nullable|integer',
+            'updateSeries' => 'nullable|boolean',
         ]);
 
         $reserva = ReservaAula::with('user')->findOrFail($id);
@@ -497,22 +499,42 @@ class ReservaAulaController extends Controller
         }
 
         $estadoAnterior = $reserva->estado;
-        $reserva->estado = $request->estado;
-        $reserva->comentario = $request->comentario;
-        $reserva->save();
-        ReservaAulaBloque::where('reserva_id', $id)
-            ->update(['estado' => $reserva->estado]);
+
+        // Si NO hay blockId o updateSeries es TRUE → actualiza reserva principal
+        if (!$request->has('blockId') || $request->boolean('updateSeries')) {
+            $reserva->estado = $request->estado;
+            $reserva->comentario = $request->comentario;
+            $reserva->save();
+        }
+
+        // BLOQUES
+        if ($request->has('blockId') && !$request->boolean('updateSeries')) {
+            // Caso: blockId presente y updateSeries FALSE → solo ese bloque
+            ReservaAulaBloque::where('id', $request->blockId)
+                ->where('reserva_id', $id)
+                ->update(['estado' => $request->estado]);
+        } elseif ($request->has('blockId') && $request->boolean('updateSeries')) {
+            // Caso: blockId presente y updateSeries TRUE → bloques con mismo estado que el bloque base
+            $bloque = ReservaAulaBloque::where('id', $request->blockId)
+                ->where('reserva_id', $id)
+                ->firstOrFail();
+
+            ReservaAulaBloque::where('reserva_id', $id)
+                ->where('estado', $bloque->estado)
+                ->update(['estado' => $request->estado]);
+        } elseif (!$request->has('blockId')) {
+            // Caso: NO hay blockId → actualizar todos los bloques
+            ReservaAulaBloque::where('reserva_id', $id)
+                ->update(['estado' => $request->estado]);
+        }
+
         $pagina = $this->calcularPaginaReserva($id);
 
-        // 🔥 Notificar dependiendo de quién realiza la acción
         if (strtolower($user->role->nombre) === 'prestamista' && strtolower($request->estado) === 'cancelado') {
-            // No se notifica al prestamista (ya lo hizo él), sino a los encargados y admins
             $this->notificarResponsablesPorCancelacion($user, $reserva, $pagina);
         } else {
-            // Encargado o admin cambia estado → notificar al prestamista
             if ($reserva->user) {
                 $reserva->user->notify(new EstadoReservaAulaNotification($reserva, $pagina));
-                //$reserva->user->notify(new EmailEstadoAulaNotification($reserva));
             }
         }
 
@@ -523,13 +545,12 @@ class ReservaAulaController extends Controller
             $user->first_name . ' ' . $user->last_name
         );
 
-        $reserva->load(['aula', 'user']); // 👈 Asegura que vengan las relaciones
+        $reserva->load(['aula', 'user']);
 
         return response()->json([
             'message' => 'Estado actualizado correctamente.',
             'reserva' => $reserva,
         ]);
-        return response()->json(['message' => 'Estado actualizado correctamente.']);
     }
 
     public function show($id)
