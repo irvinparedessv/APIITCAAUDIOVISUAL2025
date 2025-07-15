@@ -14,6 +14,9 @@ class ReservaAula extends Model
     protected $fillable = [
         'aula_id',
         'fecha',
+        'fecha_fin',
+        'dias',
+        'tipo',
         'horario',
         'user_id',
         'estado',
@@ -22,6 +25,8 @@ class ReservaAula extends Model
 
     protected $casts = [
         'fecha' => 'date',
+        'fecha_fin' => 'date',
+        'dias' => 'array',
     ];
 
     public function aula()

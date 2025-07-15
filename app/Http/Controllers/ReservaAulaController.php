@@ -98,11 +98,14 @@ class ReservaAulaController extends Controller
 
     public function store(Request $request)
     {
+        Log::info('===== INICIANDO STORE =====');
+        Log::info('Request data:', $request->all());
+
         $validator = Validator::make($request->all(), [
             'aula_id' => 'required|exists:aulas,id',
-            'fecha' => 'required|date', // inicio
+            'fecha' => 'required|date',
             'horario' => 'required|string',
-            'dias' => 'nullable|string', // "Lunes,Miércoles,Viernes"
+            'dias' => 'nullable|string',
             'tipo' => 'required|in:evento,clase_recurrente,clase',
             'user_id' => 'required|exists:users,id',
             'estado' => 'nullable|string|in:pendiente,aprobado,cancelado,rechazado',
@@ -113,11 +116,15 @@ class ReservaAulaController extends Controller
         ]);
 
         if ($validator->fails()) {
+            Log::info('Validación fallida:', $validator->errors()->toArray());
             return response()->json(['errors' => $validator->errors()], 422);
         }
+
         [$hora_inicio, $hora_fin] = explode('-', $request->horario);
+        Log::info("Hora inicio: {$hora_inicio} | Hora fin: {$hora_fin}");
 
         if ($request->tipo === 'evento' || $request->tipo === 'clase') {
+            Log::info("Verificando conflictos para evento/clase");
             $conflicto = ReservaAula::where('aula_id', $request->aula_id)
                 ->whereDate('fecha', $request->fecha)
                 ->where(function ($q) use ($hora_inicio, $hora_fin) {
@@ -128,6 +135,7 @@ class ReservaAulaController extends Controller
                 ->exists();
 
             if ($conflicto) {
+                Log::info("Conflicto detectado para evento/clase");
                 return response()->json([
                     'message' => 'Conflicto: Ya existe una reserva para esta aula, fecha y horario.'
                 ], 409);
@@ -135,12 +143,20 @@ class ReservaAulaController extends Controller
         }
 
         if ($request->tipo === 'clase_recurrente') {
-            $dias = array_map('trim', explode(',', $request->dias));
+            Log::info("Verificando conflictos para clase_recurrente");
+            $dias = array_map('trim', $request->dias);
             $fechaInicio = Carbon::parse($request->fecha);
             $fechaFin = Carbon::parse($request->fecha_fin);
 
+            Log::info("Rango de fechas: {$fechaInicio->toDateString()} - {$fechaFin->toDateString()}");
+            Log::info("Días: " . implode(', ', $dias));
+
             for ($fecha = $fechaInicio->copy(); $fecha->lte($fechaFin); $fecha->addDay()) {
-                if (in_array($fecha->locale('es')->dayName, $dias)) {
+                $diaCarbon = ucfirst($fecha->locale('es')->dayName);
+                Log::info("Día actual: {$diaCarbon}");
+
+                if (in_array($diaCarbon, $dias)) {
+                    Log::info("Día {$diaCarbon} está en días seleccionados");
                     $conflicto = ReservaAulaBloque::whereHas('reserva', function ($q) use ($request) {
                         $q->where('aula_id', $request->aula_id)
                             ->whereIn('estado', ['pendiente', 'aprobado']);
@@ -155,14 +171,17 @@ class ReservaAulaController extends Controller
                         ->exists();
 
                     if ($conflicto) {
+                        Log::info("Conflicto detectado en bloque para fecha {$fecha->toDateString()}");
                         return response()->json([
                             'message' => 'Conflicto: Ya existe una reserva para el aula en fecha '
-                                . $fecha->toDateString() . ' y horario ' . $hora_inicio . '-' . $hora_fin
+                                . $fecha->format('d-m-Y') . ' y horario ' . $hora_inicio . '-' . $hora_fin
                         ], 409);
                     }
                 }
             }
         }
+
+        Log::info("Creando reserva");
         $reserva = ReservaAula::create([
             'aula_id' => $request->aula_id,
             'fecha' => $request->fecha,
@@ -175,31 +194,39 @@ class ReservaAulaController extends Controller
             'comentario' => $request->filled('comentario') ? $request->comentario : '-',
         ]);
 
+        Log::info("Reserva creada ID: {$reserva->id}");
+
         if ($request->tipo === 'clase_recurrente') {
-            $dias = array_map('trim', explode(',', $request->dias));
+            Log::info("Creando bloques para clase_recurrente");
+            $dias = array_map('trim', $request->dias);
             [$hora_inicio, $hora_fin] = explode('-', $request->horario);
 
             $fechaInicio = Carbon::parse($request->fecha);
             $fechaFin = Carbon::parse($request->fecha_fin);
 
             for ($fecha = $fechaInicio->copy(); $fecha->lte($fechaFin); $fecha->addDay()) {
-                if (in_array($fecha->locale('es')->dayName, $dias)) {
+                $diaCarbon = ucfirst($fecha->locale('es')->dayName);
+                if (in_array($diaCarbon, $dias)) {
+                    Log::info("Creando bloque para fecha {$fecha->toDateString()} y día {$diaCarbon}");
                     $bloque = new ReservaAulaBloque([
                         'fecha_inicio' => $fecha->toDateString(),
                         'fecha_fin' => $fecha->toDateString(),
                         'hora_inicio' => trim($hora_inicio),
                         'hora_fin' => trim($hora_fin),
-                        'dia' => $fecha->locale('es')->dayName,
+                        'dia' => $diaCarbon,
                         'estado' => 'pendiente',
                         'recurrente' => true
                     ]);
                     $reserva->bloques()->save($bloque);
+                    Log::info("Bloque guardado");
+                } else {
+                    Log::info("Día {$diaCarbon} NO está en días seleccionados");
                 }
             }
         }
 
-        // Si es única, puedes crear 1 bloque igual si quieres
         if ($request->tipo === 'clase' || $request->tipo === 'evento') {
+            Log::info("Creando bloque para clase/evento única");
             [$hora_inicio, $hora_fin] = explode('-', $request->horario);
             $bloque = new ReservaAulaBloque([
                 'fecha_inicio' => $request->fecha,
@@ -211,9 +238,10 @@ class ReservaAulaController extends Controller
                 'recurrente' => false
             ]);
             $reserva->bloques()->save($bloque);
+            Log::info("Bloque guardado para clase/evento");
         }
 
-        // Resto de tu lógica (QR, notificaciones, página, etc.)
+        Log::info("===== FIN STORE =====");
         return response()->json([
             'message' => 'Reserva creada con bloques',
             'reserva' => $reserva->load('bloques'),
@@ -222,11 +250,15 @@ class ReservaAulaController extends Controller
 
     public function update(Request $request, $id)
     {
+        Log::info('===== INICIANDO UPDATE =====');
+        Log::info('Request data:', $request->all());
+        Log::info("ID reserva: {$id}");
+
         $validator = Validator::make($request->all(), [
             'aula_id' => 'required|exists:aulas,id',
-            'fecha' => 'required|date', // inicio
+            'fecha' => 'required|date',
             'horario' => 'required|string',
-            'dias' => 'nullable|string', // "Lunes,Miércoles,Viernes"
+            'dias' => 'nullable|string',
             'tipo' => 'required|in:evento,clase_recurrente,clase',
             'user_id' => 'required|exists:users,id',
             'estado' => 'nullable|string|in:pendiente,aprobado,cancelado,rechazado',
@@ -237,87 +269,146 @@ class ReservaAulaController extends Controller
         ]);
 
         if ($validator->fails()) {
+            Log::info('Validación fallida:', $validator->errors()->toArray());
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
         $reserva = ReservaAula::findOrFail($id);
+        Log::info("Reserva encontrada: {$reserva->id}");
 
-        [$horaInicio, $horaFin] = explode('-', $request->horario);
+        [$hora_inicio, $hora_fin] = explode('-', $request->horario);
+        Log::info("Hora inicio: {$hora_inicio} | Hora fin: {$hora_fin}");
 
-        // 🚨 Verificar conflictos de BLOQUES
-        $bloquesExistentes = \App\Models\ReservaAulaBloque::whereHas('reserva', function ($q) use ($request, $id) {
-            $q->where('aula_id', $request->aula_id)->where('id', '!=', $id);
-        })->where(function ($q) use ($request, $horaInicio, $horaFin) {
-            $q->where(function ($query) use ($request, $horaInicio, $horaFin) {
-                $query->whereDate('fecha_inicio', '<=', $request->fecha_fin ?? $request->fecha)
-                    ->whereDate('fecha_fin', '>=', $request->fecha)
-                    ->where(function ($sub) use ($horaInicio, $horaFin) {
-                        $sub->whereBetween('hora_inicio', [$horaInicio, $horaFin])
-                            ->orWhereBetween('hora_fin', [$horaInicio, $horaFin]);
-                    });
-            });
-        })->exists();
+        if ($request->tipo === 'evento' || $request->tipo === 'clase') {
+            Log::info("Verificando conflictos para evento/clase");
+            $conflicto = ReservaAula::where('aula_id', $request->aula_id)
+                ->whereDate('fecha', $request->fecha)
+                ->where('id', '<>', $reserva->id)
+                ->where(function ($q) use ($hora_inicio, $hora_fin) {
+                    $q->where('horario', 'like', "%$hora_inicio%")
+                        ->orWhere('horario', 'like', "%$hora_fin%");
+                })
+                ->whereIn('estado', ['pendiente', 'aprobado'])
+                ->exists();
 
-        if ($bloquesExistentes) {
-            return response()->json([
-                'message' => 'Conflicto: ya existe otra reserva para ese aula y horario.'
-            ], 409);
+            if ($conflicto) {
+                Log::info("Conflicto detectado para evento/clase");
+                return response()->json([
+                    'message' => 'Conflicto: Ya existe una reserva para esta aula, fecha y horario.'
+                ], 409);
+            }
         }
 
-        // ✅ Actualizar reserva principal
+        if ($request->tipo === 'clase_recurrente') {
+            Log::info("Verificando conflictos para clase_recurrente");
+            $dias = array_map('trim', $request->dias);
+            $fechaInicio = Carbon::parse($request->fecha);
+            $fechaFin = Carbon::parse($request->fecha_fin);
+
+            Log::info("Rango de fechas: {$fechaInicio->toDateString()} - {$fechaFin->toDateString()}");
+            Log::info("Días: " . implode(', ', $dias));
+
+            for ($fecha = $fechaInicio->copy(); $fecha->lte($fechaFin); $fecha->addDay()) {
+                $diaCarbon = ucfirst($fecha->locale('es')->dayName);
+                Log::info("Día actual: {$diaCarbon}");
+
+                if (in_array($diaCarbon, $dias)) {
+                    Log::info("Día {$diaCarbon} está en días seleccionados");
+                    $conflicto = ReservaAulaBloque::whereHas('reserva', function ($q) use ($request, $reserva) {
+                        $q->where('aula_id', $request->aula_id)
+                            ->where('id', '<>', $reserva->id)
+                            ->whereIn('estado', ['pendiente', 'aprobado']);
+                    })
+                        ->whereDate('fecha_inicio', $fecha->toDateString())
+                        ->where(function ($q) use ($hora_inicio, $hora_fin) {
+                            $q->where(function ($q2) use ($hora_inicio, $hora_fin) {
+                                $q2->where('hora_inicio', '<', $hora_fin)
+                                    ->where('hora_fin', '>', $hora_inicio);
+                            });
+                        })
+                        ->exists();
+
+                    if ($conflicto) {
+                        Log::info("Conflicto detectado en bloque para fecha {$fecha->toDateString()}");
+                        return response()->json([
+                            'message' => 'Conflicto: Ya existe una reserva para el aula en fecha '
+                                . $fecha->format('d-m-Y') . ' y horario ' . $hora_inicio . '-' . $hora_fin
+                        ], 409);
+                    }
+                }
+            }
+        }
+
+        Log::info("Actualizando reserva");
         $reserva->update([
             'aula_id' => $request->aula_id,
             'fecha' => $request->fecha,
             'fecha_fin' => $request->fecha_fin,
-            'dias' => $request->dias ? json_encode($request->dias) : null,
+            'dias' => $request->dias,
+            'tipo' => $request->tipo,
             'horario' => $request->horario,
             'user_id' => $request->user_id,
             'estado' => $request->estado ?? $reserva->estado,
-            'comentario' => $request->filled('comentario') ? $request->comentario : '-',
+            'comentario' => $request->filled('comentario') ? $request->comentario : $reserva->comentario,
         ]);
 
-        // 🔄 Borrar bloques viejos
+        Log::info("Reserva actualizada ID: {$reserva->id}");
+
+        // Opcional: Eliminar bloques previos si los vas a regenerar
         $reserva->bloques()->delete();
+        Log::info("Bloques antiguos eliminados");
 
-        // 🔄 Crear nuevos bloques
-        $fechaInicio = \Carbon\Carbon::parse($request->fecha);
-        $fechaFin = $request->fecha_fin ? \Carbon\Carbon::parse($request->fecha_fin) : $fechaInicio;
+        if ($request->tipo === 'clase_recurrente') {
+            Log::info("Creando bloques para clase_recurrente (update)");
+            $dias = array_map('trim', $request->dias);
+            [$hora_inicio, $hora_fin] = explode('-', $request->horario);
 
-        if ($request->dias) {
-            for ($date = $fechaInicio->copy(); $date->lte($fechaFin); $date->addDay()) {
-                if (in_array($date->format('l'), $request->dias)) {
-                    $reserva->bloques()->create([
-                        'fecha_inicio' => $date->toDateString(),
-                        'fecha_fin' => $date->toDateString(),
-                        'hora_inicio' => $horaInicio,
-                        'hora_fin' => $horaFin,
-                        'dia' => $date->format('l'),
-                        'estado' => strtolower($reserva->estado),
+            $fechaInicio = Carbon::parse($request->fecha);
+            $fechaFin = Carbon::parse($request->fecha_fin);
+
+            for ($fecha = $fechaInicio->copy(); $fecha->lte($fechaFin); $fecha->addDay()) {
+                $diaCarbon = ucfirst($fecha->locale('es')->dayName);
+                if (in_array($diaCarbon, $dias)) {
+                    Log::info("Creando bloque para fecha {$fecha->toDateString()} y día {$diaCarbon}");
+                    $bloque = new ReservaAulaBloque([
+                        'fecha_inicio' => $fecha->toDateString(),
+                        'fecha_fin' => $fecha->toDateString(),
+                        'hora_inicio' => trim($hora_inicio),
+                        'hora_fin' => trim($hora_fin),
+                        'dia' => $diaCarbon,
+                        'estado' => 'pendiente',
                         'recurrente' => true
                     ]);
+                    $reserva->bloques()->save($bloque);
+                    Log::info("Bloque guardado");
+                } else {
+                    Log::info("Día {$diaCarbon} NO está en días seleccionados");
                 }
             }
-        } else {
-            $reserva->bloques()->create([
-                'fecha_inicio' => $fechaInicio->toDateString(),
-                'fecha_fin' => $fechaInicio->toDateString(),
-                'hora_inicio' => $horaInicio,
-                'hora_fin' => $horaFin,
-                'dia' => $fechaInicio->format('l'),
-                'estado' => strtolower($reserva->estado),
-                'recurrente' => false
-
-
-            ]);
         }
 
+        if ($request->tipo === 'clase' || $request->tipo === 'evento') {
+            Log::info("Creando bloque para clase/evento única (update)");
+            [$hora_inicio, $hora_fin] = explode('-', $request->horario);
+            $bloque = new ReservaAulaBloque([
+                'fecha_inicio' => $request->fecha,
+                'fecha_fin' => $request->fecha,
+                'hora_inicio' => trim($hora_inicio),
+                'hora_fin' => trim($hora_fin),
+                'dia' => Carbon::parse($request->fecha)->locale('es')->dayName,
+                'estado' => 'pendiente',
+                'recurrente' => false
+            ]);
+            $reserva->bloques()->save($bloque);
+            Log::info("Bloque guardado para clase/evento");
+        }
+
+        Log::info("===== FIN UPDATE =====");
         return response()->json([
-            'message' => 'Reserva actualizada correctamente.',
+            'message' => 'Reserva actualizada con bloques',
             'reserva' => $reserva->load('bloques'),
         ]);
     }
-
-
 
     public function reservas(Request $request)
     {
@@ -367,7 +458,7 @@ class ReservaAulaController extends Controller
             $query->where('user_id', $user->id);
         }
 
-        $reservas = $query->orderBy('fecha', 'desc')
+        $reservas = $query->orderBy('id', 'desc')
             ->paginate($perPage, ['*'], 'page', $page);
 
         return response()->json($reservas);
