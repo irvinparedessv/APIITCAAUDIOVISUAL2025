@@ -20,6 +20,7 @@ class ReservaAula extends Model
         'horario',
         'user_id',
         'estado',
+        'titulo',
         'comentario'
     ];
 

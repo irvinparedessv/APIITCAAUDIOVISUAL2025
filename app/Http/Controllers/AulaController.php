@@ -149,7 +149,8 @@ class AulaController extends Controller
     {
         // Incluye encargados con relación hasMany o belongsToMany según tu modelo
         $query = Aula::withCount('imagenes')
-            ->with('encargados'); // 👈 Incluye encargados
+            ->with('encargados')->where('deleted', false);
+        // 👈 Incluye encargados
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -276,13 +277,13 @@ class AulaController extends Controller
         $aula->save();
         $aula->reservas()
             ->where(function ($query) {
-                $query->where('status', 'Pendiente')
+                $query->where('estado', 'Pendiente')
                     ->orWhere(function ($query) {
-                        $query->where('status', 'Aprobada')
+                        $query->where('estado', 'Aprobada')
                             ->where('fecha', '>', now());
                     });
             })
-            ->update(['status' => 'Cancelada']);
+            ->update(['estado' => 'Cancelada']);
         return response()->json(['message' => 'Aula marcada como eliminada']);
     }
 
@@ -318,6 +319,7 @@ class AulaController extends Controller
     public function index(): JsonResponse
     {
         $aulas = Aula::with(['primeraImagen'])
+            ->where('deleted', false)
             ->select('id', 'name')
             ->get()
             ->map(function ($aula) {

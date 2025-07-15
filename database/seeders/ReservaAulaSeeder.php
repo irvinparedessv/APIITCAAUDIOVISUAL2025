@@ -24,15 +24,12 @@ class ReservaAulaSeeder extends Seeder
 
         $materias = [
             'POO',
-            'Calculo',
-            'BaseDatos',
-            'Redes',
-            'Fisica',
-            'Quimica',
-            'Estadistica',
+            'CA',
+            'DB',
+            'RD',
             'IA',
             'SO',
-            'WebDev'
+
         ];
 
         $familias = [
@@ -50,15 +47,8 @@ class ReservaAulaSeeder extends Seeder
 
         $grupos = [
             'Teorico',
-            'Practica',
-            'Laboratorio',
-            'Seminario',
-            'Taller',
-            'Proyecto',
-            'Investigacion',
-            'Desarrollo',
-            'Revision',
-            'Consulta'
+            'Practica'
+
         ];
 
         $mesesHistorial = 24;
@@ -94,7 +84,7 @@ class ReservaAulaSeeder extends Seeder
                 $familia = $familias[array_rand($familias)];
                 $grupo = $grupos[array_rand($grupos)];
 
-                $comentario = "{$materia} {$familia} {$grupo}";
+                $titulo = "{$materia} {$familia} {$grupo}";
 
                 // Si quieres un comentario aleatorio extra:
                 // $comentarioExtra = $faker->sentence();
@@ -105,7 +95,7 @@ class ReservaAulaSeeder extends Seeder
                     'fecha' => $fecha->toDateString(),
                     'horario' => $horario,
                     'estado' => $estados[array_rand($estados)],
-                    'comentario' => $comentario,
+                    'titulo' => $titulo,
                 ]);
 
                 DB::table('codigo_qr_aulas')->insert([

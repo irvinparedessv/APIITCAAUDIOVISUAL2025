@@ -31,7 +31,7 @@ class ReservaAulaController extends Controller
     {
         $usuario = Auth::user();
 
-        $query = Aula::with(['primeraImagen', 'horarios']);
+        $query = Aula::with(['primeraImagen', 'horarios'])->where('deleted', false);
 
         // Filtrar si es espacio encargado
         if ($usuario->role->nombre === 'EspacioEncargado') {
@@ -191,7 +191,7 @@ class ReservaAulaController extends Controller
             'horario' => $request->horario,
             'user_id' => $request->user_id,
             'estado' => $request->estado ?? 'pendiente',
-            'comentario' => $request->filled('comentario') ? $request->comentario : '-',
+            'titulo' => $request->filled('comentario') ? $request->comentario : '-',
         ]);
 
         Log::info("Reserva creada ID: {$reserva->id}");
@@ -349,7 +349,7 @@ class ReservaAulaController extends Controller
             'horario' => $request->horario,
             'user_id' => $request->user_id,
             'estado' => $request->estado ?? $reserva->estado,
-            'comentario' => $request->filled('comentario') ? $request->comentario : $reserva->comentario,
+            'titulo' => $request->filled('comentario') ? $request->comentario : $reserva->comentario,
         ]);
 
         Log::info("Reserva actualizada ID: {$reserva->id}");
