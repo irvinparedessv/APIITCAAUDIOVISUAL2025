@@ -141,9 +141,17 @@ class ReservaEquipoController extends Controller
 
     public function equiposReserva()
     {
-        $equipos = Equipo::activos()->get(['id', 'nombre']);
+        $equipos = Equipo::activos()
+            ->get(['id', 'nombre', 'tipo_reserva_id', 'tipo_equipo_id']); // Solo trae el campo, sin with
 
-        return $equipos;
+        return $equipos->map(function ($equipo) {
+            return [
+                'id' => $equipo->id,
+                'nombre' => $equipo->nombre,
+                'tipo' => $equipo->tipo_reserva_id,
+                'tipoequipo' => $equipo->tipo_equipo_id, // Devuelves el ID directamente
+            ];
+        });
     }
 
     public function store(Request $request)
