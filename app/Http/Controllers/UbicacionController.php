@@ -14,20 +14,61 @@ class UbicacionController extends Controller
         return Ubicacion::where('is_deleted', false)->get();
     }
 
-    // Crear
     public function store(Request $request)
     {
-        $ubicacion = Ubicacion::create($request->only(['nombre', 'descripcion']));
+        $request->validate([
+            'nombre' => [
+                'required',
+                function ($attribute, $value, $fail) {
+                    $nombre = trim(mb_strtolower($value)); // trim + lowercase
+                    $exists = Ubicacion::whereRaw('LOWER(TRIM(nombre)) = ?', [$nombre])
+                        ->where('is_deleted', false)
+                        ->exists();
+                    if ($exists) {
+                        $fail('El nombre ya está en uso.');
+                    }
+                },
+            ],
+            'descripcion' => 'nullable|string',
+        ]);
+
+        $ubicacion = Ubicacion::create([
+            'nombre' => trim($request->nombre),
+            'descripcion' => $request->descripcion,
+        ]);
+
         return response()->json($ubicacion, 201);
     }
 
-    // Editar
     public function update(Request $request, $id)
     {
         $ubicacion = Ubicacion::findOrFail($id);
-        $ubicacion->update($request->only(['nombre', 'descripcion']));
+
+        $request->validate([
+            'nombre' => [
+                'required',
+                function ($attribute, $value, $fail) use ($id) {
+                    $nombre = trim(mb_strtolower($value)); // trim + lowercase
+                    $exists = Ubicacion::whereRaw('LOWER(TRIM(nombre)) = ?', [$nombre])
+                        ->where('is_deleted', false)
+                        ->where('id', '<>', $id)
+                        ->exists();
+                    if ($exists) {
+                        $fail('El nombre ya está en uso.');
+                    }
+                },
+            ],
+            'descripcion' => 'nullable|string',
+        ]);
+
+        $ubicacion->update([
+            'nombre' => trim($request->nombre),
+            'descripcion' => $request->descripcion,
+        ]);
+
         return response()->json($ubicacion, 200);
     }
+
 
     // Soft Delete
     public function destroy($id)

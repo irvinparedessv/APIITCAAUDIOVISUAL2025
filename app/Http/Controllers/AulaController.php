@@ -17,7 +17,18 @@ class AulaController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:aulas,name',
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                function ($attribute, $value, $fail) {
+                    $name = trim(mb_strtolower($value));
+                    $exists = Aula::whereRaw('LOWER(TRIM(name)) = ?', [$name])->where('deleted', false)->exists();
+                    if ($exists) {
+                        $fail('El nombre del aula ya existe.');
+                    }
+                },
+            ],
             'render_images.*' => 'nullable|file',
             'render_images_is360.*' => 'nullable|boolean',
             'available_times' => 'required|json',
@@ -28,21 +39,23 @@ class AulaController extends Controller
         try {
             // 1. Crear aula
             $aula = Aula::create([
-                'name' => $request->input('name'),
+                'name' => trim($request->input('name')),
             ]);
 
             // 2. Guardar imágenes
             if ($request->hasFile('render_images')) {
                 foreach ($request->file('render_images') as $index => $file) {
-                    // Guarda en storage/app/public/render_images
                     $path = $file->store('render_images', 'public');
-                    $is360 = filter_var($request->input("render_images_is360.$index"), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
-                    if (is_null($is360)) {
-                        $is360 = false;
-                    }
+                    $is360 = filter_var(
+                        $request->input("render_images_is360.$index"),
+                        FILTER_VALIDATE_BOOLEAN,
+                        FILTER_NULL_ON_FAILURE
+                    );
+                    $is360 = is_null($is360) ? false : $is360;
+
                     ImagenesAula::create([
                         'aula_id' => $aula->id,
-                        'image_path' => 'storage/' . $path, // Ruta accesible públicamente
+                        'image_path' => 'storage/' . $path,
                         'is360' => $is360,
                     ]);
                 }
@@ -64,15 +77,31 @@ class AulaController extends Controller
             return response()->json(['message' => 'Aula creada correctamente'], 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Error al crear el aula', 'details' => $e->getMessage()], 500);
+            return response()->json([
+                'error' => 'Error al crear el aula',
+                'details' => $e->getMessage()
+            ], 500);
         }
     }
-
 
     public function update(Request $request, $id)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                function ($attribute, $value, $fail) use ($id) {
+                    $name = trim(mb_strtolower($value));
+                    $exists = Aula::whereRaw('LOWER(TRIM(name)) = ?', [$name])
+                        ->where('deleted', false)
+                        ->where('id', '<>', $id)
+                        ->exists();
+                    if ($exists) {
+                        $fail('El nombre del aula ya existe.');
+                    }
+                },
+            ],
             'available_times' => 'nullable|string',
             'render_images.*' => 'nullable|image|mimes:jpeg,png,jpg|max:14000',
             'render_images_is360.*' => 'nullable|boolean',
@@ -96,14 +125,14 @@ class AulaController extends Controller
                     empty($time['days']) || !is_array($time['days'])
                 ) {
                     return response()->json([
-                        'message' => 'Cada horario debe tener start_date, end_date, y days.'
+                        'message' => 'Cada horario debe tener start_date, end_date y days.'
                     ], 422);
                 }
             }
         }
 
         $aula = Aula::findOrFail($id);
-        $aula->name = $request->name;
+        $aula->name = trim($request->name);
         $aula->save();
 
         // Actualizar horarios
@@ -116,19 +145,17 @@ class AulaController extends Controller
             ]);
         }
 
-        // --- Nueva lógica de imágenes ---
-
-        $keepImages = $request->input('keep_images', []); // Array de IDs como string o int
+        // --- Imágenes ---
+        $keepImages = $request->input('keep_images', []);
 
         foreach ($aula->imagenes as $img) {
-            if (!in_array($img->id, $keepImages)) { // 👈 comparar contra ID
+            if (!in_array($img->id, $keepImages)) {
                 $path = str_replace('/storage/', '', $img->image_path);
                 Storage::disk('public')->delete($path);
                 $img->delete();
             }
         }
 
-        // Guardar nuevas
         if ($request->hasFile('render_images')) {
             foreach ($request->file('render_images') as $index => $img) {
                 $path = $img->store('render_images', 'public');
