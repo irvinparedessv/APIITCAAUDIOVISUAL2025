@@ -245,7 +245,47 @@ class ReservaAulaController extends Controller
             $reserva->bloques()->save($bloque);
             Log::info("Bloque guardado para clase/evento");
         }
+        // Calcular en qué página cae esta reserva (según paginación de 10 por página)
+        $pagina = $this->calcularPaginaReserva($reserva->id, 10);
 
+        // Cargar relaciones para notificaciones
+        $reserva->load(['user', 'aula']);
+
+        $usuarioActual = Auth::user();
+        $rolActual = strtolower($usuarioActual->role->nombre);
+
+        if ($rolActual === 'prestamista') {
+            // 🔍 Encargados del aula (solo espacio encargados)
+            $encargadosIds = DB::table('aula_user')
+                ->join('users', 'aula_user.user_id', '=', 'users.id')
+                ->join('roles', 'users.role_id', '=', 'roles.id')
+                ->where('aula_user.aula_id', $reserva->aula_id)
+                ->where('roles.nombre', 'espacioencargado')
+                ->where('users.id', '!=', $reserva->user_id)
+                ->pluck('users.id');
+
+            $adminId = User::whereHas('role', fn($q) => $q->where('nombre', 'administrador'))
+                ->where('id', '!=', $reserva->user_id)
+                ->value('id');
+
+            $responsablesIds = $encargadosIds
+                ->push($adminId)
+                ->filter()
+                ->unique()
+                ->values();
+
+            $responsables = User::whereIn('id', $responsablesIds)->get();
+
+            foreach ($responsables as $responsable) {
+                $responsable->notify(new NuevaReservaAulaNotification($reserva, $responsable->id, $pagina, Auth::id()));
+            }
+        } else {
+            // 🔔 Admin o encargado hace reserva → notificar al prestamista
+            if ($reserva->user_id !== $usuarioActual->id) {
+                $reserva->user->notify(new NuevaReservaAulaNotification($reserva, $reserva->user_id, $pagina, Auth::id()));
+                //$reserva->user->notify(new ConfirmarReservaAulaUsuario($reserva));
+            }
+        }
         Log::info("===== FIN STORE =====");
         return response()->json([
             'message' => 'Reserva creada con bloques',
@@ -408,6 +448,33 @@ class ReservaAulaController extends Controller
             Log::info("Bloque guardado para clase/evento");
         }
 
+        $usuario = Auth::user();
+        $pagina = $this->calcularPaginaReserva($reserva->id, 10);
+
+        if (strtolower($usuario->role->nombre) === 'prestamista') {
+            // 🔍 Encargados vinculados al aula y que sean 'espacioencargado'
+            $encargados = User::whereHas('aulas', function ($query) use ($reserva) {
+                $query->where('aula_id', $reserva->aula_id);
+            })
+                ->whereHas('role', function ($query) {
+                    $query->where('nombre', 'espacioencargado');
+                })
+                ->where('id', '!=', $usuario->id)
+                ->get();
+
+            // 🔍 Administradores (puedes cambiar a ->get() si quieres notificar a todos)
+            $administradores = User::whereHas('role', function ($query) {
+                $query->where('nombre', 'administrador');
+            })
+                ->where('id', '!=', $usuario->id)
+                ->get();
+
+            $responsables = $encargados->merge($administradores)->unique('id');
+
+            foreach ($responsables as $responsable) {
+                $responsable->notify(new EstadoReservaAulaNotification($reserva, $responsable->id, $pagina, 'edicion'));
+            }
+        }
         Log::info("===== FIN UPDATE =====");
         return response()->json([
             'message' => 'Reserva actualizada con bloques',
