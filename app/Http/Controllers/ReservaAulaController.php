@@ -108,7 +108,7 @@ class ReservaAulaController extends Controller
             'dias' => 'nullable|string',
             'tipo' => 'required|in:evento,clase_recurrente,clase',
             'user_id' => 'required|exists:users,id',
-            'estado' => 'nullable|string|in:pendiente,aprobado,cancelado,rechazado',
+            'estado' => 'nullable|string|in:Pendiente,Aprobado,Cancelado,Rechazado',
             'comentario' => 'nullable|string|max:500',
             'fecha_fin' => ['required_if:tipo,clase_recurrente', 'nullable', 'date', 'after_or_equal:fecha'],
             'dias' => ['required_if:tipo,clase_recurrente', 'array'],
@@ -131,7 +131,7 @@ class ReservaAulaController extends Controller
                     $q->where('horario', 'like', "%$hora_inicio%")
                         ->orWhere('horario', 'like', "%$hora_fin%");
                 })
-                ->whereIn('estado', ['pendiente', 'aprobado'])
+                ->whereIn('estado', ['Pendiente', 'Aprobado'])
                 ->exists();
 
             if ($conflicto) {
@@ -159,7 +159,7 @@ class ReservaAulaController extends Controller
                     Log::info("Día {$diaCarbon} está en días seleccionados");
                     $conflicto = ReservaAulaBloque::whereHas('reserva', function ($q) use ($request) {
                         $q->where('aula_id', $request->aula_id)
-                            ->whereIn('estado', ['pendiente', 'aprobado']);
+                            ->whereIn('estado', ['Pendiente', 'Aprobado']);
                     })
                         ->whereDate('fecha_inicio', $fecha->toDateString())
                         ->where(function ($q) use ($hora_inicio, $hora_fin) {
@@ -190,7 +190,7 @@ class ReservaAulaController extends Controller
             'tipo' => $request->tipo,
             'horario' => $request->horario,
             'user_id' => $request->user_id,
-            'estado' => $request->estado ?? 'pendiente',
+            'estado' => $request->estado ?? 'Pendiente',
             'titulo' => $request->filled('comentario') ? $request->comentario : '-',
         ]);
 
@@ -219,7 +219,7 @@ class ReservaAulaController extends Controller
                         'hora_inicio' => trim($hora_inicio),
                         'hora_fin' => trim($hora_fin),
                         'dia' => $diaCarbon,
-                        'estado' => 'pendiente',
+                        'estado' => 'Pendiente',
                         'recurrente' => true
                     ]);
                     $reserva->bloques()->save($bloque);
@@ -239,7 +239,7 @@ class ReservaAulaController extends Controller
                 'hora_inicio' => trim($hora_inicio),
                 'hora_fin' => trim($hora_fin),
                 'dia' => Carbon::parse($request->fecha)->locale('es')->dayName,
-                'estado' => 'pendiente',
+                'estado' => 'Pendiente',
                 'recurrente' => false
             ]);
             $reserva->bloques()->save($bloque);
@@ -266,7 +266,7 @@ class ReservaAulaController extends Controller
             'dias' => 'nullable|string',
             'tipo' => 'required|in:evento,clase_recurrente,clase',
             'user_id' => 'required|exists:users,id',
-            'estado' => 'nullable|string|in:pendiente,aprobado,cancelado,rechazado',
+            'estado' => 'nullable|string|in:Pendiente,Aprobado,Cancelado,Rechazado',
             'comentario' => 'nullable|string|max:500',
             'fecha_fin' => ['required_if:tipo,clase_recurrente', 'nullable', 'date', 'after_or_equal:fecha'],
             'dias' => ['required_if:tipo,clase_recurrente', 'array'],
@@ -293,7 +293,7 @@ class ReservaAulaController extends Controller
                     $q->where('horario', 'like', "%$hora_inicio%")
                         ->orWhere('horario', 'like', "%$hora_fin%");
                 })
-                ->whereIn('estado', ['pendiente', 'aprobado'])
+                ->whereIn('estado', ['Pendiente', 'Aprobado'])
                 ->exists();
 
             if ($conflicto) {
@@ -322,7 +322,7 @@ class ReservaAulaController extends Controller
                     $conflicto = ReservaAulaBloque::whereHas('reserva', function ($q) use ($request, $reserva) {
                         $q->where('aula_id', $request->aula_id)
                             ->where('id', '<>', $reserva->id)
-                            ->whereIn('estado', ['pendiente', 'aprobado']);
+                            ->whereIn('estado', ['Pendiente', 'Aprobado']);
                     })
                         ->whereDate('fecha_inicio', $fecha->toDateString())
                         ->where(function ($q) use ($hora_inicio, $hora_fin) {
@@ -381,7 +381,7 @@ class ReservaAulaController extends Controller
                         'hora_inicio' => trim($hora_inicio),
                         'hora_fin' => trim($hora_fin),
                         'dia' => $diaCarbon,
-                        'estado' => 'pendiente',
+                        'estado' => 'Pendiente',
                         'recurrente' => true
                     ]);
                     $reserva->bloques()->save($bloque);
@@ -401,7 +401,7 @@ class ReservaAulaController extends Controller
                 'hora_inicio' => trim($hora_inicio),
                 'hora_fin' => trim($hora_fin),
                 'dia' => Carbon::parse($request->fecha)->locale('es')->dayName,
-                'estado' => 'pendiente',
+                'estado' => 'Pendiente',
                 'recurrente' => false
             ]);
             $reserva->bloques()->save($bloque);
