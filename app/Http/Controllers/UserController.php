@@ -158,7 +158,7 @@ class UserController extends Controller
             $confirmationUrl = "{$baseUrl}/confirm-account/{$confirmationToken}";
 
             try {
-               // Mail::to($usuario->email)->send(new ConfirmAccountMail($usuario, $tempPassword, $confirmationUrl));
+               Mail::to($usuario->email)->send(new ConfirmAccountMail($usuario, $tempPassword, $confirmationUrl));
             } catch (\Throwable $e) {
                 Log::error("Error al enviar el correo a {$usuario->email}: " . $e->getMessage());
 
