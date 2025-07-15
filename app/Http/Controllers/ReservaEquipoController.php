@@ -561,7 +561,7 @@ class ReservaEquipoController extends Controller
                     'usuario' => $reserva->user->first_name . ' ' . $reserva->user->last_name,
                     'equipo' => $reserva->equipos->pluck('nombre')->toArray(),
                     'aula' => $reserva->aula,
-                    'dia' => $reserva->dia,
+                    'dia' => $reserva->fecha_reserva,
                     'horaSalida' => $reserva->fecha_reserva,
                     'horaEntrada' => $reserva->fecha_entrega,
                     'estado' => $reserva->estado,
@@ -579,12 +579,14 @@ class ReservaEquipoController extends Controller
 
                 // ✅ Verifica que el usuario sea encargado de esa aula
                 $aula = $reservaAula->aula;
-                if ($aula && $aula->encargados->contains($user->id)) {
+                if ($aula &&  ($rol === 'administrador'  || $aula->encargados->contains($user->id))) {
                     return response()->json([
                         'usuario' => $reservaAula->user->first_name . ' ' . $reservaAula->user->last_name,
                         'espacio' => $reservaAula->aula,
                         'id'  => $reservaAula->id,
                         'dia' => $reservaAula->fecha,
+                        'fechafin' => $reservaAula->fecha_fin,
+                        'dias' => $reservaAula->dias,
                         'horario' => $reservaAula->horario,
                         'estado' => $reservaAula->estado,
                         'isRoom' => true
