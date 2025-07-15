@@ -195,6 +195,11 @@ class ReservaAulaController extends Controller
         ]);
 
         Log::info("Reserva creada ID: {$reserva->id}");
+        // Crear código QR
+        CodigoQrAula::create([
+            'id' => (string) Str::uuid(),
+            'reserva_id' => $reserva->id,
+        ]);
 
         if ($request->tipo === 'clase_recurrente') {
             Log::info("Creando bloques para clase_recurrente");
