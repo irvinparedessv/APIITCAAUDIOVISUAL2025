@@ -73,12 +73,12 @@ class AulaController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'available_times' => 'nullable|string', // Viene como JSON string porque usas FormData
+            'available_times' => 'nullable|string',
             'render_images.*' => 'nullable|image|mimes:jpeg,png,jpg|max:14000',
             'render_images_is360.*' => 'nullable|boolean',
+            'keep_images.*' => 'nullable|string',
         ]);
 
-        // Parsear available_times JSON manualmente
         $availableTimes = [];
         if ($request->filled('available_times')) {
             $availableTimes = json_decode($request->available_times, true);
@@ -89,7 +89,6 @@ class AulaController extends Controller
                 ], 422);
             }
 
-            // Validar cada objeto
             foreach ($availableTimes as $time) {
                 if (
                     empty($time['start_date']) ||
@@ -103,14 +102,12 @@ class AulaController extends Controller
             }
         }
 
-        // Buscar aula
         $aula = Aula::findOrFail($id);
         $aula->name = $request->name;
         $aula->save();
 
-        // Actualizar horarios: eliminar todos y recrear
+        // Actualizar horarios
         $aula->horarios()->delete();
-
         foreach ($availableTimes as $time) {
             $aula->horarios()->create([
                 'start_date' => $time['start_date'],
@@ -118,24 +115,27 @@ class AulaController extends Controller
                 'days' => json_encode($time['days']),
             ]);
         }
+
+        // --- Nueva lógica de imágenes ---
+
+        $keepImages = $request->input('keep_images', []); // Array de IDs como string o int
+
         foreach ($aula->imagenes as $img) {
-            $path = str_replace('/storage/', '', $img->image_path);
-            Storage::disk('public')->delete($path);
-            $img->delete();
+            if (!in_array($img->id, $keepImages)) { // 👈 comparar contra ID
+                $path = str_replace('/storage/', '', $img->image_path);
+                Storage::disk('public')->delete($path);
+                $img->delete();
+            }
         }
 
-        // Reemplazar imágenes si vienen nuevas
+        // Guardar nuevas
         if ($request->hasFile('render_images')) {
-            // Eliminar imágenes previas de disco y DB
-
-            // Guardar nuevas
             foreach ($request->file('render_images') as $index => $img) {
-
                 $path = $img->store('render_images', 'public');
                 $is360 = $request->input("render_images_is360.$index") ? true : false;
                 ImagenesAula::create([
                     'aula_id' => $aula->id,
-                    'image_path' => 'storage/' . $path, // Ruta accesible públicamente
+                    'image_path' => 'storage/' . $path,
                     'is360' => $is360,
                 ]);
             }
@@ -143,8 +143,6 @@ class AulaController extends Controller
 
         return response()->json(['message' => 'Aula actualizada correctamente.']);
     }
-
-
 
     public function list(Request $request)
     {
