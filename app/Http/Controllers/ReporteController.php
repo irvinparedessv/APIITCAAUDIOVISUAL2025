@@ -326,15 +326,16 @@ class ReporteController extends Controller
             $query->where('equipos.tipo_equipo_id', $tipo);
         }
 
-        if ($estado === 'disponible') {
+        if ($estado === '1') {
             $query->where('equipos.estado', 1)
                 ->where('equipos.cantidad', '>', 0);
-        } elseif ($estado === 'no_disponible') {
+        } elseif ($estado === '0') {
             $query->where(function ($q) {
                 $q->where('equipos.estado', 0)
                     ->orWhere('equipos.cantidad', '=', 0);
             });
         }
+
 
         $equipos = $query->orderBy('equipos.nombre')->paginate($perPage);
 
