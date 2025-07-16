@@ -17,7 +17,7 @@ class UsuarioSeeder extends Seeder
         User::create([
             'first_name'        => 'Admin',
             'last_name'         => 'Principal',
-            'email'             => 'admin@correo.com',
+            'email'             => 'adminitca@yopmail.com',
             'email_verified_at' => now(),
             'password'          => Hash::make('123'), // Siempre encriptar contraseñas
             'estado'            => 1, // Activo
@@ -34,7 +34,7 @@ class UsuarioSeeder extends Seeder
         User::create([
             'first_name'        => 'Encargado',
             'last_name'         => 'Ejemplo',
-            'email'             => 'encargado@correo.com',
+            'email'             => 'encargadoitca@yopmail.com',
             'email_verified_at' => now(),
             'password'          => Hash::make('123'),
             'estado'            => 1,
@@ -51,7 +51,7 @@ class UsuarioSeeder extends Seeder
         User::create([
             'first_name'        => 'Prestamista',
             'last_name'         => 'Ejemplo',
-            'email'             => 'prestamista@correo.com',
+            'email'             => 'prestamistaitca@yopmail.com',
             'email_verified_at' => now(),
             'password'          => Hash::make('123'),
             'estado'            => 1,
@@ -67,7 +67,7 @@ class UsuarioSeeder extends Seeder
         User::create([
             'first_name'        => 'Prestamista2',
             'last_name'         => 'Ejemplo2',
-            'email'             => 'prestamista2@correo.com',
+            'email'             => 'prestamista2itca@yopmail.com',
             'email_verified_at' => now(),
             'password'          => Hash::make('123'),
             'estado'            => 1,
@@ -83,7 +83,7 @@ class UsuarioSeeder extends Seeder
         User::create([
             'first_name'        => 'Prestamista3',
             'last_name'         => 'Ejemplo3',
-            'email'             => 'prestamista3@correo.com',
+            'email'             => 'prestamista3itca@yopmail.com',
             'email_verified_at' => now(),
             'password'          => Hash::make('123'),
             'estado'            => 1,
