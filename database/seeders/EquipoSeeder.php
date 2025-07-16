@@ -22,66 +22,96 @@ class EquipoSeeder extends Seeder
         $reservaClaseId = TipoReserva::where('nombre', 'Clase')->value('id');
 
         // === Equipos de 2020 ===
-        $servidores = [
-            'Dell PowerEdge R640', 'HPE ProLiant DL360 Gen10', 'Lenovo ThinkSystem SR630',
-            'Cisco UCS C220 M5', 'Fujitsu PRIMERGY RX2540 M5', 'Supermicro SuperServer 1029U',
-            'Asus ESC4000 G4', 'Intel Server System R2312', 'IBM Power System S914',
-            'Oracle SPARC T8-1'
+        $tiposEquipo = [
+            'Proyector' => [
+                'modelos' => [
+                    'Epson PowerLite X49',
+                    'BenQ MW535A',
+                    'ViewSonic PA503W',
+                    'LG PF50KA',
+                    'Optoma HD146X',
+                    'Sony VPL-EX575'
+                ],
+                'tipo_reserva' => $reservaClaseId
+            ],
+            'Micrófono' => [
+                'modelos' => [
+                    'Shure SM58',
+                    'Blue Yeti',
+                    'Rode Wireless GO II',
+                    'Audio-Technica AT875R',
+                    'Samson Go Mic',
+                    'Sennheiser MKE 400'
+                ],
+                'tipo_reserva' => rand(0, 1) ? $reservaEventosId : $reservaReunionId
+            ],
+            'Parlante' => [
+                'modelos' => [
+                    'JBL EON610',
+                    'Bose S1 Pro',
+                    'Mackie Thump12A',
+                    'Yamaha DBR10'
+                ],
+                'tipo_reserva' => $reservaEventosId
+            ],
+            'Pantalla LED' => [
+                'modelos' => [
+                    'Samsung Flip 2',
+                    'LG LED Monitor 27UL500',
+                    'ViewSonic TD2455'
+                ],
+                'tipo_reserva' => $reservaClaseId
+            ],
+            'Cámara Web' => [
+                'modelos' => [
+                    'Logitech C920',
+                    'Razer Kiyo Pro',
+                    'Microsoft LifeCam HD-3000'
+                ],
+                'tipo_reserva' => $reservaReunionId
+            ],
+            'Tablet Gráfica' => [
+                'modelos' => [
+                    'Wacom Intuos S',
+                    'Huion H610 Pro V2',
+                    'XP-PEN Deco 01 V2'
+                ],
+                'tipo_reserva' => $reservaClaseId
+            ],
+            'Sistema de Videoconferencia' => [
+                'modelos' => [
+                    'Logitech Rally Bar',
+                    'Poly Studio X50',
+                    'Cisco Webex Room Kit Mini'
+                ],
+                'tipo_reserva' => $reservaReunionId
+            ],
+            'Control Remoto de Presentación' => [
+                'modelos' => [
+                    'Logitech R400',
+                    'Kensington Expert Presenter',
+                    'DinoFire Wireless Presenter'
+                ],
+                'tipo_reserva' => $reservaClaseId
+            ],
         ];
 
-        $routers = [
-            'Cisco ISR 4221', 'MikroTik RB3011', 'Ubiquiti EdgeRouter X', 'TP-Link Archer C80',
-            'Asus RT-AC86U', 'Netgear Nighthawk X6', 'Huawei AR1220', 'Juniper SRX320',
-            'D-Link DIR-878', 'Zyxel Armor Z2'
-        ];
+        // Iterar sobre cada tipo y sus modelos
+        foreach ($tiposEquipo as $tipo => $data) {
+            $tipoEquipoId = TipoEquipo::where('nombre', $tipo)->value('id');
 
-        $laptops = [
-            'Dell XPS 13 9300', 'HP Spectre x360', 'Lenovo ThinkPad X1 Carbon Gen 8',
-            'Apple MacBook Air 2020', 'Acer Swift 3', 'ASUS ZenBook 13 UX325',
-            'Microsoft Surface Laptop 3', 'Razer Blade Stealth 13', 'LG Gram 14 2020',
-            'MSI Prestige 14'
-        ];
-
-        // === Insertar servidores
-        foreach ($servidores as $nombre) {
-            Equipo::create([
-                'nombre' => "Servidor $nombre",
-                'descripcion' => "Servidor lanzado en 2020: $nombre",
-                'estado' => rand(0, 1),
-                'cantidad' => rand(1, 4),
-                'is_deleted' => false,
-                'tipo_equipo_id' => $servidorId,
-                'tipo_reserva_id' => $reservaEventosId,
-                'imagen' => 'default.png'
-            ]);
-        }
-
-        // === Insertar routers
-        foreach ($routers as $nombre) {
-            Equipo::create([
-                'nombre' => "Router $nombre",
-                'descripcion' => "Router popular en 2020: $nombre",
-                'estado' => rand(0, 1),
-                'cantidad' => rand(1, 6),
-                'is_deleted' => false,
-                'tipo_equipo_id' => $routerId,
-                'tipo_reserva_id' => $reservaReunionId,
-                'imagen' => 'default.png'
-            ]);
-        }
-
-        // === Insertar laptops
-        foreach ($laptops as $nombre) {
-            Equipo::create([
-                'nombre' => "Laptop $nombre",
-                'descripcion' => "Laptop usada en 2020: $nombre",
-                'estado' => rand(0, 1),
-                'cantidad' => rand(2, 10),
-                'is_deleted' => false,
-                'tipo_equipo_id' => $laptopId,
-                'tipo_reserva_id' => $reservaClaseId,
-                'imagen' => 'default.png'
-            ]);
+            foreach ($data['modelos'] as $modelo) {
+                Equipo::create([
+                    'nombre' => "$tipo $modelo",
+                    'descripcion' => "$tipo modelo $modelo disponible para reserva.",
+                    'estado' => rand(0, 1),
+                    'cantidad' => rand(1, 5),
+                    'is_deleted' => false,
+                    'tipo_equipo_id' => $tipoEquipoId,
+                    'tipo_reserva_id' => is_int($data['tipo_reserva']) ? $data['tipo_reserva'] : (rand(0, 1) ? $reservaEventosId : $reservaReunionId),
+                    'imagen' => 'default.png'
+                ]);
+            }
         }
     }
 }

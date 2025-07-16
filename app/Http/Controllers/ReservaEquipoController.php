@@ -559,6 +559,7 @@ class ReservaEquipoController extends Controller
 
                 return response()->json([
                     'usuario' => $reserva->user->first_name . ' ' . $reserva->user->last_name,
+                    'image_url' => $reserva->user->image ? asset('storage/users/' . $reserva->user->image) : null,
                     'equipo' => $reserva->equipos->pluck('nombre')->toArray(),
                     'aula' => $reserva->aula,
                     'dia' => $reserva->fecha_reserva,
@@ -636,6 +637,7 @@ class ReservaEquipoController extends Controller
         return response()->json([
             ...$reserva->toArray(),
             'documento_url' => $reserva->documento_evento ? asset('storage/' . $reserva->documento_evento) : null,
+            'user_image_url' => $reserva->user->image ? asset('storage/users/' . $reserva->user->image) : null,
         ]);
     }
 
