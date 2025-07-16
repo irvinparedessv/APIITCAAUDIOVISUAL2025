@@ -47,7 +47,7 @@ class CancelarReservaAulaPrestamista extends Notification implements ShouldBroad
     {
         return [
             'type' => 'cancelacion_reserva_prestamista',
-            'title' => 'Se ha procedido la cancelación de una reserva de aula',
+            'title' => 'Se ha cancelado una reserva de aula',
             'message' => "La reserva para el aula {$this->reserva->aula->name} fue cancelada por {$this->reserva->user->first_name} {$this->reserva->user->last_name}.",
             'reserva' => [
                 'id' => $this->reserva->id,

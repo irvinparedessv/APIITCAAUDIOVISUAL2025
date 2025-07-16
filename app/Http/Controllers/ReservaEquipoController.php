@@ -324,11 +324,11 @@ class ReservaEquipoController extends Controller
                 $responsable->notify(new NuevaReservaNotification($reserva, $responsable->id, $pagina, $usuarioAutenticado->id));
                 Log::info("Notificación enviada a responsable {$responsable->id}");
                 // Enviar correo personalizado
-                //$responsable->notify(new NotificarResponsableReserva($reserva));
+                $responsable->notify(new NotificarResponsableReserva($reserva));
             }
         }
         // Notificación por correo al usuario
-        //$reserva->user->notify(new ConfirmarReservaUsuario($reserva));
+        $reserva->user->notify(new ConfirmarReservaUsuario($reserva));
 
         return response()->json([
             'message' => 'Reserva creada exitosamente',
@@ -453,12 +453,16 @@ class ReservaEquipoController extends Controller
             if ($user->id !== $reserva->user_id && $reserva->user) {
                 $reserva->user->notify(new EstadoReservaEquipoNotification($reserva, $reserva->user->id, $pagina, 'edicion'));
                 Log::info("Notificación enviada al prestamista {$reserva->user->id} tras edición");
+                 Mail::to($reserva->user->email)
+                ->queue(new ReservaEditadaMailable($reserva, false)); // false porque es para prestamista
             }
         } else {
             // Si el prestamista hizo el cambio, notificar a encargados y administradores
             foreach ($responsables as $responsable) {
                 $responsable->notify(new EstadoReservaEquipoNotification($reserva, $responsable->id, $pagina, 'edicion'));
                 Log::info("Notificación enviada a responsable {$responsable->id} tras edición del prestamista");
+                Mail::to($responsable->email)
+                ->queue(new ReservaEditadaMailable($reserva, true)); // true porque es para responsable
             }
         }
 
@@ -520,7 +524,7 @@ class ReservaEquipoController extends Controller
                 // Admin o encargado cambia estado (incluye cancelar) → notificar al prestamista
                 if ($reserva->user) {
                     $reserva->user->notify(new EstadoReservaEquipoNotification($reserva, $reserva->user->id, $pagina));
-                    //Mail::to($reserva->user->email)->queue(new EstadoReservaMailable($reserva));
+                    Mail::to($reserva->user->email)->queue(new EstadoReservaMailable($reserva));
                 }
             }
 
@@ -769,7 +773,7 @@ class ReservaEquipoController extends Controller
         foreach ($responsables as $responsable) {
             $responsable->notify(new CancelarReservaEquipoPrestamista($reserva, $responsable->id, $pagina));
             // Enviar correo al responsable
-            //Mail::to($responsable->email)->queue(new EstadoReservaMailable($reserva));
+            Mail::to($responsable->email)->queue(new EstadoReservaMailable($reserva));
         }
     }
 }

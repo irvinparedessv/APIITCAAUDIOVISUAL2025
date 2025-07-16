@@ -278,12 +278,13 @@ class ReservaAulaController extends Controller
 
             foreach ($responsables as $responsable) {
                 $responsable->notify(new NuevaReservaAulaNotification($reserva, $responsable->id, $pagina, Auth::id()));
+                $responsable->notify(new NotificarResponsableReservaAula($reserva)); // <--- Esta línea envía el correo
             }
         } else {
             // 🔔 Admin o encargado hace reserva → notificar al prestamista
             if ($reserva->user_id !== $usuarioActual->id) {
                 $reserva->user->notify(new NuevaReservaAulaNotification($reserva, $reserva->user_id, $pagina, Auth::id()));
-                //$reserva->user->notify(new ConfirmarReservaAulaUsuario($reserva));
+                $reserva->user->notify(new ConfirmarReservaAulaUsuario($reserva));
             }
         }
         Log::info("===== FIN STORE =====");
@@ -472,8 +473,18 @@ class ReservaAulaController extends Controller
             $responsables = $encargados->merge($administradores)->unique('id');
 
             foreach ($responsables as $responsable) {
+                Log::info("Enviando notificación push a responsable ID: {$responsable->id}");
                 $responsable->notify(new EstadoReservaAulaNotification($reserva, $responsable->id, $pagina, 'edicion'));
+
+                Log::info("Enviando correo a responsable ID: {$responsable->id}");
+                $responsable->notify(new EmailEdicionReservaAula($reserva)); // Envío de correo
             }
+        }
+
+        // Correo al usuario que hizo la reserva, si no fue él quien la editó
+        if ($usuario->id !== $reserva->user->id) {
+            Log::info("Enviando correo al creador de la reserva ID: {$reserva->user->id}");
+            $reserva->user->notify(new EmailEdicionReservaAula($reserva)); // Envío de correo al usuario
         }
         Log::info("===== FIN UPDATE =====");
         return response()->json([
@@ -602,6 +613,7 @@ class ReservaAulaController extends Controller
         } else {
             if ($reserva->user) {
                 $reserva->user->notify(new EstadoReservaAulaNotification($reserva, $pagina));
+                $reserva->user->notify(new EmailEstadoAulaNotification($reserva));
             }
         }
 
@@ -664,6 +676,7 @@ class ReservaAulaController extends Controller
         foreach ($responsables as $responsable) {
             Log::info("Enviando notificación de cancelación al responsable ID: {$responsable->id}");
             $responsable->notify(new CancelarReservaAulaPrestamista($reserva, $responsable->id, $pagina));
+            $responsable->notify(new EmailEstadoAulaNotification($reserva));
         }
     }
     public function getReservasPorMes(Request $request)

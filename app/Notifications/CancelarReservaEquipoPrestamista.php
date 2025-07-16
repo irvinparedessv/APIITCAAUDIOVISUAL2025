@@ -37,7 +37,7 @@ class CancelarReservaEquipoPrestamista extends Notification implements ShouldQue
     {
         return [
             'type' => 'cancelacion_reserva',
-            'title' => 'Se ha procedido la cancelación de una reserva de equipo',
+            'title' => 'Se ha cancelado una reserva de equipo',
             'message' => "Una reserva fue cancelada por {$this->reserva->user->first_name} {$this->reserva->user->last_name}.",
             'reserva' => [
                 'id' => $this->reserva->id,

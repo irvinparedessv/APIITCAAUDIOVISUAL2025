@@ -1,21 +1,4 @@
 @component('mail::message')
-<style>
-    h1 {
-        font-family: 'Georgia', serif;
-        color: rgb(139, 0, 0); /* Color principal */
-    }
-    p {
-        font-family: 'Helvetica', 'Arial', sans-serif;
-        color: #333;
-        font-size: 16px;
-        line-height: 1.6;
-    }
-    .footer {
-        margin-top: 30px;
-        font-size: 13px;
-        color: #999;
-    }
-</style>
 
 # ✅ Tu reserva ha sido registrada exitosamente
 
@@ -35,7 +18,7 @@ Gracias por realizar tu solicitud. Estos son los detalles:
 @endforeach
 
 @slot('subcopy')
-<span class="footer">
+<span style="margin-top: 30px; font-size: 13px; color: #999;">
 Este mensaje ha sido generado automáticamente. Por favor, no respondas a este correo.
 </span>
 @endslot
