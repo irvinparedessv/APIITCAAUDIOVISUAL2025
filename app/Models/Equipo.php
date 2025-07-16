@@ -52,6 +52,19 @@ class Equipo extends Model
         return $this->belongsToMany(ReservaEquipo::class, 'equipo_reserva', 'equipo_id', 'reserva_equipo_id')
             ->withPivot('cantidad');
     }
+    public static function obtenerEquiposActivosConTipoReserva()
+    {
+        return self::activos()
+            ->with(['tipoReserva'])
+            ->get()
+            ->map(function ($equipo) {
+                return [
+                    'nombre' => $equipo->nombre,
+                    'descripcion' => $equipo->descripcion,
+                    'tipo_evento' => $equipo->tipoReserva ? $equipo->tipoReserva->nombre : null,
+                ];
+            });
+    }
 
     public function disponibilidadPorRango(\Carbon\CarbonInterface $inicio, \Carbon\CarbonInterface $fin, $reservaExcluidaId = null)
     {
@@ -83,5 +96,4 @@ class Equipo extends Model
             'cantidad_entregada' => $cantidadEntregada,
         ];
     }
-
 }

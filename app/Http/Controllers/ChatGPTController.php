@@ -2,120 +2,195 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Aula;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
-
+use App\Models\Equipo;
+use App\Models\TipoReserva;
+use Carbon\Carbon;
 
 class ChatGPTController extends Controller
 {
     public function chatWithGpt(Request $request)
     {
-        try {
-            $prompt = $request->input('question');
-            Log::info('Prompt recibido', ['prompt' => $prompt]);
+        $mensajeUsuario = $request->input('question');
+        $contexto = $request->input('context') ?? [];
+        $apiKey = env('OPENAI_API_KEY');
 
-            $apiKey = env('OPENAI_API_KEY');
-            $assistantId = env('OPENAI_ASSISTANT_ID');
-            Log::info('API Key y Assistant ID cargados', [
-                'apiKey' => substr($apiKey, 0, 8) . '...',
-                'assistantId' => $assistantId,
-            ]);
-
-            if (!$prompt || strlen(trim($prompt)) < 3) {
-                Log::warning('Prompt inválido');
-                return response()->json(['error' => 'Prompt inválido o demasiado corto.'], 400);
-            }
-
-            $headers = [
-                'Authorization' => 'Bearer ' . $apiKey,
-                'OpenAI-Beta' => 'assistants=v2',
-                'Content-Type' => 'application/json',
-            ];
-
-            // 1. Crear thread
-            $threadResponse = Http::withHeaders($headers)->post('https://api.openai.com/v1/threads', []);
-            Log::info('Thread creado', ['response' => $threadResponse->body()]);
-            if (!$threadResponse->ok()) {
-                Log::error('Error creando thread', ['body' => $threadResponse->body()]);
-                return response()->json(['error' => 'Error creando thread: ' . $threadResponse->body()], 500);
-            }
-            $threadId = $threadResponse->json('id');
-            Log::info('Thread ID', ['threadId' => $threadId]);
-
-            // 2. Agregar mensaje
-            $messageResponse = Http::withHeaders($headers)->post("https://api.openai.com/v1/threads/{$threadId}/messages", [
-                'role' => 'user',
-                'content' => $prompt,
-            ]);
-            Log::info('Mensaje agregado', ['response' => $messageResponse->body()]);
-            if (!$messageResponse->ok()) {
-                Log::error('Error agregando mensaje', ['body' => $messageResponse->body()]);
-                return response()->json(['error' => 'Error agregando mensaje: ' . $messageResponse->body()], 500);
-            }
-
-            // 3. Ejecutar run
-            $runResponse = Http::withHeaders($headers)->post("https://api.openai.com/v1/threads/{$threadId}/runs", [
-                'assistant_id' => $assistantId,
-            ]);
-            Log::info('Run creado', ['response' => $runResponse->body()]);
-            if (!$runResponse->ok()) {
-                Log::error('Error creando run', ['body' => $runResponse->body()]);
-                return response()->json(['error' => 'Error creando run: ' . $runResponse->body()], 500);
-            }
-            $runId = $runResponse->json('id');
-            Log::info('Run ID', ['runId' => $runId]);
-
-            // 4. Polling limitado
-            $maxRetries = 10;
-            $retryCount = 0;
-            $status = '';
-
-            do {
-                sleep(5);
-                $runStatus = Http::withHeaders($headers)->get("https://api.openai.com/v1/threads/{$threadId}/runs/{$runId}");
-                Log::info('Chequeando estado', ['response' => $runStatus->body()]);
-                if (!$runStatus->ok()) {
-                    Log::error('Error obteniendo estado del run', ['body' => $runStatus->body()]);
-                    return response()->json(['error' => 'Error obteniendo estado del run: ' . $runStatus->body()], 500);
-                }
-                $status = $runStatus->json('status');
-                Log::info('Estado actual', ['status' => $status, 'retry' => $retryCount]);
-                $retryCount++;
-            } while ($status !== 'completed' && $status !== 'failed' && $retryCount < $maxRetries);
-
-            if ($status === 'failed') {
-                Log::error('Run fallido');
-                return response()->json(['error' => 'El assistant falló al generar la respuesta.'], 500);
-            }
-
-            if ($status !== 'completed') {
-                Log::error('Timeout esperando respuesta');
-                return response()->json(['error' => 'Tiempo de espera agotado, sin respuesta completa.'], 504);
-            }
-
-            // 5. Obtener mensajes
-            $messagesResponse = Http::withHeaders($headers)->get("https://api.openai.com/v1/threads/{$threadId}/messages");
-            Log::info('Mensajes obtenidos', ['response' => $messagesResponse->body()]);
-            if (!$messagesResponse->ok()) {
-                Log::error('Error obteniendo mensajes', ['body' => $messagesResponse->body()]);
-                return response()->json(['error' => 'Error obteniendo mensajes: ' . $messagesResponse->body()], 500);
-            }
-
-            $messages = $messagesResponse->json('data');
-            $assistantReplies = collect($messages)
-                ->where('role', 'assistant')
-                ->map(fn($msg) => $msg['content'][0]['text']['value'] ?? null)
-                ->filter()
-                ->values();
-
-            $lastReply = $assistantReplies->last();
-            Log::info('Respuesta final', ['reply' => $lastReply]);
-
-            return response()->json(['reply' => $lastReply]);
-        } catch (\Exception $e) {
-            Log::error('Excepción capturada', ['exception' => $e->getMessage()]);
-            return response()->json(['error' => $e->getMessage()], 500);
+        if (!$mensajeUsuario || strlen(trim($mensajeUsuario)) < 1) {
+            return response()->json(['error' => 'Mensaje vacío'], 400);
         }
+
+        // Aquí insertamos el prompt system base al inicio del contexto (solo si no está ya)
+        $promptSystemBase = <<<PROMPT
+Eres un asistente virtual especializado en:
+
+Consultar disponibilidad de espacios (aulas).
+
+Dar recomendaciones de equipos para eventos.
+No haces reservas.
+
+Reglas estrictas:
+
+1️⃣ Disponibilidad de aulas
+
+Si el usuario pregunta por disponibilidad de un aula, primero confirma la fecha exacta.
+
+Si la fecha está en lenguaje natural (ej: “12 octubre”), conviértela a DD/MM/YYYY usando el año actual 2025.
+
+Responde solo: SIPASO2-LAFECHASOLICITADA:DD/MM/YYYY
+
+Sin texto extra, sin explicaciones, sin frases decorativas.
+
+2️⃣ Reservas
+
+Si el usuario dice que quiere reservar un espacio/aula, responde solo: rEspacio
+
+Si el usuario dice que quiere reservar un equipo, responde solo: rEquipo
+
+3️⃣ Recomendación de equipos
+
+Si el usuario pide recomendación de equipo, primero confirma el tipo de evento.
+
+Si ya tienes el tipo de evento, responde solo: SIPASO:<nombre_tipo_evento>
+
+Si no tienes el tipo de evento, pídeselo.
+
+No confundas recomendación con reserva. Para reserva de equipo, responde rEquipo.
+
+4️⃣ Información incompleta
+
+Si falta fecha o tipo de evento, pide solo lo que falta.
+
+No des información genérica, no redirijas, guía el flujo tú mismo.
+
+5️⃣ Elección de opción
+
+Si ya tienes toda la información necesaria y el usuario pide que elijas o recomiendes, da una respuesta clara, con una breve razón, sin usar formato SIPASO.
+
+Ejemplo:
+
+✅ Correcto: “La mejor opción para tu evento es el Aula Magna porque tiene mayor capacidad.”
+
+🚫 Incorrecto: No uses SIPASO ni pidas más datos en este caso.
+PROMPT;
+
+        // Solo insertar el system prompt si no está en el contexto aún
+        $hasSystemPrompt = false;
+        foreach ($contexto as $msg) {
+            if ($msg['role'] === 'system') {
+                $hasSystemPrompt = true;
+                break;
+            }
+        }
+
+        if (!$hasSystemPrompt) {
+            array_unshift($contexto, ['role' => 'system', 'content' => $promptSystemBase]);
+        }
+
+        // Añadir input del usuario al contexto
+        $contexto[] = ['role' => 'user', 'content' => $mensajeUsuario];
+
+        // 1️⃣ PRIMERA CONSULTA GPT
+        $response = Http::withHeaders([
+            'Authorization' => "Bearer {$apiKey}",
+            'Content-Type' => 'application/json',
+        ])->post('https://api.openai.com/v1/chat/completions', [
+            'model' => 'gpt-4o-mini',
+            'messages' => $contexto,
+            'max_tokens' => 2000,
+            'temperature' => 0.7,
+        ]);
+
+        $respuestaGPT = trim($response->json('choices.0.message.content'));
+        $contexto[] = ['role' => 'assistant', 'content' => $respuestaGPT];
+
+        // 2️⃣ ANALIZAR respuesta de GPT, NO el mensaje del usuario
+        if (preg_match('/SIPASO2-LAFECHASOLICITADA\s*:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i', $respuestaGPT, $match)) {
+            $fechaSolicitada = trim($match[1]);
+
+            try {
+                $fecha = Carbon::createFromFormat('d/m/Y', $fechaSolicitada);
+                $fechaSolicitada = $fecha->format('Y-m-d');
+            } catch (\Exception $e) {
+                return response()->json(['error' => 'Formato de fecha inválido.'], 400);
+            }
+
+            $aulas = Aula::obtenerAulasConBloquesPorFecha($fechaSolicitada);
+            $aulasJson = $aulas->toJson(JSON_PRETTY_PRINT);
+
+            // 3️⃣ Vuelves a GPT con los bloques
+            $prompt = <<<PROMPT
+El usuario necesita un espacio para la fecha {$fechaSolicitada}.
+Estas son las aulas y bloques disponibles:
+{$aulasJson}
+
+Selecciona la mejor opción y explica la recomendación.
+PROMPT;
+
+            $responseFinal = Http::withHeaders([
+                'Authorization' => "Bearer {$apiKey}",
+                'Content-Type' => 'application/json',
+            ])->post('https://api.openai.com/v1/chat/completions', [
+                'model' => 'gpt-4o-mini',
+                'messages' => [
+                    ['role' => 'system', 'content' => 'Eres un recomendador de espacios para eventos.'],
+                    ['role' => 'user', 'content' => $prompt],
+                ],
+                'max_tokens' => 1000,
+                'temperature' => 0.7,
+            ]);
+
+            return response()->json([
+                'reply' => $responseFinal->json('choices.0.message.content'),
+                'context' => $contexto,
+                'status' => 'SIPASO2'
+            ]);
+        }
+
+        if (preg_match('/^SIPASO(.*)/', $respuestaGPT, $match)) {
+            $tipoEvento = trim($match[1]);
+
+            $equipos = Equipo::obtenerEquiposActivosConTipoReserva();
+
+
+
+            $equiposTexto = $equipos->map(fn($eq) => "tipo {$eq['tipo_evento']}- {$eq['nombre']}: {$eq['descripcion']}")->implode("\n");
+
+            // 3️⃣ Vuelves a GPT con los equipos
+            $prompt = <<<PROMPT
+El usuario tiene un evento tipo "{$tipoEvento}".
+Estos son los equipos disponibles con sus tipos:
+{$equiposTexto}
+
+Selecciona los equipos más adecuados y explica la recomendación.
+PROMPT;
+
+            $responseFinal = Http::withHeaders([
+                'Authorization' => "Bearer {$apiKey}",
+                'Content-Type' => 'application/json',
+            ])->post('https://api.openai.com/v1/chat/completions', [
+                'model' => 'gpt-4o-mini',
+                'messages' => [
+                    ['role' => 'system', 'content' => 'Eres un recomendador de equipos para eventos.'],
+                    ['role' => 'user', 'content' => $prompt],
+                ],
+                'max_tokens' => 1000,
+                'temperature' => 0.7,
+            ]);
+
+            return response()->json([
+                'reply' => $responseFinal->json('choices.0.message.content'),
+                'context' => $contexto,
+                'status' => 'SIPASO'
+            ]);
+        }
+
+        // Si no trae SIPASO ni SIPASO2, devuelve tal cual
+        return response()->json([
+            'reply' => $respuestaGPT,
+            'context' => $contexto,
+            'status' => 'CONTINUAR'
+        ]);
     }
 }
