@@ -19,14 +19,12 @@ class StoreUserRequest extends FormRequest
         return [
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-             // ✅ Validamos que el email sea único y de dominio @itca.edu.sv
             'email' => [
                 'required',
                 'string',
                 'email',
                 'max:255',
                 'unique:users',
-                'regex:/^[a-zA-Z0-9._%+-]+@itca\.edu\.sv$/'
             ],
             'password' => 'required|string|min:6',
             'role_id' => 'required|exists:roles,id',
@@ -37,11 +35,12 @@ class StoreUserRequest extends FormRequest
         ];
     }
 
+
     public function messages(): array
     {
         return [
             // ✅ Mensaje personalizado para correos no institucionales
-            'email.regex' => 'Solo se permiten correos institucionales @itca.edu.sv.',
+            //'email.regex' => 'Solo se permiten correos institucionales @itca.edu.sv.',
         ];
     }
 }
