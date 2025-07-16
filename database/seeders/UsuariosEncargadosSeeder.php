@@ -19,7 +19,7 @@ class UsuariosEncargadosSeeder extends Seeder
             $user = User::create([
                 'first_name'        => 'EncargadoEspacio' . $aula->id,
                 'last_name'         => 'EspacioLast' . $aula->id,
-                'email'             => 'espacio' . $aula->id . '@correo.com',
+                'email'             => 'espacio' . $aula->id . '@yopmail.com',
                 'email_verified_at' => now(),
                 'password'          => Hash::make('123'),
                 'estado'            => 1,
