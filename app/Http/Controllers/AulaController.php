@@ -245,7 +245,15 @@ class AulaController extends Controller
             if ($start_date > $end_date) {
                 continue;
             }
-
+            $daysInEnglish = [
+                'Lunes' => 'Monday',
+                'Martes' => 'Tuesday',
+                'Miércoles' => 'Wednesday',
+                'Jueves' => 'Thursday',
+                'Viernes' => 'Friday',
+                'Sábado' => 'Saturday',
+                'Domingo' => 'Sunday',
+            ];
             $periodo = new \DatePeriod(
                 new \DateTime($start_date),
                 new \DateInterval('P1D'),
@@ -253,8 +261,13 @@ class AulaController extends Controller
             );
 
             $diasValidos = [];
+            $daysMapped = [];
+            foreach ($days as $dia) {
+                $daysMapped[] = $daysInEnglish[$dia] ?? $dia;
+            }
+
             foreach ($periodo as $date) {
-                if (in_array($date->format('l'), $days)) {
+                if (in_array($date->format('l'), $daysMapped)) {
                     $diasValidos[] = $date->format('Y-m-d');
                 }
             }
