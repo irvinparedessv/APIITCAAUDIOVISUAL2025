@@ -28,7 +28,7 @@
     }
 </style>
 
-# Confirmación de Cuenta - {{ config('app.name') }}
+# Confirmación de Cuenta
 
 Hola {{ $user->first_name }} {{ $user->last_name }},
 

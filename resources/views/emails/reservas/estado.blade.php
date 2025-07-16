@@ -22,6 +22,5 @@ Se ha actualizado una reserva realizada por **{{ $reserva->user->first_name }} {
 @endif
 @endcomponent
 
-Gracias,
-{{ config('app.name') }}
+Gracias.
 @endcomponent
