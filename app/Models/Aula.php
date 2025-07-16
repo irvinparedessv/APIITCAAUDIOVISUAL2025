@@ -38,7 +38,13 @@ class Aula extends Model
     }
 
     /**
-     * Devuelve aulas disponibles con bloques que coinciden con una fecha dada.
+     * Devuelve aulas disponibles con bloques y horarios que coinciden con una fecha dada.
+     *
+     * @param string $fecha Formato 'Y-m-d'
+     * @return \Illuminate\Support\Collection
+     */
+    /**
+     * Devuelve aulas disponibles con bloques (filtrados por estado) y horarios que coinciden con una fecha dada.
      *
      * @param string $fecha Formato 'Y-m-d'
      * @return \Illuminate\Support\Collection
@@ -49,21 +55,41 @@ class Aula extends Model
             $q->whereDate('start_date', '<=', $fecha)
                 ->whereDate('end_date', '>=', $fecha);
         })
-            ->with(['reservas.bloques' => function ($q) use ($fecha) {
-                $q->whereDate('fecha_inicio', '<=', $fecha)
-                    ->whereDate('fecha_fin', '>=', $fecha);
-            }])
+            ->with([
+                'reservas' => function ($q) {
+                    $q->whereIn('estado', ['Pendiente', 'Aprobado']);
+                },
+                'reservas.bloques' => function ($q) use ($fecha) {
+                    $q->whereDate('fecha_inicio', '<=', $fecha)
+                        ->whereDate('fecha_fin', '>=', $fecha);
+                },
+                'horarios' => function ($q) use ($fecha) {
+                    $q->whereDate('start_date', '<=', $fecha)
+                        ->whereDate('end_date', '>=', $fecha);
+                }
+            ])
             ->get()
             ->map(function ($aula) {
                 return [
                     'nombre' => $aula->name,
                     'bloques' => $aula->reservas->flatMap(function ($reserva) {
-                        return $reserva->bloques->map(function ($bloque) {
+                        return $reserva->bloques->map(function ($bloque) use ($reserva) {
                             return [
                                 'fecha_inicio' => $bloque->fecha_inicio,
-                                'fecha_fin' => $bloque->fecha_fin,
+                                'fecha_fin'    => $bloque->fecha_fin,
+                                'hora_inicio'  => $bloque->hora_inicio,
+                                'hora_fin'     => $bloque->hora_fin,
+                                'estado'       => $bloque->estado ?? $reserva->estado, // Toma el estado del bloque o de la reserva
                             ];
                         });
+                    })->values(),
+                    'horarios' => $aula->horarios->map(function ($horario) {
+                        return [
+                            'start_date'  => $horario->start_date,
+                            'end_date'    => $horario->end_date,
+                            'hora_inicio' => $horario->hora_inicio,
+                            'hora_fin'    => $horario->hora_fin,
+                        ];
                     })->values(),
                 ];
             });

@@ -96,10 +96,10 @@ PROMPT;
             'Authorization' => "Bearer {$apiKey}",
             'Content-Type' => 'application/json',
         ])->post('https://api.openai.com/v1/chat/completions', [
-            'model' => 'gpt-4o-mini',
+            'model' => 'gpt-4o',
             'messages' => $contexto,
             'max_tokens' => 2000,
-            'temperature' => 0.7,
+            'temperature' => 0.4,
         ]);
 
         $respuestaGPT = trim($response->json('choices.0.message.content'));
@@ -122,7 +122,7 @@ PROMPT;
             // 3️⃣ Vuelves a GPT con los bloques
             $prompt = <<<PROMPT
 El usuario necesita un espacio para la fecha {$fechaSolicitada}.
-Estas son las aulas y bloques disponibles:
+Estas son las aulas,sus horarios y reservas hechas:
 {$aulasJson}
 
 Selecciona la mejor opción y explica la recomendación.
@@ -132,13 +132,13 @@ PROMPT;
                 'Authorization' => "Bearer {$apiKey}",
                 'Content-Type' => 'application/json',
             ])->post('https://api.openai.com/v1/chat/completions', [
-                'model' => 'gpt-4o-mini',
+                'model' => 'gpt-4o',
                 'messages' => [
                     ['role' => 'system', 'content' => 'Eres un recomendador de espacios para eventos.'],
                     ['role' => 'user', 'content' => $prompt],
                 ],
                 'max_tokens' => 1000,
-                'temperature' => 0.7,
+                'temperature' => 0.4,
             ]);
 
             return response()->json([
@@ -170,13 +170,13 @@ PROMPT;
                 'Authorization' => "Bearer {$apiKey}",
                 'Content-Type' => 'application/json',
             ])->post('https://api.openai.com/v1/chat/completions', [
-                'model' => 'gpt-4o-mini',
+                'model' => 'gpt-4o',
                 'messages' => [
                     ['role' => 'system', 'content' => 'Eres un recomendador de equipos para eventos.'],
                     ['role' => 'user', 'content' => $prompt],
                 ],
                 'max_tokens' => 1000,
-                'temperature' => 0.7,
+                'temperature' => 0.4,
             ]);
 
             return response()->json([
