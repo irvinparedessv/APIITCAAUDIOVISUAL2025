@@ -30,7 +30,7 @@ class CancelarReservasVencidas extends Command
 
     private function cancelarAulas($hoy)
     {
-        $reservas = ReservaAula::where('estado', 'pendiente')
+        $reservas = ReservaAula::where('estado', 'Pendiente')
             ->whereDate('fecha', '<', $hoy)
             ->get();
 
