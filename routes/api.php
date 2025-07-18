@@ -16,6 +16,9 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\BitacoraController;
 use App\Http\Controllers\ChatGPTController;
+use App\Http\Controllers\EstadoController;
+use App\Http\Controllers\MarcaController;
+use App\Http\Controllers\ModeloController;
 use App\Http\Controllers\PrediccionAulaController;
 use App\Http\Controllers\PrediccionEquipoController;
 use App\Http\Controllers\ProfileController;  // ✅ Para Perfil Usuario    
@@ -93,6 +96,11 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/reportes/uso-equipos', [ReporteController::class, 'reporteUsoEquipos']);
     Route::get('/reportes/horarios-solicitados', [ReporteController::class, 'reporteHorariosSolicitados']);
     Route::get('/reportes/inventario-equipos', [ReporteController::class, 'reporteInventarioEquipos']);
+
+
+    Route::get('/marcas', [MarcaController::class, 'index']);
+Route::get('/modelos', [ModeloController::class, 'index']);
+Route::get('/estados', [EstadoController::class, 'index']);
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador,Encargado'])->group(function () {

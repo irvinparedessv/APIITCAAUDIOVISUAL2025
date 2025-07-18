@@ -2,19 +2,28 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class TipoEquipo extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['nombre','is_deleted'];
+    protected $table = 'tipo_equipos';
 
-    // Relación con equipos
+    protected $fillable = ['nombre', 'is_deleted'];
+
+    protected $casts = [
+        'is_deleted' => 'boolean',
+    ];
+
     public function equipos()
     {
-        return $this->hasMany(Equipo::class);
+        return $this->hasMany(Equipo::class, 'tipo_equipo_id');
     }
-    
+
+    public function categoria()
+    {
+        return $this->belongsTo(Categoria::class);
+    }
 }

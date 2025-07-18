@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
             TipoReservaSeeder::class,
             UsuarioSeeder::class,
             AulaSeeder::class,
-            TipoEquipoSeeder::class,
+            CategoriaSeeder::class,
             EquipoSeeder::class,
             UbicacionSeeder::class,
             ReservaEquipoSeeder::class,
@@ -27,7 +27,7 @@ class DatabaseSeeder extends Seeder
             UsuariosEncargadosSeeder::class,
             ReservaAulaSeeder::class,
             ReservaAulaBloqueSeeder::class,
-
+            InsumoSeeder::class,
         ]);
     }
 }

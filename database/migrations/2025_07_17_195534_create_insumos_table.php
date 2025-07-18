@@ -1,15 +1,17 @@
 <?php
 
-// database/migrations/2025_04_25_003136_create_equipos_table.php
-
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
     public function up(): void
 {
-    Schema::create('equipos', function (Blueprint $table) {
+    Schema::create('insumos', function (Blueprint $table) {
         $table->id();
 
         $table->foreignId('tipo_equipo_id')->constrained('tipo_equipos')->onDelete('cascade');
@@ -17,11 +19,9 @@ return new class extends Migration {
         $table->foreignId('modelo_id')->constrained('modelos')->onDelete('restrict');
         $table->foreignId('estado_id')->constrained('estados')->onDelete('restrict');
 
-        $table->foreignId('tipo_reserva_id')->nullable()->constrained('tipo_reservas')->onDelete('set null');
+        $table->foreignId('tipo_reserva_id')->constrained('tipo_reservas')->onDelete('cascade');
 
-        $table->string('numero_serie')->required()->unique();  // número de serie único, nullable para insumos
-        $table->integer('vida_util')->nullable(); // si es equipo
-
+        $table->integer('cantidad')->default(0); // cantidad para insumos
         $table->text('detalles')->nullable();
 
         $table->date('fecha_adquisicion')->nullable();
@@ -32,7 +32,12 @@ return new class extends Migration {
     });
 }
 
-    public function down(): void {
-        Schema::dropIfExists('equipos');
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('insumos');
     }
 };
