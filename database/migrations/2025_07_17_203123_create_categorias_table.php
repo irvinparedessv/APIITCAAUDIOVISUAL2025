@@ -10,7 +10,7 @@ return new class extends Migration {
         Schema::create('categorias', function (Blueprint $table) {
             $table->id();
             $table->string('nombre')->unique(); // Ej: 'Equipo', 'Insumo'
-            $table->text('descripcion')->nullable();
+            $table->boolean('is_deleted')->default(false);
             $table->timestamps();
         });
     }

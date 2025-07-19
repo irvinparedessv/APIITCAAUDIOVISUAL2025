@@ -26,4 +26,9 @@ class TipoEquipo extends Model
     {
         return $this->belongsTo(Categoria::class);
     }
+
+    public function caracteristicas()
+    {
+        return $this->belongsToMany(Caracteristica::class, 'caracteristicas_tipo_equipo');
+    }
 }

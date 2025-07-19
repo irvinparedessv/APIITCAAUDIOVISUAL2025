@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+
 class Equipo extends Model
 {
     use HasFactory;
@@ -14,13 +15,17 @@ class Equipo extends Model
         'marca_id',
         'modelo_id',
         'estado_id',
-        'tipo_reserva_id',   // agregado aquí
+        'tipo_reserva_id',
         'numero_serie',
         'cantidad',
         'vida_util',
         'detalles',
         'fecha_adquisicion',
+        'es_componente',   // nuevo
+        'padre_id',        // nuevo
+        'is_deleted',      // para borrado lógico
     ];
+
 
     protected $dates = ['fecha_adquisicion'];
 
@@ -53,16 +58,44 @@ class Equipo extends Model
     public function reservas()
     {
         return $this->belongsToMany(ReservaEquipo::class, 'equipo_reserva', 'equipo_id', 'reserva_equipo_id')
-                    ->withPivot('cantidad');
+            ->withPivot('cantidad');
     }
+
+    public function padre()
+    {
+        return $this->belongsTo(Equipo::class, 'padre_id');
+    }
+
+    public function componentes()
+    {
+        return $this->hasMany(Equipo::class, 'padre_id')->where('es_componente', true);
+    }
+
+    public function esInsumo()
+    {
+        return !is_null($this->cantidad) && is_null($this->numero_serie);
+    }
+
+    public function esEquipo()
+    {
+        return !is_null($this->numero_serie);
+    }
+
+    public function valoresCaracteristicas()
+    {
+        return $this->hasMany(ValoresCaracteristica::class, 'equipo_id');
+    }
+
+
 
     // --- Accesor para imagen del modelo ---
     public function getImagenUrlAttribute()
     {
-        return $this->modelo && $this->modelo->imagen_local
-            ? asset('storage/modelos/' . $this->modelo->imagen_local)
+        return $this->modelo && $this->modelo->imagen_normal
+            ? asset('storage/modelos/' . $this->modelo->imagen_normal)
             : asset('storage/modelos/default.png');
     }
+
 
     // --- Scope para filtrar equipos activos (no eliminados y tipo activo) ---
     public function scopeActivos($query)
@@ -121,5 +154,4 @@ class Equipo extends Model
             'cantidad_entregada' => $cantidadEntregada,
         ];
     }
-
 }
