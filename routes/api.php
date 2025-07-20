@@ -105,7 +105,8 @@ Route::get('/modelos', [ModeloController::class, 'index']);
 Route::get('/estados', [EstadoController::class, 'index']);
 Route::get('/categorias', [CategoriaController::class, 'index']);
 Route::get('/caracteristicas', [CaracteristicaController::class, 'index']);
-    Route::post('/nuevaCaracteristica', [CaracteristicaController::class, 'store']);      
+    Route::post('/nuevaCaracteristica', [CaracteristicaController::class, 'store']);  
+      Route::get('/tipo-equipos/{id}/caracteristicas', [TipoEquipoController::class, 'getCaracteristicas']);    
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador,Encargado'])->group(function () {

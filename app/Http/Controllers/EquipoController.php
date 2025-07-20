@@ -50,7 +50,7 @@ class EquipoController extends Controller
                 'imagen_url' => $item->imagen_normal
                     ? asset('storage/equipos/' . $item->imagen_normal)
                     : asset('storage/equipos/default.png'),
-                'marca' => $item->modelo->marca->nombre ?? null, 
+                'marca' => $item->modelo->marca->nombre ?? null,
                 'tipoEquipo' => $item->tipoEquipo,
                 'modelo' => $item->modelo,
                 'estado' => $item->estado,
@@ -94,6 +94,7 @@ class EquipoController extends Controller
             'tipo_reserva_id' => 'nullable|exists:tipo_reservas,id',
             'detalles' => 'nullable|string',
             'fecha_adquisicion' => 'nullable|date',
+            'caracteristicas' => 'nullable|array', // Nuevo campo para características
         ];
 
         if ($tipo === 'equipo') {
@@ -105,11 +106,22 @@ class EquipoController extends Controller
 
         $request->validate($rules);
 
-        $equipo = Equipo::create($request->all());
+        // Crear el equipo
+        $equipo = Equipo::create($request->except('caracteristicas'));
+
+        // Guardar características si existen
+        if ($request->has('caracteristicas')) {
+            foreach ($request->input('caracteristicas') as $caracteristica) {
+                $equipo->valoresCaracteristicas()->create([
+                    'caracteristica_id' => $caracteristica['id'],
+                    'valor' => $caracteristica['valor']
+                ]);
+            }
+        }
 
         return response()->json([
             'message' => 'Registrado correctamente',
-            'data' => $equipo,
+            'data' => $equipo->load('valoresCaracteristicas.caracteristica'),
         ], 201);
     }
 
