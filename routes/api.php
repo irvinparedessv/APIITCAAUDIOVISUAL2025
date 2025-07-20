@@ -15,6 +15,8 @@ use App\Http\Controllers\TipoEquipoController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\BitacoraController;
+use App\Http\Controllers\CaracteristicaController;
+use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\ChatGPTController;
 use App\Http\Controllers\EstadoController;
 use App\Http\Controllers\MarcaController;
@@ -101,6 +103,9 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/marcas', [MarcaController::class, 'index']);
 Route::get('/modelos', [ModeloController::class, 'index']);
 Route::get('/estados', [EstadoController::class, 'index']);
+Route::get('/categorias', [CategoriaController::class, 'index']);
+Route::get('/caracteristicas', [CaracteristicaController::class, 'index']);
+    Route::post('/nuevaCaracteristica', [CaracteristicaController::class, 'store']);      
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador,Encargado'])->group(function () {

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\TipoEquipo;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class TipoEquipoController extends Controller
 {
@@ -23,35 +24,69 @@ class TipoEquipoController extends Controller
     }
 
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+
+public function store(Request $request)
 {
-    $request->validate([
-        'nombre' => 'required|string|max:255',
+    $validated = $request->validate([
+        'nombre' => 'required|string|unique:tipo_equipos,nombre',
+        'categoria_id' => 'required|exists:categorias,id',
+        'caracteristicas' => 'array',
+        'caracteristicas.*.id' => 'sometimes|exists:caracteristicas,id',
+        'caracteristicas.*.nombre' => 'sometimes|string',
+        'caracteristicas.*.tipo_dato' => 'sometimes|in:string,integer,decimal,boolean',
     ]);
 
-    $nombre = $request->input('nombre');
+    // Iniciar transacción para asegurar integridad de datos
+    DB::beginTransaction();
 
-    // Comparación insensible a mayúsculas/minúsculas
-    $existe = TipoEquipo::whereRaw('LOWER(nombre) = ?', [strtolower($nombre)])
-        ->where('is_deleted', false)
-        ->exists();
+    try {
+        // 1. Crear el tipo de equipo
+        $tipoEquipo = TipoEquipo::create([
+            'nombre' => $validated['nombre'],
+            'categoria_id' => $validated['categoria_id'],
+        ]);
 
-    if ($existe) {
+        // 2. Procesar características
+        if (isset($validated['caracteristicas'])) {
+            $caracteristicasIds = [];
+            
+            foreach ($validated['caracteristicas'] as $caracteristica) {
+                // Si tiene ID, es una característica existente
+                if (isset($caracteristica['id']) && $caracteristica['id'] > 0) {
+                    $caracteristicasIds[] = $caracteristica['id'];
+                } 
+                // Si no tiene ID pero tiene nombre, es nueva
+                elseif (isset($caracteristica['nombre'])) {
+                    $nuevaCaracteristica = \App\Models\Caracteristica::create([
+                        'nombre' => $caracteristica['nombre'],
+                        'tipo_dato' => $caracteristica['tipo_dato'] ?? 'string',
+                    ]);
+                    $caracteristicasIds[] = $nuevaCaracteristica->id;
+                }
+            }
+
+            // 3. Relacionar características con el tipo de equipo
+            if (!empty($caracteristicasIds)) {
+                $tipoEquipo->caracteristicas()->attach($caracteristicasIds);
+            }
+        }
+
+        DB::commit();
+
         return response()->json([
-            'message' => 'El nombre ya existe.'
-        ], 422); // Código HTTP 422: Unprocessable Entity
+            'message' => 'Tipo de equipo creado exitosamente',
+            'data' => $tipoEquipo->load('caracteristicas')
+        ], 201);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'message' => 'Error al crear el tipo de equipo',
+            'error' => $e->getMessage()
+        ], 500);
     }
-
-    $tipoEquipo = TipoEquipo::create([
-        'nombre' => $nombre,
-        'is_deleted' => false,
-    ]);
-
-    return response()->json($tipoEquipo, 201);
 }
+
 
 
     /**

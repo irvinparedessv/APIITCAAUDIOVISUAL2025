@@ -11,7 +11,8 @@ class TipoEquipo extends Model
 
     protected $table = 'tipo_equipos';
 
-    protected $fillable = ['nombre', 'is_deleted'];
+    protected $fillable = ['nombre', 'categoria_id', 'is_deleted'];
+
 
     protected $casts = [
         'is_deleted' => 'boolean',
@@ -23,9 +24,10 @@ class TipoEquipo extends Model
     }
 
     public function categoria()
-    {
-        return $this->belongsTo(Categoria::class);
-    }
+{
+    return $this->belongsTo(Categoria::class, 'categoria_id');
+}
+
 
     public function caracteristicas()
     {
