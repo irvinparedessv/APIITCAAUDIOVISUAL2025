@@ -39,6 +39,8 @@ Route::post('/confirm-account/{token}', [UserController::class, 'confirmAccount'
 Route::post('/change-password', [UserController::class, 'changePassword']);
 Route::post('/chatGPT', [ChatGPTController::class, 'chatWithGpt']);
 Route::post('/upload-model', [ModelUploadController::class, 'upload']);
+Route::get('/get-model-path/{id}', [ModelUploadController::class, 'getModelPath']);
+
 
 
 
