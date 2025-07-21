@@ -31,6 +31,8 @@ use App\Http\Controllers\TipoReservaController;
 use App\Http\Controllers\UbicacionController;
 
 // Rutas públicas
+Route::get('/equiposDisponiblesPorTipoYFecha', [EquipoController::class, 'equiposDisponiblesPorTipoYFecha']);
+
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLinkEmail']);
 Route::post('/reset-password', [PasswordResetController::class, 'reset']);

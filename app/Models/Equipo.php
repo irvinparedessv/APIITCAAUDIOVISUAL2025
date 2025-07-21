@@ -125,33 +125,26 @@ class Equipo extends Model
     }
 
     // --- Disponibilidad por rango ---
-    public function disponibilidadPorRango(\Carbon\CarbonInterface $inicio, \Carbon\CarbonInterface $fin, $reservaExcluidaId = null)
+    public function disponibilidadPorRango($start, $end)
     {
+        // Revisar si el equipo está reservado en ese rango
         $reservas = $this->reservas()
-            ->where(function ($query) use ($inicio, $fin) {
-                $query->where(function ($q) use ($inicio, $fin) {
-                    $q->where('fecha_reserva', '<', $fin)
-                        ->where('fecha_entrega', '>', $inicio);
-                });
-            })
-            ->whereIn('estado', ['Pendiente', 'Aprobado']);
+            ->where(function ($query) use ($start, $end) {
+                $query->whereBetween('fecha_reserva', [$start, $end])
+                    ->orWhereBetween('fecha_entrega', [$start, $end])
+                    ->orWhere(function ($q) use ($start, $end) {
+                        $q->where('fecha_reserva', '<=', $start)
+                            ->where('fecha_entrega', '>=', $end);
+                    });
+            })->count();
 
-        if ($reservaExcluidaId) {
-            $reservas->where('reserva_equipos.id', '!=', $reservaExcluidaId);
-        }
-
-        $reservas = $reservas->get();
-
-        $cantidadEnReserva = $reservas->where('estado', 'Pendiente')->sum('pivot.cantidad');
-        $cantidadEntregada = $reservas->where('estado', 'Aprobado')->sum('pivot.cantidad');
-
-        $cantidadDisponible = max(0, $this->cantidad - ($cantidadEnReserva + $cantidadEntregada));
+        $disponible = $reservas === 0;
 
         return [
-            'cantidad_total' => $this->cantidad,
-            'cantidad_disponible' => $cantidadDisponible,
-            'cantidad_en_reserva' => $cantidadEnReserva,
-            'cantidad_entregada' => $cantidadEntregada,
+            'cantidad_total' => 1,
+            'cantidad_disponible' => $disponible ? 1 : 0,
+            'cantidad_en_reserva' => $reservas,
+            'cantidad_entregada' => 0,
         ];
     }
 }

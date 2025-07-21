@@ -5,7 +5,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Equipo;
+use App\Models\VistaResumenEquipo;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
+
 
 class EquipoController extends Controller
 {
@@ -173,5 +176,16 @@ class EquipoController extends Controller
             ->get(['id', 'numero_serie as nombre', 'tipo_equipo_id']);
 
         return response()->json($equipos);
+    }
+
+    public function equiposDisponiblesPorTipoYFecha(Request $request)
+    {
+        $request->validate([
+            'tipo_reserva_id' => 'required|integer',
+            'fecha' => 'required|date',
+            'startTime' => 'required',
+            'endTime' => 'required',
+        ]);
+        return response()->json(VistaResumenEquipo::all());
     }
 }
