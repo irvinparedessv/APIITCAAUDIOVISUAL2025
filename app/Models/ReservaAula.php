@@ -21,7 +21,8 @@ class ReservaAula extends Model
         'user_id',
         'estado',
         'titulo',
-        'comentario'
+        'comentario',
+        'path_model'
     ];
 
     protected $casts = [

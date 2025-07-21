@@ -21,6 +21,7 @@ use App\Http\Controllers\ChatGPTController;
 use App\Http\Controllers\EstadoController;
 use App\Http\Controllers\MarcaController;
 use App\Http\Controllers\ModeloController;
+use App\Http\Controllers\ModelUploadController;
 use App\Http\Controllers\PrediccionAulaController;
 use App\Http\Controllers\PrediccionEquipoController;
 use App\Http\Controllers\ProfileController;  // ✅ Para Perfil Usuario    
@@ -37,6 +38,7 @@ Route::get('/enviar-correo', [EmailController::class, 'enviarCorreo']);
 Route::post('/confirm-account/{token}', [UserController::class, 'confirmAccount']);
 Route::post('/change-password', [UserController::class, 'changePassword']);
 Route::post('/chatGPT', [ChatGPTController::class, 'chatWithGpt']);
+Route::post('/upload-model', [ModelUploadController::class, 'upload']);
 
 
 
@@ -101,12 +103,12 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
 
 
     Route::get('/marcas', [MarcaController::class, 'index']);
-Route::get('/modelos', [ModeloController::class, 'index']);
-Route::get('/estados', [EstadoController::class, 'index']);
-Route::get('/categorias', [CategoriaController::class, 'index']);
-Route::get('/caracteristicas', [CaracteristicaController::class, 'index']);
-    Route::post('/nuevaCaracteristica', [CaracteristicaController::class, 'store']);  
-      Route::get('/tipo-equipos/{id}/caracteristicas', [TipoEquipoController::class, 'getCaracteristicas']);    
+    Route::get('/modelos', [ModeloController::class, 'index']);
+    Route::get('/estados', [EstadoController::class, 'index']);
+    Route::get('/categorias', [CategoriaController::class, 'index']);
+    Route::get('/caracteristicas', [CaracteristicaController::class, 'index']);
+    Route::post('/nuevaCaracteristica', [CaracteristicaController::class, 'store']);
+    Route::get('/tipo-equipos/{id}/caracteristicas', [TipoEquipoController::class, 'getCaracteristicas']);
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador,Encargado'])->group(function () {
