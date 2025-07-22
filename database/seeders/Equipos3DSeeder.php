@@ -39,7 +39,7 @@ class Equipos3DSeeder extends Seeder
             TipoEquipo::updateOrCreate(['nombre' => $tipo['nombre']], $tipo);
         }
 
-        // -- Marcas (puedes agregar marcas específicas 3D o usar genéricas) --
+        // -- Marcas --
         $marcas = ['Generic 3D Models'];
         foreach ($marcas as $nombre) {
             Marca::updateOrCreate(['nombre' => $nombre], ['is_deleted' => false]);
@@ -94,12 +94,6 @@ class Equipos3DSeeder extends Seeder
         $tipoProyector = TipoEquipo::where('nombre', 'Proyector')->first();
         $tipoMouse = TipoEquipo::where('nombre', 'Mouse')->first();
 
-        // -- Obtener modelos 3D --
-        $modelos = [];
-        foreach ($modelos3D as $mod) {
-            $modelos[$mod['nombre']] = Modelo::where('nombre', $mod['nombre'])->first();
-        }
-
         // -- Características --
         $caracteristicasData = [
             ['nombre' => 'Peso (kg)', 'tipo_dato' => 'decimal'],
@@ -140,105 +134,60 @@ class Equipos3DSeeder extends Seeder
         // -- Tipo reserva --
         $tipoReservaId = TipoReserva::first()?->id ?? null;
 
-        // -- Equipos 3D --
-        $equipos3D = [
-            [
-                'tipo_equipo_id' => $tipoLaptop->id,
-                'modelo_id' => $modelos['laptop_low-poly']->id,
-                'estado_id' => $estadoDisponible->id,
-                'tipo_reserva_id' => $tipoReservaId,
-                'numero_serie' => '3D-LAPTOP-001',
-                'vida_util' => 3,
-                'cantidad' => 1,
-                'detalles' => 'Laptop 3D low poly modelo',
-                'fecha_adquisicion' => '2023-05-10',
-                'is_deleted' => false,
-                'caracteristicas' => [
-                    'Peso (kg)' => '1.6',
-                    'Color' => 'Negro',
-                    'Resolución (px)' => 1920,
-                ],
-            ],
-            [
-                'tipo_equipo_id' => $tipoMicrofono->id,
-                'modelo_id' => $modelos['razer_seiren_x']->id,
-                'estado_id' => $estadoDisponible->id,
-                'tipo_reserva_id' => $tipoReservaId,
-                'numero_serie' => '3D-MIC-002',
-                'vida_util' => 4,
-                'cantidad' => 1,
-                'detalles' => 'Micrófono 3D Razer Seiren X',
-                'fecha_adquisicion' => '2023-05-12',
-                'is_deleted' => false,
-                'caracteristicas' => [
-                    'Peso (kg)' => '0.7',
-                    'Color' => 'Negro',
-                    'Resolución (px)' => 0,
-                ],
-            ],
-            [
-                'tipo_equipo_id' => $tipoParlante->id,
-                'modelo_id' => $modelos['jbl_charge_3_speaker']->id,
-                'estado_id' => $estadoDisponible->id,
-                'tipo_reserva_id' => $tipoReservaId,
-                'numero_serie' => '3D-SPK-003',
-                'vida_util' => 5,
-                'cantidad' => 1,
-                'detalles' => 'Parlante 3D JBL Charge 3',
-                'fecha_adquisicion' => '2023-05-15',
-                'is_deleted' => false,
-                'caracteristicas' => [
-                    'Peso (kg)' => '1.3',
-                    'Color' => 'Negro',
-                    'Resolución (px)' => 0,
-                ],
-            ],
-            [
-                'tipo_equipo_id' => $tipoProyector->id,
-                'modelo_id' => $modelos['video_projector']->id,
-                'estado_id' => $estadoDisponible->id,
-                'tipo_reserva_id' => $tipoReservaId,
-                'numero_serie' => '3D-PROJ-004',
-                'vida_util' => 6,
-                'cantidad' => 1,
-                'detalles' => 'Proyector 3D genérico',
-                'fecha_adquisicion' => '2023-05-18',
-                'is_deleted' => false,
-                'caracteristicas' => [
-                    'Peso (kg)' => '3.5',
-                    'Color' => 'Blanco',
-                    'Resolución (px)' => 1080,
-                ],
-            ],
-            [
-                'tipo_equipo_id' => $tipoMouse->id,
-                'modelo_id' => $modelos['pc_mouse_type-r']->id,
-                'estado_id' => $estadoDisponible->id,
-                'tipo_reserva_id' => $tipoReservaId,
-                'numero_serie' => '3D-MOUSE-005',
-                'vida_util' => 2,
-                'cantidad' => 1,
-                'detalles' => 'Mouse 3D tipo R',
-                'fecha_adquisicion' => '2023-05-20',
-                'is_deleted' => false,
-                'caracteristicas' => [
-                    'Peso (kg)' => '0.25',
-                    'Color' => 'Negro',
-                    'Resolución (px)' => 0,
-                ],
-            ],
-        ];
+        // -- Obtener todos los modelos ya guardados en BD --
+        $modelos = [];
+        foreach ($modelos3D as $mod) {
+            $modelos[$mod['nombre']] = Modelo::where('nombre', $mod['nombre'])->first();
+        }
 
-        foreach ($equipos3D as $data) {
-            $caracValues = $data['caracteristicas'];
-            unset($data['caracteristicas']);
+        // -- Crear un equipo 3D para cada modelo 3D --
+        foreach ($modelos as $nombreModelo => $modelo) {
+
+            // Detectar tipo equipo según nombre modelo (ejemplo rápido)
+            if (str_contains($nombreModelo, 'laptop')) {
+                $tipoEquipo = $tipoLaptop;
+            } elseif (str_contains($nombreModelo, 'microfono') || str_contains($nombreModelo, 'microphone') || str_contains($nombreModelo, 'razer')) {
+                $tipoEquipo = $tipoMicrofono;
+            } elseif (str_contains($nombreModelo, 'speaker')) {
+                $tipoEquipo = $tipoParlante;
+            } elseif (str_contains($nombreModelo, 'projector')) {
+                $tipoEquipo = $tipoProyector;
+            } elseif (str_contains($nombreModelo, 'mouse')) {
+                $tipoEquipo = $tipoMouse;
+            } else {
+                // Default si no se reconoce
+                $tipoEquipo = $tipoLaptop;
+            }
+
+            $numeroSerie = strtoupper('3D-' . str_replace('_', '-', $nombreModelo)); // ejemplo 3D-LAPTOP-LOW-POLY
+
+            $equipoData = [
+                'tipo_equipo_id' => $tipoEquipo->id,
+                'modelo_id' => $modelo->id,
+                'estado_id' => $estadoDisponible->id,
+                'tipo_reserva_id' => $tipoReservaId,
+                'numero_serie' => $numeroSerie,
+                'vida_util' => 3,  // Puedes ajustar valor por defecto
+                'cantidad' => 1,
+                'detalles' => 'Equipo 3D generado automáticamente para modelo ' . $nombreModelo,
+                'fecha_adquisicion' => now()->toDateString(),
+                'is_deleted' => false,
+                'imagen_gbl' => $modelo->imagen_gbl,
+            ];
 
             $equipo = Equipo::updateOrCreate(
-                ['numero_serie' => $data['numero_serie']],
-                $data
+                ['numero_serie' => $numeroSerie],
+                $equipoData
             );
 
-            foreach ($caracValues as $nombreCarac => $valor) {
+            // Características por defecto (puedes ajustar si quieres valores distintos)
+            $caracteristicasPorDefecto = [
+                'Peso (kg)' => 1.0,
+                'Color' => 'Negro',
+                'Resolución (px)' => 1080,
+            ];
+
+            foreach ($caracteristicasPorDefecto as $nombreCarac => $valor) {
                 $carac = $caracteristicas[$nombreCarac] ?? null;
                 if ($carac) {
                     ValoresCaracteristica::updateOrCreate(
