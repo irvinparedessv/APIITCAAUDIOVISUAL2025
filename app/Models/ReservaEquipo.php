@@ -25,7 +25,7 @@ class ReservaEquipo extends Model
     public function equipos()
     {
         return $this->belongsToMany(Equipo::class, 'equipo_reserva', 'reserva_equipo_id', 'equipo_id')
-                    ->withPivot('cantidad');
+            ->withPivot('cantidad');
     }
 
     public function user()
@@ -53,6 +53,4 @@ class ReservaEquipo extends Model
             ? asset('storage/' . $this->documento_evento)
             : null;
     }
-
-
 }

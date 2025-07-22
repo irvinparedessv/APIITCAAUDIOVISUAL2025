@@ -5,6 +5,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Equipo;
+use App\Models\ReservaEquipo;
 use App\Models\VistaResumenEquipo;
 use Illuminate\Http\Request;
 
@@ -216,7 +217,67 @@ class EquipoController extends Controller
             'fecha' => 'required|date',
             'startTime' => 'required',
             'endTime' => 'required',
+            'page' => 'nullable|integer|min:1',
+            'limit' => 'nullable|integer|min:1|max:100',
+            'search' => 'nullable|string'
         ]);
-        return response()->json(VistaResumenEquipo::all());
+
+        $page = $request->input('page', 1);
+        $limit = $request->input('limit', 5);
+        $search = $request->input('search', '');
+
+        $fechaInicio = $request->fecha . ' ' . $request->startTime;
+        $fechaFin = $request->fecha . ' ' . $request->endTime;
+
+        $reservados = ReservaEquipo::whereDate('fecha_reserva', $request->fecha)
+            ->where('tipo_reserva_id', $request->tipo_reserva_id)
+            ->whereIn('estado', ['Aprobada', 'Pendiente'])
+            ->where(function ($query) use ($fechaInicio, $fechaFin) {
+                $query->whereBetween('fecha_reserva', [$fechaInicio, $fechaFin])
+                    ->orWhereBetween('fecha_entrega', [$fechaInicio, $fechaFin])
+                    ->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
+                        $q->where('fecha_reserva', '<=', $fechaInicio)
+                            ->where('fecha_entrega', '>=', $fechaFin);
+                    });
+            })
+            ->with('equipos.modelo')
+            ->get();
+
+        $reservasPorModelo = collect();
+
+        foreach ($reservados as $reserva) {
+            foreach ($reserva->equipos as $equipo) {
+                $modeloId = $equipo->modelo_id;
+                $actual = $reservasPorModelo->get($modeloId, 0);
+                $reservasPorModelo->put($modeloId, $actual + 1);
+            }
+        }
+
+        $query = VistaResumenEquipo::query();
+
+        if (!empty($search)) {
+            $query->where('nombre_modelo', 'like', "%$search%");
+        }
+
+        $paginator = $query->paginate($limit, ['*'], 'page', $page);
+
+        $filtered = $paginator->getCollection()->transform(function ($item) use ($reservasPorModelo) {
+            $item->cantidad_enreserva = $reservasPorModelo->get($item->modelo_id, 0);
+            $item->disponibles_finales = $item->cantidad_disponible - $item->cantidad_enreserva;
+            return $item;
+        })->filter(function ($item) {
+            return $item->disponibles_finales > 0;
+        })->values(); // Reindexar la colección
+
+        // Crear nueva instancia de LengthAwarePaginator con datos filtrados
+        $result = new \Illuminate\Pagination\LengthAwarePaginator(
+            $filtered,
+            $filtered->count(), // total real de elementos
+            $limit,
+            $page,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
+
+        return response()->json($result);
     }
 }

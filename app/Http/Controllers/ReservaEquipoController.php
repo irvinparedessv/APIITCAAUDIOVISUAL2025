@@ -59,7 +59,7 @@ class ReservaEquipoController extends Controller
         $user = Auth::user();
         $perPage = $request->input('per_page', 15);
 
-        $query = ReservaEquipo::with(['user', 'equipos', 'codigoQr', 'tipoReserva'])
+        $query = ReservaEquipo::with(['user', 'equipos.modelo', 'equipos.insumos.modelo', 'codigoQr', 'tipoReserva'])
             ->orderBy('created_at', 'DESC');
 
         // Filtro de búsqueda por texto
@@ -453,8 +453,8 @@ class ReservaEquipoController extends Controller
             if ($user->id !== $reserva->user_id && $reserva->user) {
                 $reserva->user->notify(new EstadoReservaEquipoNotification($reserva, $reserva->user->id, $pagina, 'edicion'));
                 Log::info("Notificación enviada al prestamista {$reserva->user->id} tras edición");
-                 Mail::to($reserva->user->email)
-                ->queue(new ReservaEditadaMailable($reserva, false)); // false porque es para prestamista
+                Mail::to($reserva->user->email)
+                    ->queue(new ReservaEditadaMailable($reserva, false)); // false porque es para prestamista
             }
         } else {
             // Si el prestamista hizo el cambio, notificar a encargados y administradores
@@ -462,7 +462,7 @@ class ReservaEquipoController extends Controller
                 $responsable->notify(new EstadoReservaEquipoNotification($reserva, $responsable->id, $pagina, 'edicion'));
                 Log::info("Notificación enviada a responsable {$responsable->id} tras edición del prestamista");
                 Mail::to($responsable->email)
-                ->queue(new ReservaEditadaMailable($reserva, true)); // true porque es para responsable
+                    ->queue(new ReservaEditadaMailable($reserva, true)); // true porque es para responsable
             }
         }
 
