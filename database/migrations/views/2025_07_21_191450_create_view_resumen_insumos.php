@@ -4,12 +4,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Migrations\Migration;
 
-class CreateViewResumenEquipos extends Migration
+class CreateViewResumenInsumos extends Migration
 {
     public function up(): void
     {
         DB::statement("
-            CREATE OR REPLACE VIEW vista_resumen_equipos AS
+            CREATE OR REPLACE VIEW vista_resumen_insumos AS
             SELECT 
                 m.nombre AS nombre_modelo,
                 COUNT(e.id) AS cantidad_total,
@@ -18,7 +18,7 @@ class CreateViewResumenEquipos extends Migration
             FROM equipos e
             JOIN modelos m ON m.id = e.modelo_id
             JOIN estados est ON est.id = e.estado_id
-            WHERE e.es_componente = 0
+            WHERE e.es_componente = 1
             GROUP BY e.modelo_id, m.nombre
             ORDER BY m.nombre
         ");
@@ -26,6 +26,6 @@ class CreateViewResumenEquipos extends Migration
 
     public function down(): void
     {
-        DB::statement("DROP VIEW IF EXISTS vista_resumen_equipos");
+        DB::statement("DROP VIEW IF EXISTS vista_resumen_insumos");
     }
 }
