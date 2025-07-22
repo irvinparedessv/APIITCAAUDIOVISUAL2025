@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Modelo;
+use App\Models\Marca;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class ModeloController extends Controller
 {
@@ -11,5 +13,41 @@ class ModeloController extends Controller
     {
         $modelos = Modelo::where('is_deleted', false)->get();
         return response()->json($modelos);
+    }
+
+    public function store(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'nombre' => 'required|string|max:255',
+            'marca_id' => 'required|exists:marcas,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Error de validación',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        // Validar si ya existe un modelo con ese nombre y marca
+        $existente = Modelo::whereRaw('LOWER(nombre) = ?', [strtolower($request->nombre)])
+            ->where('marca_id', $request->marca_id)
+            ->where('is_deleted', false)
+            ->first();
+
+        if ($existente) {
+            return response()->json([
+                'message' => 'El modelo ya existe para esta marca',
+                'id' => $existente->id
+            ], 409);
+        }
+
+        $modelo = Modelo::create([
+            'nombre' => $request->nombre,
+            'marca_id' => $request->marca_id,
+            'is_deleted' => false,
+        ]);
+
+        return response()->json($modelo, 201);
     }
 }

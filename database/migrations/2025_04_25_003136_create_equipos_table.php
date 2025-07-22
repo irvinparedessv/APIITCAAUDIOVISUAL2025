@@ -20,7 +20,7 @@ return new class extends Migration {
             // Datos opcionales, depende si es equipo o insumo
             $table->string('numero_serie')->nullable()->unique(); // Si es equipo
             $table->integer('vida_util')->nullable(); // Si es equipo
-            $table->integer('cantidad')->nullable(); // Si es insumo
+            
 
             $table->text('detalles')->nullable();
             $table->date('fecha_adquisicion')->nullable();
@@ -28,9 +28,11 @@ return new class extends Migration {
             $table->string('imagen_normal')->nullable(); // puede sobrescribir la del modelo
             $table->string('imagen_gbl')->nullable();
 
+            $table->string('comentario')->nullable();
+
             // Para combos
             $table->boolean('es_componente')->default(false);
-            $table->foreignId('padre_id')->nullable()->constrained('equipos')->onDelete('cascade');
+            $table->foreignId('accesorio_id')->nullable()->constrained('equipos')->onDelete('cascade');
 
             $table->boolean('is_deleted')->default(false);
             $table->timestamps();

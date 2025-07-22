@@ -18,6 +18,7 @@ use App\Http\Controllers\BitacoraController;
 use App\Http\Controllers\CaracteristicaController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\ChatGPTController;
+use App\Http\Controllers\EquipoAccesorioController;
 use App\Http\Controllers\EstadoController;
 use App\Http\Controllers\MarcaController;
 use App\Http\Controllers\ModeloController;
@@ -107,12 +108,19 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
 
 
     Route::get('/marcas', [MarcaController::class, 'index']);
+    Route::post('/marcas', [MarcaController::class, 'store']);
     Route::get('/modelos', [ModeloController::class, 'index']);
+    Route::post('/modelos', [ModeloController::class, 'store']);
     Route::get('/estados', [EstadoController::class, 'index']);
     Route::get('/categorias', [CategoriaController::class, 'index']);
     Route::get('/caracteristicas', [CaracteristicaController::class, 'index']);
     Route::post('/nuevaCaracteristica', [CaracteristicaController::class, 'store']);
     Route::get('/tipo-equipos/{id}/caracteristicas', [TipoEquipoController::class, 'getCaracteristicas']);
+
+    Route::get('/equipos/{equipo}/insumos', [EquipoAccesorioController::class, 'index']);
+    Route::post('/equipos/{equipo}/insumos', [EquipoAccesorioController::class, 'store']);
+    Route::delete('/equipos/{equipo}/insumos/{insumo}', [EquipoAccesorioController::class, 'destroy']);
+    Route::get('/equipos/{equipo}/insumos/no-asignados', [EquipoAccesorioController::class, 'insumosNoAsignados']);
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador,Encargado'])->group(function () {

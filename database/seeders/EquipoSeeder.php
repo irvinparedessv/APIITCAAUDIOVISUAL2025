@@ -122,7 +122,7 @@ class EquipoSeeder extends Seeder
                 'tipo_reserva_id' => $tipoReservaId,
                 'numero_serie' => 'SN1234567890',
                 'vida_util' => 5,
-                'cantidad' => null,
+                'comentario' => null,
                 'detalles' => 'Laptop para desarrollo',
                 'fecha_adquisicion' => '2022-01-15',
                 'is_deleted' => false,
@@ -131,6 +131,7 @@ class EquipoSeeder extends Seeder
                     'Peso (kg)' => '1.8',
                     'Tamaño pantalla (pulgadas)' => '14',
                 ],
+                'es_componente' => false,
             ],
             [
                 'tipo_equipo_id' => $tipoLaptop->id,
@@ -139,7 +140,7 @@ class EquipoSeeder extends Seeder
                 'tipo_reserva_id' => $tipoReservaId,
                 'numero_serie' => 'SN0987654321',
                 'vida_util' => 4,
-                'cantidad' => null,
+                'comentario' => null,
                 'detalles' => 'Laptop de oficina',
                 'fecha_adquisicion' => '2021-06-30',
                 'is_deleted' => false,
@@ -148,6 +149,7 @@ class EquipoSeeder extends Seeder
                     'Peso (kg)' => '2.0',
                     'Tamaño pantalla (pulgadas)' => '15.6',
                 ],
+                'es_componente' => false,
             ],
             [
                 'tipo_equipo_id' => $tipoProyector->id,
@@ -156,7 +158,7 @@ class EquipoSeeder extends Seeder
                 'tipo_reserva_id' => $tipoReservaId,
                 'numero_serie' => 'SN1122334455',
                 'vida_util' => 6,
-                'cantidad' => null,
+                'comentario' => null,
                 'detalles' => 'Proyector para salas',
                 'fecha_adquisicion' => '2020-09-10',
                 'is_deleted' => false,
@@ -164,6 +166,7 @@ class EquipoSeeder extends Seeder
                     'Peso (kg)' => '3.5',
                     'Tamaño pantalla (pulgadas)' => '100',
                 ],
+                'es_componente' => false,
             ],
             [
                 'tipo_equipo_id' => $tipoCable->id,
@@ -172,7 +175,7 @@ class EquipoSeeder extends Seeder
                 'tipo_reserva_id' => $tipoReservaId,
                 'numero_serie' => null,
                 'vida_util' => null,
-                'cantidad' => 100,
+                'comentario' => null,
                 'detalles' => 'Cable HDMI 2 metros',
                 'fecha_adquisicion' => '2023-03-20',
                 'is_deleted' => false,
@@ -180,6 +183,7 @@ class EquipoSeeder extends Seeder
                     'Largo (metros)' => '2.0',
                     'Voltaje' => '220',
                 ],
+                'es_componente' => true,
             ],
         ];
 

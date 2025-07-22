@@ -7,8 +7,6 @@ namespace App\Http\Controllers;
 use App\Models\Equipo;
 use App\Models\VistaResumenEquipo;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
-
 
 class EquipoController extends Controller
 {
@@ -43,7 +41,7 @@ class EquipoController extends Controller
                 'tipo' => $tipo,
                 'numero_serie' => $item->numero_serie,
                 'vida_util' => $item->vida_util,
-                'cantidad' => $item->numero_serie ? 1 : $item->cantidad,
+                'cantidad' => 1,
                 'detalles' => $item->detalles,
                 'tipo_equipo_id' => $item->tipo_equipo_id,
                 'modelo_id' => $item->modelo_id,
@@ -97,7 +95,7 @@ class EquipoController extends Controller
             'tipo_reserva_id' => 'nullable|exists:tipo_reservas,id',
             'detalles' => 'nullable|string',
             'fecha_adquisicion' => 'nullable|date',
-            'caracteristicas' => 'nullable|array', // Nuevo campo para características
+            'caracteristicas' => 'nullable|array',
         ];
 
         if ($tipo === 'equipo') {
@@ -109,24 +107,57 @@ class EquipoController extends Controller
 
         $request->validate($rules);
 
-        // Crear el equipo
-        $equipo = Equipo::create($request->except('caracteristicas'));
+        if ($tipo === 'equipo') {
+            // Equipo único
+            $equipo = Equipo::create(array_merge(
+                $request->except('caracteristicas'),
+                ['es_componente' => false]
+            ));
 
-        // Guardar características si existen
-        if ($request->has('caracteristicas')) {
-            foreach ($request->input('caracteristicas') as $caracteristica) {
-                $equipo->valoresCaracteristicas()->create([
-                    'caracteristica_id' => $caracteristica['id'],
-                    'valor' => $caracteristica['valor']
-                ]);
+            // Guardar características
+            if ($request->has('caracteristicas')) {
+                foreach ($request->input('caracteristicas') as $caracteristica) {
+                    $equipo->valoresCaracteristicas()->create([
+                        'caracteristica_id' => $caracteristica['id'],
+                        'valor' => $caracteristica['valor']
+                    ]);
+                }
             }
-        }
 
-        return response()->json([
-            'message' => 'Registrado correctamente',
-            'data' => $equipo->load('valoresCaracteristicas.caracteristica'),
-        ], 201);
+            return response()->json([
+                'message' => 'Equipo registrado correctamente',
+                'data' => $equipo->load('valoresCaracteristicas.caracteristica'),
+            ], 201);
+        } else {
+            // Insumos: crear múltiples registros
+            $cantidad = (int) $request->input('cantidad');
+            $insumos = [];
+
+            for ($i = 0; $i < $cantidad; $i++) {
+                $nuevoInsumo = Equipo::create(array_merge(
+                    $request->except('caracteristicas', 'cantidad', 'numero_serie', 'vida_util'),
+                    ['es_componente' => true]
+                ));
+
+                if ($request->has('caracteristicas')) {
+                    foreach ($request->input('caracteristicas') as $caracteristica) {
+                        $nuevoInsumo->valoresCaracteristicas()->create([
+                            'caracteristica_id' => $caracteristica['id'],
+                            'valor' => $caracteristica['valor']
+                        ]);
+                    }
+                }
+
+                $insumos[] = $nuevoInsumo->load('valoresCaracteristicas.caracteristica');
+            }
+
+            return response()->json([
+                'message' => 'Insumos registrados correctamente',
+                'data' => $insumos,
+            ], 201);
+        }
     }
+
 
     public function update(Request $request, $id)
     {

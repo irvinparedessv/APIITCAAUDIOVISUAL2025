@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-
 class Equipo extends Model
 {
     use HasFactory;
@@ -17,19 +16,19 @@ class Equipo extends Model
         'estado_id',
         'tipo_reserva_id',
         'numero_serie',
-        'cantidad',
         'vida_util',
         'detalles',
         'fecha_adquisicion',
-        'es_componente',   // nuevo
-        'padre_id',        // nuevo
-        'is_deleted',      // para borrado lógico
+        'comentario',
+        'es_componente',   
+        'is_deleted',
+        'cantidad',       
     ];
-
 
     protected $dates = ['fecha_adquisicion'];
 
-    // --- Relaciones ---
+    // Relaciones existentes ...
+
     public function tipoEquipo()
     {
         return $this->belongsTo(TipoEquipo::class, 'tipo_equipo_id');
@@ -61,34 +60,53 @@ class Equipo extends Model
             ->withPivot('cantidad');
     }
 
-    public function padre()
-    {
-        return $this->belongsTo(Equipo::class, 'padre_id');
-    }
-
-    public function componentes()
-    {
-        return $this->hasMany(Equipo::class, 'padre_id')->where('es_componente', true);
-    }
-
-    public function esInsumo()
-    {
-        return !is_null($this->cantidad) && is_null($this->numero_serie);
-    }
-
-    public function esEquipo()
-    {
-        return !is_null($this->numero_serie);
-    }
-
     public function valoresCaracteristicas()
     {
         return $this->hasMany(ValoresCaracteristica::class, 'equipo_id');
     }
 
+    // Nuevas relaciones con tabla pivote equipo_accesorio
 
+    /**
+     * Insumos (componentes) asociados a este equipo
+     */
+    public function insumos()
+    {
+        return $this->belongsToMany(
+            Equipo::class,
+            'equipo_accesorio',
+            'equipo_id',
+            'insumo_id'
+        )->withTimestamps();
+    }
 
-    // --- Accesor para imagen del modelo ---
+    /**
+     * Equipos donde este equipo (insumo) está asignado
+     */
+    public function equiposDondeEsInsumo()
+    {
+        return $this->belongsToMany(
+            Equipo::class,
+            'equipo_accesorio',
+            'insumo_id',
+            'equipo_id'
+        )->withTimestamps();
+    }
+
+    // Método para filtrar solo insumos (componentes)
+    public function scopeComponentes($query)
+    {
+        return $query->where('es_componente', true);
+    }
+
+    // Método para filtrar solo equipos que NO son insumos
+    public function scopeEquipos($query)
+    {
+        return $query->where('es_componente', false);
+    }
+
+    // El resto igual...
+
     public function getImagenUrlAttribute()
     {
         return $this->modelo && $this->modelo->imagen_normal
@@ -96,8 +114,6 @@ class Equipo extends Model
             : asset('storage/modelos/default.png');
     }
 
-
-    // --- Scope para filtrar equipos activos (no eliminados y tipo activo) ---
     public function scopeActivos($query)
     {
         return $query->whereHas('tipoEquipo', function ($q) {
@@ -105,7 +121,6 @@ class Equipo extends Model
         });
     }
 
-    // --- Método para devolver datos estructurados para frontend ---
     public static function obtenerEquiposActivosConTipoReserva()
     {
         return self::activos()
