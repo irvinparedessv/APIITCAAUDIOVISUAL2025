@@ -29,7 +29,6 @@ use App\Http\Controllers\ProfileController;  // ✅ Para Perfil Usuario
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\ReservaAulaController;
 use App\Http\Controllers\TipoReservaController;
-use App\Http\Controllers\UbicacionController;
 
 // Rutas públicas
 Route::get('/equiposDisponiblesPorTipoYFecha', [EquipoController::class, 'equiposDisponiblesPorTipoYFecha']);
@@ -89,11 +88,6 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/prediccion/aula/{aulaId}', [PrediccionAulaController::class, 'predecir']);
     Route::get('/prediccion/aulas/general', [PrediccionAulaController::class, 'prediccionGeneralAulas']);
 
-    Route::post('/ubicaciones', [UbicacionController::class, 'store']);
-    Route::put('/ubicaciones/{id}', [UbicacionController::class, 'update']);
-    Route::delete('/ubicaciones/{id}', [UbicacionController::class, 'destroy']);
-    Route::get('/ubicaciones/paginate', [UbicacionController::class, 'paginate']);
-    Route::get('/ubicaciones/{id}', [UbicacionController::class, 'show']);
 
 
 
@@ -170,7 +164,6 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::post('/aulas/{aula}/encargados', [AulaController::class, 'asignarEncargados']);
     Route::get('/aulas/{id}/encargados', [AulaController::class, 'encargados']);
     Route::get('/aulas/{aula}/disponibilidad', [AulaController::class, 'disponibilidad']);
-    Route::get('/ubicaciones', [UbicacionController::class, 'index']);
     Route::get('/encargados', function () {
         return \App\Models\User::encargadosAula()->get();
     });

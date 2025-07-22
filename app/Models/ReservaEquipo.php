@@ -39,7 +39,7 @@ class ReservaEquipo extends Model
 
     public function aula()
     {
-        return $this->belongsTo(Aula::class, 'aula_id'); // o el nombre correcto del campo
+        return $this->belongsTo(Aula::class, 'aula_id');
     }
 
     public function tipoReserva()

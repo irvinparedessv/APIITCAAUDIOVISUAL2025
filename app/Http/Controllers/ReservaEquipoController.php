@@ -59,7 +59,7 @@ class ReservaEquipoController extends Controller
         $user = Auth::user();
         $perPage = $request->input('per_page', 15);
 
-        $query = ReservaEquipo::with(['user', 'equipos.modelo', 'equipos.insumos.modelo', 'codigoQr', 'tipoReserva'])
+        $query = ReservaEquipo::with(['user', 'equipos.modelo', 'equipos.insumos.modelo', 'codigoQr', 'tipoReserva', 'aula'])
             ->orderBy('created_at', 'DESC');
 
         // Filtro de búsqueda por texto
@@ -162,7 +162,7 @@ class ReservaEquipoController extends Controller
             'equipo' => 'required|array',
             'equipo.*.id' => 'required|exists:equipos,id',
             'equipo.*.cantidad' => 'required|integer|min:1',
-            'aula' => 'required',
+            'aula' => 'required|exists:aulas,id',
             'fecha_reserva' => 'required|date',
             'startTime' => 'required|date_format:H:i',
             'endTime' => 'required|date_format:H:i',

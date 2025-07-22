@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('reserva_equipos', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('aula');
+            $table->foreignId('aula_id')->constrained('aulas')->onDelete('cascade');
             $table->dateTime('fecha_reserva');
             $table->dateTime('fecha_entrega');
             $table->string('estado')->default('Pendiente');
