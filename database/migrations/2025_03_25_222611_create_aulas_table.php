@@ -14,6 +14,9 @@ return new class extends Migration
         Schema::create('aulas', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->string('path_modelo')->nullable();
+            $table->integer('capacidad_maxima');
+            $table->text('descripcion')->nullable();
             $table->timestamps();
             $table->boolean('deleted')->default(false);
         });

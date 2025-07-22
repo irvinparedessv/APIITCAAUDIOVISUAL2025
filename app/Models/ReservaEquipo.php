@@ -13,7 +13,7 @@ class ReservaEquipo extends Model
     protected $fillable = [
         'equipo_id',
         'user_id',
-        'aula',
+        'aula_id',
         'fecha_reserva',
         'fecha_entrega',
         'estado',
@@ -21,12 +21,13 @@ class ReservaEquipo extends Model
         'documento_evento',
     ];
 
-
     public function equipos()
     {
         return $this->belongsToMany(Equipo::class, 'equipo_reserva', 'reserva_equipo_id', 'equipo_id')
-            ->withPivot('cantidad');
+            ->using(EquipoReserva::class)
+            ->withPivot('cantidad', 'comentario');
     }
+
 
     public function user()
     {

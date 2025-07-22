@@ -262,7 +262,7 @@ class ReservaEquipoController extends Controller
             'user_id' => $userIdReserva,
             'fecha_reserva' => Carbon::parse($validated['fecha_reserva'] . ' ' . $validated['startTime']),
             'fecha_entrega' => Carbon::parse($validated['fecha_reserva'] . ' ' . $validated['endTime']),
-            'aula' => $validated['aula'],
+            'aula_id' => $validated['aula'],
             'estado' => 'Pendiente',
             'tipo_reserva_id' => $validated['tipo_reserva_id'],
             'documento_evento' => $documentoPath,

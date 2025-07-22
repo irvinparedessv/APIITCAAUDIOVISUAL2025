@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('reserva_equipo_id')->constrained('reserva_equipos')->onDelete('cascade');
             $table->foreignId('equipo_id')->constrained('equipos')->onDelete('cascade');
+            $table->text('comentario')->nullable();
         });
     }
 

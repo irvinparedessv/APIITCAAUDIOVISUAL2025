@@ -11,6 +11,7 @@ use App\Models\ReservaAulaBloque;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Str;
 
 class AulaController extends Controller
 {
@@ -29,7 +30,10 @@ class AulaController extends Controller
                     }
                 },
             ],
-            'render_images.*' => 'nullable|file',
+            'descripcion' => 'nullable|string',
+            'capacidad_maxima' => 'nullable|integer|min:1',
+            'path_modelo' => 'nullable|file|mimes:glb,gltf|max:20480',
+            'render_images.*' => 'nullable|file|image|mimes:jpeg,png,jpg|max:14000',
             'render_images_is360.*' => 'nullable|boolean',
             'available_times' => 'required|json',
         ]);
@@ -37,21 +41,28 @@ class AulaController extends Controller
         DB::beginTransaction();
 
         try {
-            // 1. Crear aula
+            $modeloPath = null;
+
+            if ($request->hasFile('path_modelo')) {
+                $uuid = Str::uuid()->toString();
+                $file = $request->file('path_modelo');
+                $extension = $file->getClientOriginalExtension();
+                $filename = "$uuid.$extension";
+                $path = $file->storeAs('models', $filename, 'public');
+                $modeloPath = 'storage/' . $path;
+            }
+
             $aula = Aula::create([
                 'name' => trim($request->input('name')),
+                'descripcion' => $request->input('descripcion'),
+                'capacidad_maxima' => $request->input('capacidad_maxima'),
+                'path_modelo' => $modeloPath,
             ]);
 
-            // 2. Guardar imágenes
-            if ($request->hasFile('render_images')) {
+            if (!$modeloPath && $request->hasFile('render_images')) {
                 foreach ($request->file('render_images') as $index => $file) {
                     $path = $file->store('render_images', 'public');
-                    $is360 = filter_var(
-                        $request->input("render_images_is360.$index"),
-                        FILTER_VALIDATE_BOOLEAN,
-                        FILTER_NULL_ON_FAILURE
-                    );
-                    $is360 = is_null($is360) ? false : $is360;
+                    $is360 = filter_var($request->input("render_images_is360.$index"), FILTER_VALIDATE_BOOLEAN) ?? false;
 
                     ImagenesAula::create([
                         'aula_id' => $aula->id,
@@ -61,9 +72,7 @@ class AulaController extends Controller
                 }
             }
 
-            // 3. Guardar horarios
             $availableTimes = json_decode($request->input('available_times'), true);
-
             foreach ($availableTimes as $time) {
                 HorarioAulas::create([
                     'aula_id' => $aula->id,
@@ -77,12 +86,10 @@ class AulaController extends Controller
             return response()->json(['message' => 'Aula creada correctamente'], 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'error' => 'Error al crear el aula',
-                'details' => $e->getMessage()
-            ], 500);
+            return response()->json(['error' => 'Error al crear el aula', 'details' => $e->getMessage()], 500);
         }
     }
+
 
     public function update(Request $request, $id)
     {
@@ -102,74 +109,73 @@ class AulaController extends Controller
                     }
                 },
             ],
+            'descripcion' => 'nullable|string',
+            'capacidad_maxima' => 'nullable|integer|min:1',
+            'path_modelo' => 'nullable|file|mimes:glb,gltf|max:20480',
             'available_times' => 'nullable|string',
             'render_images.*' => 'nullable|image|mimes:jpeg,png,jpg|max:14000',
             'render_images_is360.*' => 'nullable|boolean',
             'keep_images.*' => 'nullable|string',
         ]);
 
-        $availableTimes = [];
-        if ($request->filled('available_times')) {
-            $availableTimes = json_decode($request->available_times, true);
-
-            if (!is_array($availableTimes)) {
-                return response()->json([
-                    'message' => 'El campo available_times debe ser un array válido.'
-                ], 422);
-            }
-
-            foreach ($availableTimes as $time) {
-                if (
-                    empty($time['start_date']) ||
-                    empty($time['end_date']) ||
-                    empty($time['days']) || !is_array($time['days'])
-                ) {
-                    return response()->json([
-                        'message' => 'Cada horario debe tener start_date, end_date y days.'
-                    ], 422);
-                }
-            }
-        }
-
         $aula = Aula::findOrFail($id);
         $aula->name = trim($request->name);
-        $aula->save();
+        $aula->descripcion = $request->input('descripcion');
+        $aula->capacidad_maxima = $request->input('capacidad_maxima');
 
-        // Actualizar horarios
-        $aula->horarios()->delete();
-        foreach ($availableTimes as $time) {
-            $aula->horarios()->create([
-                'start_date' => $time['start_date'],
-                'end_date' => $time['end_date'],
-                'days' => json_encode($time['days']),
-            ]);
+        if ($request->hasFile('path_modelo')) {
+            if ($aula->path_modelo) {
+                $oldPath = str_replace('storage/', '', $aula->path_modelo);
+                Storage::disk('public')->delete($oldPath);
+            }
+            $uuid = Str::uuid()->toString();
+            $file = $request->file('path_modelo');
+            $extension = $file->getClientOriginalExtension();
+            $filename = "$uuid.$extension";
+            $path = $file->storeAs('models', $filename, 'public');
+            $aula->path_modelo = 'storage/' . $path;
         }
 
-        // --- Imágenes ---
-        $keepImages = $request->input('keep_images', []);
+        $aula->save();
 
-        foreach ($aula->imagenes as $img) {
-            if (!in_array($img->id, $keepImages)) {
-                $path = str_replace('/storage/', '', $img->image_path);
-                Storage::disk('public')->delete($path);
-                $img->delete();
+        $aula->horarios()->delete();
+        if ($request->filled('available_times')) {
+            $availableTimes = json_decode($request->available_times, true);
+            foreach ($availableTimes as $time) {
+                $aula->horarios()->create([
+                    'start_date' => $time['start_date'],
+                    'end_date' => $time['end_date'],
+                    'days' => json_encode($time['days']),
+                ]);
             }
         }
 
-        if ($request->hasFile('render_images')) {
-            foreach ($request->file('render_images') as $index => $img) {
-                $path = $img->store('render_images', 'public');
-                $is360 = $request->input("render_images_is360.$index") ? true : false;
-                ImagenesAula::create([
-                    'aula_id' => $aula->id,
-                    'image_path' => 'storage/' . $path,
-                    'is360' => $is360,
-                ]);
+        if (!$aula->path_modelo) {
+            $keepImages = $request->input('keep_images', []);
+            foreach ($aula->imagenes as $img) {
+                if (!in_array($img->id, $keepImages)) {
+                    $path = str_replace('/storage/', '', $img->image_path);
+                    Storage::disk('public')->delete($path);
+                    $img->delete();
+                }
+            }
+
+            if ($request->hasFile('render_images')) {
+                foreach ($request->file('render_images') as $index => $img) {
+                    $path = $img->store('render_images', 'public');
+                    $is360 = $request->input("render_images_is360.$index") ? true : false;
+                    ImagenesAula::create([
+                        'aula_id' => $aula->id,
+                        'image_path' => 'storage/' . $path,
+                        'is360' => $is360,
+                    ]);
+                }
             }
         }
 
         return response()->json(['message' => 'Aula actualizada correctamente.']);
     }
+
 
     public function list(Request $request)
     {
@@ -374,7 +380,8 @@ class AulaController extends Controller
     }
     public function show($id)
     {
-        $aula = Aula::with(['imagenes', 'horarios'])->findOrFail($id);
+        $aula = Aula::with(['imagenes', 'horarios'])->where('deleted', false)
+            ->findOrFail($id);
 
         return response()->json($aula);
     }

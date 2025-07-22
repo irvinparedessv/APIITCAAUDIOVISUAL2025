@@ -9,16 +9,24 @@ class Aula extends Model
 {
     /** @use HasFactory<\Database\Factories\AulaFactory> */
     use HasFactory;
-    protected $fillable = ['name'];
+
+    protected $fillable = [
+        'name',
+        'path_modelo',
+        'capacidad_maxima',
+        'descripcion',
+    ];
 
     public function imagenes()
     {
         return $this->hasMany(ImagenesAula::class);
     }
+
     public function users()
     {
         return $this->belongsToMany(User::class, 'aula_user');
     }
+
     public function horarios()
     {
         return $this->hasMany(HorarioAulas::class);
@@ -28,10 +36,12 @@ class Aula extends Model
     {
         return $this->hasOne(ImagenesAula::class, 'aula_id')->orderBy('id');
     }
+
     public function encargados()
     {
         return $this->belongsToMany(User::class, 'aula_user');
     }
+
     public function reservas()
     {
         return $this->hasMany(ReservaAula::class, 'aula_id');
@@ -39,12 +49,6 @@ class Aula extends Model
 
     /**
      * Devuelve aulas disponibles con bloques y horarios que coinciden con una fecha dada.
-     *
-     * @param string $fecha Formato 'Y-m-d'
-     * @return \Illuminate\Support\Collection
-     */
-    /**
-     * Devuelve aulas disponibles con bloques (filtrados por estado) y horarios que coinciden con una fecha dada.
      *
      * @param string $fecha Formato 'Y-m-d'
      * @return \Illuminate\Support\Collection
@@ -79,7 +83,7 @@ class Aula extends Model
                                 'fecha_fin'    => $bloque->fecha_fin,
                                 'hora_inicio'  => $bloque->hora_inicio,
                                 'hora_fin'     => $bloque->hora_fin,
-                                'estado'       => $bloque->estado ?? $reserva->estado, // Toma el estado del bloque o de la reserva
+                                'estado'       => $bloque->estado ?? $reserva->estado,
                             ];
                         });
                     })->values(),
