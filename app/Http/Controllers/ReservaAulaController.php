@@ -44,6 +44,9 @@ class ReservaAulaController extends Controller
             return [
                 'id' => $aula->id,
                 'name' => $aula->name,
+                'path_modelo' => $aula->path_modelo,
+                'capacidad_maxima' => $aula->capacidad_maxima,
+                'descripcion' => $aula->descripcion,
                 'imagenes' => $aula->imagenes->map(function ($img) {
                     return [
                         'url' => url($img->image_path),
