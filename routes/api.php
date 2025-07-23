@@ -29,6 +29,7 @@ use App\Http\Controllers\ProfileController;  // ✅ Para Perfil Usuario
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\ReservaAulaController;
 use App\Http\Controllers\TipoReservaController;
+use App\Http\Controllers\ValoresCaracteristicaController;
 
 // Rutas públicas
 Route::get('/equiposDisponiblesPorTipoYFecha', [EquipoController::class, 'equiposDisponiblesPorTipoYFecha']);
@@ -115,6 +116,10 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::post('/equipos/{equipo}/insumos', [EquipoAccesorioController::class, 'store']);
     Route::delete('/equipos/{equipo}/insumos/{insumo}', [EquipoAccesorioController::class, 'destroy']);
     Route::get('/equipos/{equipo}/insumos/no-asignados', [EquipoAccesorioController::class, 'insumosNoAsignados']);
+
+    Route::get('/valores-caracteristica/{equipo}', [ValoresCaracteristicaController::class, 'index']);
+    Route::get('/valores-caracteristica/equipo/{equipoId}', [ValoresCaracteristicaController::class, 'caracteristicasConValoresPorEquipo']);
+    Route::post('/valores-caracteristica/equipo/{equipoId}/actualizar', [ValoresCaracteristicaController::class, 'actualizarValoresPorEquipo']);
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador,Encargado'])->group(function () {

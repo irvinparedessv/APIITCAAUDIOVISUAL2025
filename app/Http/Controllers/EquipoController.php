@@ -6,12 +6,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Equipo;
 use App\Models\ReservaEquipo;
+use App\Models\ValoresCaracteristica;
 use App\Models\VistaResumenEquipo;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class EquipoController extends Controller
 {
-    public function index(Request $request)
+     public function index(Request $request)
     {
         $perPage = $request->input('perPage', 10);
 
@@ -21,7 +23,7 @@ class EquipoController extends Controller
             'modelo',
             'estado',
             'tipoReserva',
-            'valoresCaracteristicas.caracteristica',  // <-- carga características relacionadas
+            'valoresCaracteristicas.caracteristica',
         ])->where('is_deleted', false);
 
         if ($request->filled('tipo')) {
@@ -34,48 +36,51 @@ class EquipoController extends Controller
 
         $equipos = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
-        $equipos->getCollection()->transform(function ($item) {
-            $tipo = $item->numero_serie ? 'equipo' : 'insumo';
+        // Aquí reasignas la colección transformada
+        $equipos->setCollection(
+            $equipos->getCollection()->transform(function ($item) {
+                $tipo = $item->numero_serie ? 'equipo' : 'insumo';
 
-            return [
-                'id' => $item->id,
-                'tipo' => $tipo,
-                'numero_serie' => $item->numero_serie,
-                'vida_util' => $item->vida_util,
-                'cantidad' => 1,
-                'detalles' => $item->detalles,
-                'tipo_equipo_id' => $item->tipo_equipo_id,
-                'modelo_id' => $item->modelo_id,
-                'estado_id' => $item->estado_id,
-                'tipo_reserva_id' => $item->tipo_reserva_id,
-                'fecha_adquisicion' => $item->fecha_adquisicion,
-                'imagen_url' => $item->imagen_normal
-                    ? asset('storage/equipos/' . $item->imagen_normal)
-                    : asset('storage/equipos/default.png'),
-                'marca' => $item->modelo->marca->nombre ?? null,
-                'tipoEquipo' => $item->tipoEquipo,
-                'modelo' => $item->modelo,
-                'estado' => $item->estado,
-                'tipoReserva' => $item->tipoReserva,
-                'caracteristicas' => $item->valoresCaracteristicas->map(function ($vc) {
-                    return [
-                        'id' => $vc->id,
-                        'caracteristica_id' => $vc->caracteristica_id,
-                        'nombre' => $vc->caracteristica->nombre ?? null,
-                        'valor' => $vc->valor,
-                    ];
-                }),
-            ];
-        });
-
+                return [
+                    'id' => $item->id,
+                    'tipo' => $tipo,
+                    'numero_serie' => $item->numero_serie,
+                    'vida_util' => $item->vida_util,
+                    'cantidad' => 1,
+                    'detalles' => $item->detalles,
+                    'tipo_equipo_id' => $item->tipo_equipo_id,
+                    'modelo_id' => $item->modelo_id,
+                    'estado_id' => $item->estado_id,
+                    'tipo_reserva_id' => $item->tipo_reserva_id,
+                    'fecha_adquisicion' => $item->fecha_adquisicion,
+                    'imagen_url' => $item->imagen_normal
+                        ? asset('storage/equipos/' . $item->imagen_normal)
+                        : asset('storage/equipos/default.png'),
+                    'marca' => $item->modelo->marca->nombre ?? null,
+                    'tipoEquipo' => $item->tipoEquipo,
+                    'modelo' => $item->modelo,
+                    'estado' => $item->estado,
+                    'tipoReserva' => $item->tipoReserva,
+                    'caracteristicas' => $item->valoresCaracteristicas->map(function ($vc) {
+                        return [
+                            'id' => $vc->id,
+                            'caracteristica_id' => $vc->caracteristica_id,
+                            'nombre' => $vc->caracteristica->nombre ?? null,
+                            'valor' => $vc->valor,
+                        ];
+                    }),
+                ];
+            })
+        );
 
         return response()->json($equipos);
     }
 
 
+
     public function show($id)
     {
-        $equipo = Equipo::with(['tipoEquipo', 'modelo', 'estado', 'tipoReserva'])->findOrFail($id);
+        $equipo = Equipo::with(['tipoEquipo', 'modelo', 'estado', 'tipoReserva', 'valoresCaracteristicas.caracteristica'])->findOrFail($id);
 
         $equipo->tipo = $equipo->numero_serie ? 'equipo' : 'insumo';
         $equipo->imagen_url = $equipo->imagen_normal
@@ -84,6 +89,7 @@ class EquipoController extends Controller
 
         return response()->json($equipo);
     }
+
 
     public function store(Request $request)
     {
@@ -162,9 +168,28 @@ class EquipoController extends Controller
 
     public function update(Request $request, $id)
     {
+        Log::debug('Datos recibidos en el servidor:', $request->all());
+
         $equipo = Equipo::findOrFail($id);
         $tipo = $equipo->numero_serie ? 'equipo' : 'insumo';
 
+        // 🛠 RECONSTRUIR CARACTERÍSTICAS SI VIENEN COMO FORM DATA
+        if (!is_array($request->input('caracteristicas'))) {
+            $caracteristicas = [];
+            foreach ($request->all() as $key => $value) {
+                if (preg_match('/^caracteristicas\[(\d+)]\[caracteristica_id]$/', $key, $matches)) {
+                    $index = $matches[1];
+                    $caracteristicas[$index]['caracteristica_id'] = $value;
+                }
+                if (preg_match('/^caracteristicas\[(\d+)]\[valor]$/', $key, $matches)) {
+                    $index = $matches[1];
+                    $caracteristicas[$index]['valor'] = $value;
+                }
+            }
+            $request->merge(['caracteristicas' => array_values($caracteristicas)]);
+        }
+
+        // ✅ VALIDACIÓN
         $rules = [
             'tipo_equipo_id' => 'sometimes|required|exists:tipo_equipos,id',
             'modelo_id' => 'sometimes|required|exists:modelos,id',
@@ -172,6 +197,9 @@ class EquipoController extends Controller
             'tipo_reserva_id' => 'nullable|exists:tipo_reservas,id',
             'detalles' => 'nullable|string',
             'fecha_adquisicion' => 'nullable|date',
+            'caracteristicas' => 'sometimes|array',
+            'caracteristicas.*.caracteristica_id' => 'required|exists:caracteristicas,id',
+            'caracteristicas.*.valor' => 'required',
         ];
 
         if ($tipo === 'equipo') {
@@ -181,13 +209,71 @@ class EquipoController extends Controller
             $rules['cantidad'] = 'sometimes|required|integer|min:1';
         }
 
-        $request->validate($rules);
-        $equipo->update($request->all());
+        $validatedData = $request->validate($rules);
+
+        // ✅ ACTUALIZAR CAMPOS DEL MODELO EQUIPO
+        $equipoFields = collect($validatedData)->only([
+            'tipo_equipo_id',
+            'modelo_id',
+            'estado_id',
+            'tipo_reserva_id',
+            'detalles',
+            'fecha_adquisicion',
+            'numero_serie',
+            'vida_util',
+            'cantidad'
+        ])->toArray();
+
+        $equipo->update($equipoFields);
+
+        // ✅ SINCRONIZAR CARACTERÍSTICAS SI VIENEN
+        if ($request->has('caracteristicas')) {
+            $this->sincronizarCaracteristicas($equipo, $request->input('caracteristicas'));
+        }
+
+        Log::debug('Características recibidas en update:', ['caracteristicas' => $request->input('caracteristicas')]);
 
         return response()->json([
-            'message' => 'Actualizado correctamente',
-            'data' => $equipo,
+            'message' => 'Equipo actualizado correctamente',
+            'data' => $equipo->fresh()->load('valoresCaracteristicas.caracteristica'),
         ]);
+    }
+
+
+    protected function sincronizarCaracteristicas(Equipo $equipo, array $caracteristicas)
+    {
+
+        Log::debug("Sincronizando características", ['caracteristicas' => $caracteristicas]);
+
+        // Obtener IDs nuevos que vienen en la petición
+        $idsNuevos = collect($caracteristicas)->pluck('caracteristica_id')->all();
+
+        // Log de IDs nuevos
+        Log::debug("IDs nuevos enviados:", $idsNuevos);
+
+        // Obtener los IDs existentes en la base para ese equipo
+        $idsExistentes = ValoresCaracteristica::where('equipo_id', $equipo->id)
+            ->pluck('caracteristica_id')
+            ->all();
+
+        // Log de IDs existentes en DB antes de eliminar
+        Log::debug("IDs existentes en DB:", $idsExistentes);
+
+        // Mostrar qué IDs serán eliminados (los que existen pero no están en nuevos)
+        $idsAEliminar = array_diff($idsExistentes, $idsNuevos);
+        Log::debug("IDs que se eliminarán:", $idsAEliminar);
+
+
+        // Insertar o actualizar los valores recibidos
+        foreach ($caracteristicas as $caracteristica) {
+            ValoresCaracteristica::updateOrCreate(
+                [
+                    'equipo_id' => $equipo->id,
+                    'caracteristica_id' => $caracteristica['caracteristica_id'],
+                ],
+                ['valor' => $caracteristica['valor']]
+            );
+        }
     }
 
     public function destroy($id)
