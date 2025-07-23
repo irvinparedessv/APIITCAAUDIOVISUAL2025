@@ -9,11 +9,12 @@ use App\Models\ReservaEquipo;
 use App\Models\ValoresCaracteristica;
 use App\Models\VistaResumenEquipo;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class EquipoController extends Controller
 {
-     public function index(Request $request)
+    public function index(Request $request)
     {
         $perPage = $request->input('perPage', 10);
 
@@ -366,4 +367,90 @@ class EquipoController extends Controller
 
         return response()->json($result);
     }
+
+    public function getResumenInventario(Request $request)
+    {
+        $query = DB::table('vista_resumen_inventario');
+
+        if ($request->filled('categoria')) {
+            $query->where('nombre_categoria', $request->categoria);
+        }
+
+        if ($request->filled('tipo_equipo')) {
+            $query->where('nombre_tipo_equipo', $request->tipo_equipo);
+        }
+
+        if ($request->filled('marca')) {
+            $query->where('nombre_marca', $request->marca);
+        }
+
+        // paginar, por ejemplo 10 por página
+        $result = $query->paginate(10);
+
+        return response()->json($result);
+    }
+
+    public function equiposPorModelo(Request $request, $modeloId)
+{
+    $perPage = $request->input('perPage', 10);
+
+    $query = Equipo::with([
+        'tipoEquipo',
+        'modelo.marca',
+        'estado',
+        'tipoReserva',
+        'valoresCaracteristicas.caracteristica',
+    ])
+    ->where('is_deleted', false)
+    ->where('modelo_id', $modeloId);
+
+    if ($request->filled('tipo')) {
+        if ($request->input('tipo') === 'equipo') {
+            $query->whereNotNull('numero_serie');
+        } elseif ($request->input('tipo') === 'insumo') {
+            $query->whereNotNull('cantidad');
+        }
+    }
+
+    $equipos = $query->orderBy('created_at', 'desc')->paginate($perPage);
+
+    $equipos->setCollection(
+        $equipos->getCollection()->transform(function ($item) {
+            $tipo = $item->numero_serie ? 'equipo' : 'insumo';
+
+            return [
+                'id' => $item->id,
+                'tipo' => $tipo,
+                'numero_serie' => $item->numero_serie,
+                'vida_util' => $item->vida_util,
+                'cantidad' => 1,
+                'detalles' => $item->detalles,
+                'tipo_equipo_id' => $item->tipo_equipo_id,
+                'modelo_id' => $item->modelo_id,
+                'estado_id' => $item->estado_id,
+                'tipo_reserva_id' => $item->tipo_reserva_id,
+                'fecha_adquisicion' => $item->fecha_adquisicion,
+                'imagen_url' => $item->imagen_normal
+                    ? asset('storage/equipos/' . $item->imagen_normal)
+                    : asset('storage/equipos/default.png'),
+                'marca' => $item->modelo->marca->nombre ?? null,
+                'tipoEquipo' => $item->tipoEquipo,
+                'modelo' => $item->modelo,
+                'estado' => $item->estado,
+                'tipoReserva' => $item->tipoReserva,
+                'caracteristicas' => $item->valoresCaracteristicas->map(function ($vc) {
+                    return [
+                        'id' => $vc->id,
+                        'caracteristica_id' => $vc->caracteristica_id,
+                        'nombre' => $vc->caracteristica->nombre ?? null,
+                        'valor' => $vc->valor,
+                    ];
+                }),
+            ];
+        })
+    );
+
+    return response()->json($equipos);
+}
+
 }

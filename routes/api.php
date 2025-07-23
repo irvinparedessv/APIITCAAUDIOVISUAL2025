@@ -120,6 +120,10 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/valores-caracteristica/{equipo}', [ValoresCaracteristicaController::class, 'index']);
     Route::get('/valores-caracteristica/equipo/{equipoId}', [ValoresCaracteristicaController::class, 'caracteristicasConValoresPorEquipo']);
     Route::post('/valores-caracteristica/equipo/{equipoId}/actualizar', [ValoresCaracteristicaController::class, 'actualizarValoresPorEquipo']);
+
+    Route::get('/inventario/modelo/{modeloId}', [EquipoController::class, 'equiposPorModelo']);
+    Route::get('/resumen-inventario', [EquipoController::class, 'getResumenInventario']);
+
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador,Encargado'])->group(function () {
