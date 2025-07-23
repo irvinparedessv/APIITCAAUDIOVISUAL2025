@@ -42,7 +42,7 @@ class EquipoAccesorioController extends Controller
         ]);
 
         // Verificar que el insumo no esté asignado a otro equipo
-        $asignado = DB::table('equipo_insumo')->where('insumo_id', $request->insumo_id)->exists();
+        $asignado = DB::table('equipo_accesorio')->where('insumo_id', $request->insumo_id)->exists();
 
         if ($asignado) {
             return response()->json(['message' => 'El insumo ya está asignado a otro equipo.'], 422);

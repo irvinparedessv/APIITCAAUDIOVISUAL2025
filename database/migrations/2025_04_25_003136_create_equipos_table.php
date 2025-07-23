@@ -32,7 +32,6 @@ return new class extends Migration {
 
             // Para combos
             $table->boolean('es_componente')->default(false);
-            $table->foreignId('accesorio_id')->nullable()->constrained('equipos')->onDelete('cascade');
 
             $table->boolean('is_deleted')->default(false);
             $table->timestamps();
