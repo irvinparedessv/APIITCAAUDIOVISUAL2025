@@ -14,7 +14,7 @@ class ReservaEquipoSeeder extends Seeder
 {
     public function run(): void
     {
-        $equipos = Equipo::all();
+        $equipos = Equipo::where('es_componente', false)->get();
         $usuarios = User::all();
         $ubicaciones = Aula::all();
 
