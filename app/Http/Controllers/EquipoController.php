@@ -7,8 +7,10 @@ namespace App\Http\Controllers;
 use App\Models\Equipo;
 use App\Models\ReservaEquipo;
 use App\Models\ValoresCaracteristica;
+use App\Models\VistaEquipo;
 use App\Models\VistaResumenEquipo;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -316,58 +318,70 @@ class EquipoController extends Controller
         $fechaInicio = $request->fecha . ' ' . $request->startTime;
         $fechaFin = $request->fecha . ' ' . $request->endTime;
 
-        $reservados = ReservaEquipo::whereDate('fecha_reserva', $request->fecha)
-            ->where('tipo_reserva_id', $request->tipo_reserva_id)
-            ->whereIn('estado', ['Aprobada', 'Pendiente'])
+        // Equipos reservados
+        $equiposReservados = DB::table('reserva_equipos as re')
+            ->join('equipo_reserva as er', 're.id', '=', 'er.reserva_equipo_id')
+            ->where('re.tipo_reserva_id', $request->tipo_reserva_id)
+            ->whereIn('re.estado', ['Aprobada', 'Pendiente'])
             ->where(function ($query) use ($fechaInicio, $fechaFin) {
-                $query->whereBetween('fecha_reserva', [$fechaInicio, $fechaFin])
-                    ->orWhereBetween('fecha_entrega', [$fechaInicio, $fechaFin])
+                $query->whereBetween('re.fecha_reserva', [$fechaInicio, $fechaFin])
+                    ->orWhereBetween('re.fecha_entrega', [$fechaInicio, $fechaFin])
                     ->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
-                        $q->where('fecha_reserva', '<=', $fechaInicio)
-                            ->where('fecha_entrega', '>=', $fechaFin);
+                        $q->where('re.fecha_reserva', '<=', $fechaInicio)
+                            ->where('re.fecha_entrega', '>=', $fechaFin);
                     });
             })
-            ->with('equipos.modelo')
+            ->pluck('er.equipo_id');
+
+        // Equipos disponibles (sin paginar todavía)
+        $equiposDisponibles = VistaEquipo::query()
+            ->where('tipo_reserva_id', $request->tipo_reserva_id)
+            ->where('estado', 'Disponible')
+            ->whereNotIn('equipo_id', $equiposReservados)
+            ->when($search, function ($q) use ($search) {
+                $q->where(function ($q2) use ($search) {
+                    $q2->where('nombre_modelo', 'like', "%$search%")
+                        ->orWhere('nombre_marca', 'like', "%$search%");
+                });
+            })
             ->get();
 
-        $reservasPorModelo = collect();
+        // Agrupar por modelo_id
+        $agrupados = $equiposDisponibles
+            ->groupBy('modelo_id')
+            ->map(function ($equipos, $modelo_id) {
+                $primer = $equipos->first();
+                return [
+                    'modelo_id' => $modelo_id,
+                    'nombre_modelo' => $primer->nombre_modelo,
+                    'nombre_marca' => $primer->nombre_marca,
+                    'equipos' => $equipos->map(function ($e) {
+                        return [
+                            'equipo_id' => $e->equipo_id,
+                            'modelo_id' => $e->modelo_id,
+                            'tipo_equipo' => $e->tipo_equipo,
+                            'imagen_gbl' => $e->imagen_gbl,
+                            'imagen_normal' => $e->imagen_normal,
+                            'estado' => $e->estado,
+                        ];
+                    })->values(),
+                ];
+            })->values();
 
-        foreach ($reservados as $reserva) {
-            foreach ($reserva->equipos as $equipo) {
-                $modeloId = $equipo->modelo_id;
-                $actual = $reservasPorModelo->get($modeloId, 0);
-                $reservasPorModelo->put($modeloId, $actual + 1);
-            }
-        }
+        // Paginación manual de grupos
+        $total = $agrupados->count();
+        $resultados = $agrupados->slice(($page - 1) * $limit, $limit)->values();
 
-        $query = VistaResumenEquipo::query();
-
-        if (!empty($search)) {
-            $query->where('nombre_modelo', 'like', "%$search%");
-        }
-
-        $paginator = $query->paginate($limit, ['*'], 'page', $page);
-
-        $filtered = $paginator->getCollection()->transform(function ($item) use ($reservasPorModelo) {
-            $item->cantidad_enreserva = $reservasPorModelo->get($item->modelo_id, 0);
-            $item->disponibles_finales = $item->cantidad_disponible - $item->cantidad_enreserva;
-            return $item;
-        })->filter(function ($item) {
-            return $item->disponibles_finales > 0;
-        })->values(); // Reindexar la colección
-
-        // Crear nueva instancia de LengthAwarePaginator con datos filtrados
-        $result = new \Illuminate\Pagination\LengthAwarePaginator(
-            $filtered,
-            $filtered->count(), // total real de elementos
+        $paginador = new LengthAwarePaginator(
+            $resultados,
+            $total,
             $limit,
             $page,
-            ['path' => request()->url(), 'query' => request()->query()]
+            ['path' => $request->url(), 'query' => $request->query()]
         );
 
-        return response()->json($result);
+        return response()->json($paginador);
     }
-
     public function getResumenInventario(Request $request)
     {
         $query = DB::table('vista_resumen_inventario');
@@ -391,66 +405,65 @@ class EquipoController extends Controller
     }
 
     public function equiposPorModelo(Request $request, $modeloId)
-{
-    $perPage = $request->input('perPage', 10);
+    {
+        $perPage = $request->input('perPage', 10);
 
-    $query = Equipo::with([
-        'tipoEquipo',
-        'modelo.marca',
-        'estado',
-        'tipoReserva',
-        'valoresCaracteristicas.caracteristica',
-    ])
-    ->where('is_deleted', false)
-    ->where('modelo_id', $modeloId);
+        $query = Equipo::with([
+            'tipoEquipo',
+            'modelo.marca',
+            'estado',
+            'tipoReserva',
+            'valoresCaracteristicas.caracteristica',
+        ])
+            ->where('is_deleted', false)
+            ->where('modelo_id', $modeloId);
 
-    if ($request->filled('tipo')) {
-        if ($request->input('tipo') === 'equipo') {
-            $query->whereNotNull('numero_serie');
-        } elseif ($request->input('tipo') === 'insumo') {
-            $query->whereNotNull('cantidad');
+        if ($request->filled('tipo')) {
+            if ($request->input('tipo') === 'equipo') {
+                $query->whereNotNull('numero_serie');
+            } elseif ($request->input('tipo') === 'insumo') {
+                $query->whereNotNull('cantidad');
+            }
         }
+
+        $equipos = $query->orderBy('created_at', 'desc')->paginate($perPage);
+
+        $equipos->setCollection(
+            $equipos->getCollection()->transform(function ($item) {
+                $tipo = $item->numero_serie ? 'equipo' : 'insumo';
+
+                return [
+                    'id' => $item->id,
+                    'tipo' => $tipo,
+                    'numero_serie' => $item->numero_serie,
+                    'vida_util' => $item->vida_util,
+                    'cantidad' => 1,
+                    'detalles' => $item->detalles,
+                    'tipo_equipo_id' => $item->tipo_equipo_id,
+                    'modelo_id' => $item->modelo_id,
+                    'estado_id' => $item->estado_id,
+                    'tipo_reserva_id' => $item->tipo_reserva_id,
+                    'fecha_adquisicion' => $item->fecha_adquisicion,
+                    'imagen_url' => $item->imagen_normal
+                        ? asset('storage/equipos/' . $item->imagen_normal)
+                        : asset('storage/equipos/default.png'),
+                    'marca' => $item->modelo->marca->nombre ?? null,
+                    'tipoEquipo' => $item->tipoEquipo,
+                    'modelo' => $item->modelo,
+                    'estado' => $item->estado,
+                    'tipoReserva' => $item->tipoReserva,
+                    'caracteristicas' => $item->valoresCaracteristicas->map(function ($vc) {
+                        return [
+                            'id' => $vc->id,
+                            'caracteristica_id' => $vc->caracteristica_id,
+                            'nombre' => $vc->caracteristica->nombre ?? null,
+                            'valor' => $vc->valor,
+                        ];
+                    }),
+                ];
+            })
+        );
+
+        return response()->json($equipos);
     }
-
-    $equipos = $query->orderBy('created_at', 'desc')->paginate($perPage);
-
-    $equipos->setCollection(
-        $equipos->getCollection()->transform(function ($item) {
-            $tipo = $item->numero_serie ? 'equipo' : 'insumo';
-
-            return [
-                'id' => $item->id,
-                'tipo' => $tipo,
-                'numero_serie' => $item->numero_serie,
-                'vida_util' => $item->vida_util,
-                'cantidad' => 1,
-                'detalles' => $item->detalles,
-                'tipo_equipo_id' => $item->tipo_equipo_id,
-                'modelo_id' => $item->modelo_id,
-                'estado_id' => $item->estado_id,
-                'tipo_reserva_id' => $item->tipo_reserva_id,
-                'fecha_adquisicion' => $item->fecha_adquisicion,
-                'imagen_url' => $item->imagen_normal
-                    ? asset('storage/equipos/' . $item->imagen_normal)
-                    : asset('storage/equipos/default.png'),
-                'marca' => $item->modelo->marca->nombre ?? null,
-                'tipoEquipo' => $item->tipoEquipo,
-                'modelo' => $item->modelo,
-                'estado' => $item->estado,
-                'tipoReserva' => $item->tipoReserva,
-                'caracteristicas' => $item->valoresCaracteristicas->map(function ($vc) {
-                    return [
-                        'id' => $vc->id,
-                        'caracteristica_id' => $vc->caracteristica_id,
-                        'nombre' => $vc->caracteristica->nombre ?? null,
-                        'valor' => $vc->valor,
-                    ];
-                }),
-            ];
-        })
-    );
-
-    return response()->json($equipos);
-}
-
 }
