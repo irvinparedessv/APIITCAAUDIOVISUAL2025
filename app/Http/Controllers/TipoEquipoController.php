@@ -19,11 +19,11 @@ class TipoEquipoController extends Controller
 
     public function obtenerTipo(Request $request)
     {
-        $tiposEquipos = TipoEquipo::where('is_deleted', false)->paginate(10);
+        $tiposEquipos = TipoEquipo::with(['categoria', 'caracteristicas'])
+            ->where('is_deleted', false)
+            ->paginate(10);
         return response()->json($tiposEquipos);
     }
-
-
 
     public function store(Request $request)
     {
@@ -91,24 +91,33 @@ class TipoEquipoController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
-    {
-        $tipoEquipo = TipoEquipo::where('id', $id)->where('is_deleted', false)->first();
+   public function show(string $id)
+{
+    $tipoEquipo = TipoEquipo::with('caracteristicas') // <--- incluye las características
+        ->where('id', $id)
+        ->where('is_deleted', false)
+        ->first();
 
-        if (!$tipoEquipo) {
-            return response()->json(['error' => 'Tipo de equipo no encontrado'], 404);
-        }
-
-        return response()->json($tipoEquipo);
+    if (!$tipoEquipo) {
+        return response()->json(['error' => 'Tipo de equipo no encontrado'], 404);
     }
+
+    return response()->json($tipoEquipo);
+}
+
 
     /**
      * Update the specified resource in storage.
      */
     public function update(Request $request, string $id)
     {
-        $request->validate([
+        $validated = $request->validate([
             'nombre' => 'required|string|max:255',
+            'categoria_id' => 'required|exists:categorias,id',
+            'caracteristicas' => 'array',
+            'caracteristicas.*.id' => 'sometimes|exists:caracteristicas,id',
+            'caracteristicas.*.nombre' => 'sometimes|string',
+            'caracteristicas.*.tipo_dato' => 'sometimes|in:string,integer,decimal,boolean',
         ]);
 
         $tipoEquipo = TipoEquipo::where('id', $id)->where('is_deleted', false)->first();
@@ -117,10 +126,8 @@ class TipoEquipoController extends Controller
             return response()->json(['error' => 'Tipo de equipo no encontrado'], 404);
         }
 
-        $nombreNuevo = $request->input('nombre');
-
-        // Comparación insensible a mayúsculas/minúsculas, excluyendo el mismo ID
-        $existe = TipoEquipo::whereRaw('LOWER(nombre) = ?', [strtolower($nombreNuevo)])
+        // Validar nombre único ignorando el actual
+        $existe = TipoEquipo::whereRaw('LOWER(nombre) = ?', [strtolower($validated['nombre'])])
             ->where('id', '!=', $id)
             ->where('is_deleted', false)
             ->exists();
@@ -129,10 +136,52 @@ class TipoEquipoController extends Controller
             return response()->json(['message' => 'El nombre ya existe.'], 422);
         }
 
-        $tipoEquipo->nombre = $nombreNuevo;
-        $tipoEquipo->save();
+        DB::beginTransaction();
 
-        return response()->json($tipoEquipo);
+        try {
+            // Actualizar nombre y categoría
+            $tipoEquipo->nombre = $validated['nombre'];
+            $tipoEquipo->categoria_id = $validated['categoria_id'];
+            $tipoEquipo->save();
+
+            // Manejo de características
+            $nuevasCaracteristicasIds = [];
+
+            if (isset($validated['caracteristicas'])) {
+                foreach ($validated['caracteristicas'] as $caracteristica) {
+                    if (isset($caracteristica['id']) && $caracteristica['id'] > 0) {
+                        // Característica existente
+                        $nuevasCaracteristicasIds[] = $caracteristica['id'];
+                    } elseif (isset($caracteristica['nombre'])) {
+                        // Característica nueva
+                        $nueva = \App\Models\Caracteristica::create([
+                            'nombre' => $caracteristica['nombre'],
+                            'tipo_dato' => $caracteristica['tipo_dato'] ?? 'string',
+                        ]);
+                        $nuevasCaracteristicasIds[] = $nueva->id;
+                    }
+                }
+
+                // Actualizar la relación (detach + attach)
+                $tipoEquipo->caracteristicas()->sync($nuevasCaracteristicasIds);
+            } else {
+                // Si no se envía ninguna, quitamos todas las relaciones
+                $tipoEquipo->caracteristicas()->detach();
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Tipo de equipo actualizado exitosamente',
+                'data' => $tipoEquipo->load('categoria', 'caracteristicas')
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Error al actualizar el tipo de equipo',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
 
