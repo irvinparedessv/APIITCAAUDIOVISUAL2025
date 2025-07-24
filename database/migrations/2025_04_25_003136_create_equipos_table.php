@@ -20,13 +20,13 @@ return new class extends Migration {
             // Datos opcionales, depende si es equipo o insumo
             $table->string('numero_serie')->nullable()->unique(); // Si es equipo
             $table->integer('vida_util')->nullable(); // Si es equipo
-            
+
 
             $table->text('detalles')->nullable();
             $table->date('fecha_adquisicion')->nullable();
 
             $table->string('imagen_normal')->nullable(); // puede sobrescribir la del modelo
-            $table->string('imagen_gbl')->nullable();
+            $table->string('imagen_glb')->nullable();
 
             $table->string('comentario')->nullable();
 

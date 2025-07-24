@@ -11,6 +11,7 @@ return new class extends Migration {
             SELECT 
                 equipos.id AS equipo_id,
                 equipos.modelo_id,
+                equipos.numero_serie,
                 modelos.nombre AS nombre_modelo,
                 marcas.nombre AS nombre_marca,
                 tipo_equipos.nombre AS tipo_equipo,
@@ -18,7 +19,7 @@ return new class extends Migration {
                 estados.nombre AS estado,
 
                 -- Imágenes, prioridad: equipo > modelo
-                COALESCE(equipos.imagen_gbl, modelos.imagen_gbl) AS imagen_gbl,
+                COALESCE(equipos.imagen_glb, modelos.imagen_glb) AS imagen_glb,
                 COALESCE(equipos.imagen_normal, modelos.imagen_normal) AS imagen_normal
 
             FROM equipos

@@ -17,7 +17,7 @@ class Modelo extends Model
         'nombre',
         'marca_id',
         'imagen_normal',
-        'imagen_gbl',
+        'imagen_glb',
         'is_deleted'
     ];
 
@@ -76,8 +76,8 @@ class Modelo extends Model
      */
     public function esEquipo(): bool
     {
-        return $this->tipoEquipo && 
-               $this->tipoEquipo->categoria_id == 1; // Ajusta según tu ID para Equipos
+        return $this->tipoEquipo &&
+            $this->tipoEquipo->categoria_id == 1; // Ajusta según tu ID para Equipos
     }
 
     public function esInsumo(): bool

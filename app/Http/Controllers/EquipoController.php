@@ -354,13 +354,16 @@ class EquipoController extends Controller
                 return [
                     'modelo_id' => $modelo_id,
                     'nombre_modelo' => $primer->nombre_modelo,
+                    'imagen_normal' => $primer->imagen_normal,
+                    'imagen_glb' => $primer->imagen_glb,
                     'nombre_marca' => $primer->nombre_marca,
                     'equipos' => $equipos->map(function ($e) {
                         return [
                             'equipo_id' => $e->equipo_id,
                             'modelo_id' => $e->modelo_id,
+                            'numero_serie' => $e->numero_serie,
                             'tipo_equipo' => $e->tipo_equipo,
-                            'imagen_gbl' => $e->imagen_gbl,
+                            'imagen_glb' => $e->imagen_glb,
                             'imagen_normal' => $e->imagen_normal,
                             'estado' => $e->estado,
                         ];
@@ -467,7 +470,7 @@ class EquipoController extends Controller
         return response()->json($equipos);
     }
 
-     public function detalleEquipo($id)
+    public function detalleEquipo($id)
     {
         // Consulta base con joins para traer equipo y características
         $rows = DB::table('equipos as e')

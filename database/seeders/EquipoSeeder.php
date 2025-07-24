@@ -39,10 +39,10 @@ class EquipoSeeder extends Seeder
 
         // -- Modelos --
         $modelos = [
-            ['nombre' => 'Latitude 7490', 'marca' => 'Dell', 'imagen_normal' => null, 'imagen_gbl' => null, 'is_deleted' => false],
-            ['nombre' => 'EliteBook 840', 'marca' => 'HP', 'imagen_normal' => null, 'imagen_gbl' => null, 'is_deleted' => false],
-            ['nombre' => 'PowerLite X39', 'marca' => 'Epson', 'imagen_normal' => null, 'imagen_gbl' => null, 'is_deleted' => false],
-            ['nombre' => 'Cable HDMI 2m', 'marca' => 'Generic Cable', 'imagen_normal' => null, 'imagen_gbl' => null, 'is_deleted' => false],
+            ['nombre' => 'Latitude 7490', 'marca' => 'Dell', 'imagen_normal' => null, 'imagen_glb' => null, 'is_deleted' => false],
+            ['nombre' => 'EliteBook 840', 'marca' => 'HP', 'imagen_normal' => null, 'imagen_glb' => null, 'is_deleted' => false],
+            ['nombre' => 'PowerLite X39', 'marca' => 'Epson', 'imagen_normal' => null, 'imagen_glb' => null, 'is_deleted' => false],
+            ['nombre' => 'Cable HDMI 2m', 'marca' => 'Generic Cable', 'imagen_normal' => null, 'imagen_glb' => null, 'is_deleted' => false],
         ];
         foreach ($modelos as $mod) {
             $marca = Marca::where('nombre', $mod['marca'])->first();
@@ -50,7 +50,7 @@ class EquipoSeeder extends Seeder
                 ['nombre' => $mod['nombre'], 'marca_id' => $marca->id],
                 [
                     'imagen_normal' => $mod['imagen_normal'],
-                    'imagen_gbl' => $mod['imagen_gbl'],
+                    'imagen_glb' => $mod['imagen_glb'],
                     'is_deleted' => false,
                     'marca_id' => $marca->id,
                 ]

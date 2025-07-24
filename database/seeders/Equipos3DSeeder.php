@@ -48,33 +48,33 @@ class Equipos3DSeeder extends Seeder
 
         // -- Modelos 3D con solo imagen glb --
         $modelos3D = [
-            ['nombre' => 'laptop_low-poly', 'marca_id' => $marcaGen3D->id, 'imagen_gbl' => '/models/laptop_low-poly.glb', 'is_deleted' => false],
-            ['nombre' => 'laptop_alienpredator', 'marca_id' => $marcaGen3D->id, 'imagen_gbl' => '/models/laptop_alienpredator.glb', 'is_deleted' => false],
-            ['nombre' => 'laptop_windows_menu', 'marca_id' => $marcaGen3D->id, 'imagen_gbl' => '/models/laptop_windows_menu.glb', 'is_deleted' => false],
-            ['nombre' => 'laptop_dell_g7', 'marca_id' => $marcaGen3D->id, 'imagen_gbl' => '/models/laptop_dell_g7.glb', 'is_deleted' => false],
-            ['nombre' => 'laptop_acer', 'marca_id' => $marcaGen3D->id, 'imagen_gbl' => '/models/laptop_acer.glb', 'is_deleted' => false],
+            ['nombre' => 'laptop_low-poly', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => '/models/laptop_low-poly.glb', 'is_deleted' => false],
+            ['nombre' => 'laptop_alienpredator', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => '/models/laptop_alienpredator.glb', 'is_deleted' => false],
+            ['nombre' => 'laptop_windows_menu', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => '/models/laptop_windows_menu.glb', 'is_deleted' => false],
+            ['nombre' => 'laptop_dell_g7', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => '/models/laptop_dell_g7.glb', 'is_deleted' => false],
+            ['nombre' => 'laptop_acer', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => '/models/laptop_acer.glb', 'is_deleted' => false],
 
-            ['nombre' => 'microfono', 'marca_id' => $marcaGen3D->id, 'imagen_gbl' => '/models/microfono.glb', 'is_deleted' => false],
-            ['nombre' => 'razer_seiren_x', 'marca_id' => $marcaGen3D->id, 'imagen_gbl' => '/models/razer_seiren_x.glb', 'is_deleted' => false],
-            ['nombre' => 'skp_pro_40_microphone', 'marca_id' => $marcaGen3D->id, 'imagen_gbl' => '/models/skp_pro_40_microphone.glb', 'is_deleted' => false],
+            ['nombre' => 'microfono', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => '/models/microfono.glb', 'is_deleted' => false],
+            ['nombre' => 'razer_seiren_x', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => '/models/razer_seiren_x.glb', 'is_deleted' => false],
+            ['nombre' => 'skp_pro_40_microphone', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => '/models/skp_pro_40_microphone.glb', 'is_deleted' => false],
 
-            ['nombre' => 'jbl_charge_3_speaker', 'marca_id' => $marcaGen3D->id, 'imagen_gbl' => '/models/jbl_charge_3_speaker.glb', 'is_deleted' => false],
-            ['nombre' => 'logitech_speaker', 'marca_id' => $marcaGen3D->id, 'imagen_gbl' => '/models/logitech_speaker.glb', 'is_deleted' => false],
-            ['nombre' => 'bluetooth_speaker', 'marca_id' => $marcaGen3D->id, 'imagen_gbl' => '/models/bluetooth_speaker.glb', 'is_deleted' => false],
-            ['nombre' => 'jbl_speaker', 'marca_id' => $marcaGen3D->id, 'imagen_gbl' => '/models/jbl_speaker.glb', 'is_deleted' => false],
+            ['nombre' => 'jbl_charge_3_speaker', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => '/models/jbl_charge_3_speaker.glb', 'is_deleted' => false],
+            ['nombre' => 'logitech_speaker', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => '/models/logitech_speaker.glb', 'is_deleted' => false],
+            ['nombre' => 'bluetooth_speaker', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => '/models/bluetooth_speaker.glb', 'is_deleted' => false],
+            ['nombre' => 'jbl_speaker', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => '/models/jbl_speaker.glb', 'is_deleted' => false],
 
-            ['nombre' => 'video_projector', 'marca_id' => $marcaGen3D->id, 'imagen_gbl' => '/models/video_projector.glb', 'is_deleted' => false],
-            ['nombre' => 'generic_white_digital_projector', 'marca_id' => $marcaGen3D->id, 'imagen_gbl' => '/models/generic_white_digital_projector.glb', 'is_deleted' => false],
+            ['nombre' => 'video_projector', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => '/models/video_projector.glb', 'is_deleted' => false],
+            ['nombre' => 'generic_white_digital_projector', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => '/models/generic_white_digital_projector.glb', 'is_deleted' => false],
 
-            ['nombre' => 'pc_mouse_type-r', 'marca_id' => $marcaGen3D->id, 'imagen_gbl' => '/models/pc_mouse_type-r.glb', 'is_deleted' => false],
-            ['nombre' => 'computer_mouse', 'marca_id' => $marcaGen3D->id, 'imagen_gbl' => '/models/computer_mouse.glb', 'is_deleted' => false],
-            ['nombre' => 'computer_mouse_a4tech_bloody_v7', 'marca_id' => $marcaGen3D->id, 'imagen_gbl' => '/models/computer_mouse_a4tech_bloody_v7.glb', 'is_deleted' => false],
+            ['nombre' => 'pc_mouse_type-r', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => '/models/pc_mouse_type-r.glb', 'is_deleted' => false],
+            ['nombre' => 'computer_mouse', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => '/models/computer_mouse.glb', 'is_deleted' => false],
+            ['nombre' => 'computer_mouse_a4tech_bloody_v7', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => '/models/computer_mouse_a4tech_bloody_v7.glb', 'is_deleted' => false],
         ];
         foreach ($modelos3D as $mod) {
             Modelo::updateOrCreate(
                 ['nombre' => $mod['nombre'], 'marca_id' => $mod['marca_id']],
                 [
-                    'imagen_gbl' => $mod['imagen_gbl'],
+                    'imagen_glb' => $mod['imagen_glb'],
                     'is_deleted' => $mod['is_deleted']
                 ]
             );
@@ -174,7 +174,7 @@ class Equipos3DSeeder extends Seeder
                     'detalles' => 'Equipo 3D generado automáticamente para modelo ' . $nombreModelo,
                     'fecha_adquisicion' => now()->toDateString(),
                     'is_deleted' => false,
-                    'imagen_gbl' => $modelo->imagen_gbl,
+                    'imagen_glb' => $modelo->imagen_glb,
                 ];
 
                 $equipo = Equipo::updateOrCreate(
