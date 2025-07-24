@@ -27,7 +27,6 @@ return new class extends Migration
 
             // Opcional: puedes incluir estado (pendiente, confirmada, cancelada)
             $table->string('estado')->default('pendiente');
-
             $table->timestamps();
         });
     }

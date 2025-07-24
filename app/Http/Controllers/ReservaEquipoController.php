@@ -160,6 +160,7 @@ class ReservaEquipoController extends Controller
         $validated = $request->validate([
             'user_id' => 'nullable|exists:users,id',
             'equipo' => 'required|array',
+            'modelo_3d' => 'nullable|file|mimetypes:model/gltf-binary,application/octet-stream|max:102400',
             'equipo.*.id' => 'required|exists:equipos,id',
             'equipo.*.cantidad' => 'required|integer|min:1',
             'aula' => 'required|exists:aulas,id',
@@ -246,7 +247,14 @@ class ReservaEquipoController extends Controller
         if ($request->hasFile('documento_evento')) {
             $documentoPath = $request->file('documento_evento')->store('eventos', 'public');
         }
-
+        $modelPath = null;
+        if ($request->hasFile('modelo_3d')) {
+            $file = $request->file('modelo_3d');
+            $extension = $file->getClientOriginalExtension(); // .glb
+            $uuidName = (string) Str::uuid() . '.' . $extension;
+            $modelPath = $file->storeAs('models', $uuidName, 'public'); // guarda en storage/app/public/models
+            $modelPath = '/' . $modelPath;
+        }
         $usuarioAutenticado = $request->user();
 
         // Si es administrador o encargado y viene el user_id, usarlo
@@ -266,6 +274,7 @@ class ReservaEquipoController extends Controller
             'estado' => 'Pendiente',
             'tipo_reserva_id' => $validated['tipo_reserva_id'],
             'documento_evento' => $documentoPath,
+            'path_model' => $modelPath,
         ]);
 
         // Asociar equipos con cantidades

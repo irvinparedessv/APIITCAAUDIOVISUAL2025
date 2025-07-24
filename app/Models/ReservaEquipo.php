@@ -19,6 +19,7 @@ class ReservaEquipo extends Model
         'estado',
         'tipo_reserva_id',
         'documento_evento',
+        'path_model'
     ];
 
     public function equipos()
