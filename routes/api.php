@@ -132,6 +132,10 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/modelos/{id}/accesorios', [ModeloAccesorioController::class, 'index']); 
     Route::get('/modelos/insumos/listar', [ModeloAccesorioController::class, 'listarInsumos']);
 
+
+Route::get('/detalleEquipo/{id}', [EquipoController::class, 'detalleEquipo']);
+
+
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador,Encargado'])->group(function () {

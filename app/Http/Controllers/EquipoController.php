@@ -466,4 +466,72 @@ class EquipoController extends Controller
 
         return response()->json($equipos);
     }
+
+     public function detalleEquipo($id)
+    {
+        // Consulta base con joins para traer equipo y características
+        $rows = DB::table('equipos as e')
+            ->join('tipo_equipos as te', 'e.tipo_equipo_id', '=', 'te.id')
+            ->join('categorias as c', 'te.categoria_id', '=', 'c.id')
+            ->leftJoin('tipo_reservas as tr', 'e.tipo_reserva_id', '=', 'tr.id')
+            ->join('estados as es', 'e.estado_id', '=', 'es.id')
+            ->join('modelos as mo', 'e.modelo_id', '=', 'mo.id')
+            ->join('marcas as ma', 'mo.marca_id', '=', 'ma.id')
+            ->leftJoin('valores_caracteristicas as vc', 'vc.equipo_id', '=', 'e.id')
+            ->leftJoin('caracteristicas as ca', 'vc.caracteristica_id', '=', 'ca.id')
+            ->where('e.is_deleted', 0)
+            ->where('e.id', $id)
+            ->orderBy('ca.nombre')
+            ->select([
+                'e.id as equipo_id',
+                'c.nombre as categoria',
+                'te.nombre as tipo_equipo',
+                'tr.nombre as tipo_reserva',
+                'es.nombre as estado',
+                'ma.nombre as marca',
+                'mo.nombre as modelo',
+                'e.numero_serie',
+                'e.vida_util',
+                'e.detalles',
+                'e.fecha_adquisicion',
+                'e.comentario',
+                'ca.nombre as caracteristica',
+                'vc.valor as valor_caracteristica',
+            ])
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return response()->json(['error' => 'Equipo no encontrado'], 404);
+        }
+
+        // Tomamos los datos generales del equipo (todos iguales en filas)
+        $first = $rows->first();
+
+        // Agrupamos características en un array
+        $caracteristicas = $rows->filter(fn($r) => $r->caracteristica !== null)
+            ->map(fn($r) => [
+                'nombre' => $r->caracteristica,
+                'valor' => $r->valor_caracteristica,
+            ])
+            ->values();
+
+        // Formamos la respuesta final
+        $detalleEquipo = [
+            'equipo_id' => $first->equipo_id,
+            'categoria' => $first->categoria,
+            'tipo_equipo' => $first->tipo_equipo,
+            'tipo_reserva' => $first->tipo_reserva,
+            'estado' => $first->estado,
+            'marca' => $first->marca,
+            'modelo' => $first->modelo,
+            'numero_serie' => $first->numero_serie,
+            'vida_util' => $first->vida_util,
+            'detalles' => $first->detalles,
+            'fecha_adquisicion' => $first->fecha_adquisicion,
+            'comentario' => $first->comentario,
+            'caracteristicas' => $caracteristicas,
+        ];
+
+        return response()->json($detalleEquipo);
+    }
 }
