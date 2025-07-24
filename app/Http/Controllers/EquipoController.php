@@ -1,5 +1,6 @@
 <?php
 
+
 // app/Http/Controllers/EquipoController.php
 
 namespace App\Http\Controllers;
@@ -81,6 +82,7 @@ class EquipoController extends Controller
 
 
 
+
     public function show($id)
     {
         $equipo = Equipo::with(['tipoEquipo', 'modelo', 'estado', 'tipoReserva', 'valoresCaracteristicas.caracteristica'])->findOrFail($id);
@@ -95,90 +97,92 @@ class EquipoController extends Controller
 
 
     public function store(Request $request)
-    {
-        $tipo = $request->input('tipo'); // equipo o insumo
+{
+    // Validate required fields
+    $validated = $request->validate([
+        'tipo_equipo_id' => 'required|exists:tipo_equipos,id',
+        'modelo_id' => 'required|exists:modelos,id',
+        'estado_id' => 'required|exists:estados,id',
+        'detalles' => 'required|string',
+        'imagen' => 'nullable|image|max:5120',
+        'caracteristicas' => 'nullable|json',
+    ]);
 
-        $rules = [
-            'tipo_equipo_id' => 'required|exists:tipo_equipos,id',
-            'modelo_id' => 'required|exists:modelos,id',
-            'estado_id' => 'required|exists:estados,id',
-            'tipo_reserva_id' => 'nullable|exists:tipo_reservas,id',
-            'detalles' => 'nullable|string',
-            'fecha_adquisicion' => 'nullable|date',
-            'caracteristicas' => 'nullable|array',
-        ];
-
-        if ($tipo === 'equipo') {
-            $rules['numero_serie'] = 'required|string|unique:equipos,numero_serie';
-            $rules['vida_util'] = 'nullable|integer';
-        } else {
-            $rules['cantidad'] = 'required|integer|min:1';
+    try {
+        // Handle file upload
+        $imagePath = null;
+        if ($request->hasFile('imagen')) {
+            $imagePath = $request->file('imagen')->store('equipos', 'public');
         }
 
-        $request->validate($rules);
+        // Create equipment
+        $equipo = Equipo::create([
+            'tipo_equipo_id' => $validated['tipo_equipo_id'],
+            'modelo_id' => $validated['modelo_id'],
+            'estado_id' => $validated['estado_id'],
+            'detalles' => $validated['detalles'],
+            'imagen_url' => $imagePath,
+            // Add other fields as needed from $request
+            'numero_serie' => $request->numero_serie,
+            'vida_util' => $request->vida_util,
+            'tipo_reserva_id' => $request->tipo_reserva_id,
+            'fecha_adquisicion' => $request->fecha_adquisicion,
+        ]);
 
-        if ($tipo === 'equipo') {
-            // Equipo único
-            $equipo = Equipo::create(array_merge(
-                $request->except('caracteristicas'),
-                ['es_componente' => false]
-            ));
-
-            // Guardar características
-            if ($request->has('caracteristicas')) {
-                foreach ($request->input('caracteristicas') as $caracteristica) {
-                    $equipo->valoresCaracteristicas()->create([
-                        'caracteristica_id' => $caracteristica['id'],
-                        'valor' => $caracteristica['valor']
-                    ]);
-                }
+        // Handle characteristics if provided
+        if ($request->has('caracteristicas')) {
+            $caracteristicas = json_decode($request->caracteristicas, true);
+            
+            foreach ($caracteristicas as $caracteristica) {
+                $equipo->valoresCaracteristicas()->create([
+                    'caracteristica_id' => $caracteristica['caracteristica_id'],
+                    'valor' => $caracteristica['valor']
+                ]);
             }
-
-            return response()->json([
-                'message' => 'Equipo registrado correctamente',
-                'data' => $equipo->load('valoresCaracteristicas.caracteristica'),
-            ], 201);
-        } else {
-            // Insumos: crear múltiples registros
-            $cantidad = (int) $request->input('cantidad');
-            $insumos = [];
-
-            for ($i = 0; $i < $cantidad; $i++) {
-                $nuevoInsumo = Equipo::create(array_merge(
-                    $request->except('caracteristicas', 'cantidad', 'numero_serie', 'vida_util'),
-                    ['es_componente' => true]
-                ));
-
-                if ($request->has('caracteristicas')) {
-                    foreach ($request->input('caracteristicas') as $caracteristica) {
-                        $nuevoInsumo->valoresCaracteristicas()->create([
-                            'caracteristica_id' => $caracteristica['id'],
-                            'valor' => $caracteristica['valor']
-                        ]);
-                    }
-                }
-
-                $insumos[] = $nuevoInsumo->load('valoresCaracteristicas.caracteristica');
-            }
-
-            return response()->json([
-                'message' => 'Insumos registrados correctamente',
-                'data' => $insumos,
-            ], 201);
         }
+
+        return response()->json([
+            'message' => 'Equipo creado exitosamente',
+            'data' => $equipo->load('valoresCaracteristicas')
+        ], 201);
+    } catch (\Exception $e) {
+        return response()->json([
+            'message' => 'Error al crear el equipo',
+            'error' => $e->getMessage(),
+            'trace' => config('app.debug') ? $e->getTrace() : null
+        ], 500);
     }
+}
+
+
 
 
     public function update(Request $request, $id)
-    {
-        Log::debug('Datos recibidos en el servidor:', $request->all());
+{
+    Log::debug('Datos recibidos en el servidor:', $request->all());
 
-        $equipo = Equipo::findOrFail($id);
-        $tipo = $equipo->numero_serie ? 'equipo' : 'insumo';
+    $equipo = Equipo::findOrFail($id);
+    $tipo = $equipo->numero_serie ? 'equipo' : 'insumo';
 
-        // 🛠 RECONSTRUIR CARACTERÍSTICAS SI VIENEN COMO FORM DATA
-        if (!is_array($request->input('caracteristicas'))) {
-            $caracteristicas = [];
+    /**
+     * 🧠 1. Normalizar las características:
+     * - Si vienen como JSON string, decodificar.
+     * - Si vienen como form-data tipo caracteristicas[0][caracteristica_id], reestructurar.
+     */
+    $caracteristicas = [];
+
+    if ($request->has('caracteristicas')) {
+        $raw = $request->input('caracteristicas');
+
+        // Si viene como string JSON (probable en JSON payload)
+        if (is_string($raw)) {
+            $caracteristicas = json_decode($raw, true) ?? [];
+        }
+        // Si ya viene como array (por FormData)
+        elseif (is_array($raw)) {
+            $caracteristicas = $raw;
+        } else {
+            // Reconstrucción manual desde form keys como caracteristicas[0][caracteristica_id]
             foreach ($request->all() as $key => $value) {
                 if (preg_match('/^caracteristicas\[(\d+)]\[caracteristica_id]$/', $key, $matches)) {
                     $index = $matches[1];
@@ -189,58 +193,62 @@ class EquipoController extends Controller
                     $caracteristicas[$index]['valor'] = $value;
                 }
             }
-            $request->merge(['caracteristicas' => array_values($caracteristicas)]);
         }
 
-        // ✅ VALIDACIÓN
-        $rules = [
-            'tipo_equipo_id' => 'sometimes|required|exists:tipo_equipos,id',
-            'modelo_id' => 'sometimes|required|exists:modelos,id',
-            'estado_id' => 'sometimes|required|exists:estados,id',
-            'tipo_reserva_id' => 'nullable|exists:tipo_reservas,id',
-            'detalles' => 'nullable|string',
-            'fecha_adquisicion' => 'nullable|date',
-            'caracteristicas' => 'sometimes|array',
-            'caracteristicas.*.caracteristica_id' => 'required|exists:caracteristicas,id',
-            'caracteristicas.*.valor' => 'required',
-        ];
-
-        if ($tipo === 'equipo') {
-            $rules['numero_serie'] = 'sometimes|required|string|unique:equipos,numero_serie,' . $id;
-            $rules['vida_util'] = 'nullable|integer';
-        } else {
-            $rules['cantidad'] = 'sometimes|required|integer|min:1';
-        }
-
-        $validatedData = $request->validate($rules);
-
-        // ✅ ACTUALIZAR CAMPOS DEL MODELO EQUIPO
-        $equipoFields = collect($validatedData)->only([
-            'tipo_equipo_id',
-            'modelo_id',
-            'estado_id',
-            'tipo_reserva_id',
-            'detalles',
-            'fecha_adquisicion',
-            'numero_serie',
-            'vida_util',
-            'cantidad'
-        ])->toArray();
-
-        $equipo->update($equipoFields);
-
-        // ✅ SINCRONIZAR CARACTERÍSTICAS SI VIENEN
-        if ($request->has('caracteristicas')) {
-            $this->sincronizarCaracteristicas($equipo, $request->input('caracteristicas'));
-        }
-
-        Log::debug('Características recibidas en update:', ['caracteristicas' => $request->input('caracteristicas')]);
-
-        return response()->json([
-            'message' => 'Equipo actualizado correctamente',
-            'data' => $equipo->fresh()->load('valoresCaracteristicas.caracteristica'),
-        ]);
+        // Fusionar al request para validación posterior
+        $request->merge(['caracteristicas' => array_values($caracteristicas)]);
     }
+
+    // ✅ VALIDACIONES
+    $rules = [
+        'tipo_equipo_id' => 'sometimes|required|exists:tipo_equipos,id',
+        'modelo_id' => 'sometimes|required|exists:modelos,id',
+        'estado_id' => 'sometimes|required|exists:estados,id',
+        'tipo_reserva_id' => 'nullable|exists:tipo_reservas,id',
+        'detalles' => 'nullable|string',
+        'fecha_adquisicion' => 'nullable|date',
+        'caracteristicas' => 'sometimes|array',
+        'caracteristicas.*.caracteristica_id' => 'required|exists:caracteristicas,id',
+        'caracteristicas.*.valor' => 'required',
+    ];
+
+    if ($tipo === 'equipo') {
+        $rules['numero_serie'] = 'sometimes|required|string|unique:equipos,numero_serie,' . $id;
+        $rules['vida_util'] = 'nullable|integer';
+    } else {
+        $rules['cantidad'] = 'sometimes|required|integer|min:1';
+    }
+
+    $validatedData = $request->validate($rules);
+
+    // ✅ ACTUALIZAR CAMPOS DEL MODELO EQUIPO
+    $equipoFields = collect($validatedData)->only([
+        'tipo_equipo_id',
+        'modelo_id',
+        'estado_id',
+        'tipo_reserva_id',
+        'detalles',
+        'fecha_adquisicion',
+        'numero_serie',
+        'vida_util',
+        'cantidad'
+    ])->toArray();
+
+    $equipo->update($equipoFields);
+
+    // ✅ ACTUALIZAR CARACTERÍSTICAS SI SE PROPORCIONAN
+    if (!empty($caracteristicas)) {
+        $this->sincronizarCaracteristicas($equipo, $caracteristicas);
+    }
+
+    Log::debug('Características sincronizadas:', ['caracteristicas' => $caracteristicas]);
+
+    return response()->json([
+        'message' => 'Equipo actualizado correctamente',
+        'data' => $equipo->fresh()->load('valoresCaracteristicas.caracteristica'),
+    ]);
+}
+
 
 
     protected function sincronizarCaracteristicas(Equipo $equipo, array $caracteristicas)

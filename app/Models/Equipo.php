@@ -60,6 +60,17 @@ class Equipo extends Model
             ->withPivot('cantidad');
     }
 
+    // Método para adjuntar características fácilmente
+public function agregarCaracteristicas(array $caracteristicas)
+{
+    foreach ($caracteristicas as $caract) {
+        $this->valoresCaracteristicas()->updateOrCreate(
+            ['caracteristica_id' => $caract['caracteristica_id']],
+            ['valor' => $caract['valor']]
+        );
+    }
+}
+
     public function valoresCaracteristicas()
     {
         return $this->hasMany(ValoresCaracteristica::class, 'equipo_id');
