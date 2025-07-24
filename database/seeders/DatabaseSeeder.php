@@ -25,6 +25,11 @@ class DatabaseSeeder extends Seeder
             UsuariosEncargadosSeeder::class,
             //ReservaAulaSeeder::class,
             //ReservaAulaBloqueSeeder::class,
+
+            // Seeders de mantenimiento
+            TipoMantenimientoSeeder::class,
+            MantenimientoSeeder::class,
+            FuturoMantenimientoSeeder::class,
         ]);
     }
 }

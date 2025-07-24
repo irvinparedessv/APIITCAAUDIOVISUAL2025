@@ -31,6 +31,11 @@ use App\Http\Controllers\ReservaAulaController;
 use App\Http\Controllers\TipoReservaController;
 use App\Http\Controllers\ValoresCaracteristicaController;
 
+use App\Http\Controllers\TipoMantenimientoController;
+use App\Http\Controllers\FuturoMantenimientoController;
+use App\Http\Controllers\MantenimientoController;
+
+
 // Rutas públicas
 Route::get('/equiposDisponiblesPorTipoYFecha', [EquipoController::class, 'equiposDisponiblesPorTipoYFecha']);
 
@@ -133,6 +138,11 @@ Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador,Encargad
 
     Route::post('/BOTreservas', [ReservaEquipoController::class, 'store']);
     //Route::post('/reservas', [ReservaAulaController::class, 'store']);
+
+    // RUTAS DE MANTENIMIENTO
+    Route::apiResource('tipoMantenimiento', TipoMantenimientoController::class);
+    Route::apiResource('futuroMantenimiento', FuturoMantenimientoController::class);
+    Route::apiResource('mantenimiento', MantenimientoController::class);
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamista,EspacioEncargado'])->group(function () {

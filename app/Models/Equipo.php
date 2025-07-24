@@ -93,6 +93,25 @@ class Equipo extends Model
         )->withTimestamps();
     }
 
+      // NUEVAS RELACIONES para mantenimiento y futuro mantenimiento
+
+    /**
+     * Mantenimientos realizados a este equipo
+     */
+    public function mantenimientos()
+    {
+        return $this->hasMany(Mantenimiento::class);
+    }
+
+    /**
+     * Mantenimientos futuros programados para este equipo
+     */
+    public function futurosMantenimientos()
+    {
+        return $this->hasMany(FuturoMantenimiento::class);
+    }
+
+
     // Método para filtrar solo insumos (componentes)
     public function scopeComponentes($query)
     {
