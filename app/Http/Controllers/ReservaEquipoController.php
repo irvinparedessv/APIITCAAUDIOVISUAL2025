@@ -11,6 +11,7 @@ use App\Models\CodigoQrReserva;
 use App\Models\CodigoQrReservaEquipo;
 use App\Models\EquipmentReservation;
 use App\Models\Equipo;
+use App\Models\ReservaAula;
 use App\Models\ReservaEquipo;
 use App\Models\Role;
 use App\Models\User;
@@ -276,6 +277,21 @@ class ReservaEquipoController extends Controller
             'documento_evento' => $documentoPath,
             'path_model' => $modelPath,
         ]);
+        $reservaAula = ReservaAula::create([
+            'aula_id'     => $validated['aula'],
+            'fecha'       => Carbon::parse($validated['fecha_reserva'] . ' ' . $validated['startTime']),
+            'fecha_fin'   => Carbon::parse($validated['fecha_reserva'] . ' ' . $validated['endTime']),
+            'dias'        => [$fechaReserva->format('l')], // puedes ajustar según lógica real
+            'tipo'        => 'evento',
+            'horario'     => $validated['startTime'] . ' - ' . $validated['endTime'],
+            'user_id'     => $userIdReserva,
+            'estado'      => 'Pendiente',
+            'titulo'      => 'Reserva asociada a equipo', // puedes hacerlo más dinámico
+            'comentario'  => 'Generada automáticamente junto a la reserva de equipo.',
+            'path_model'  => $modelPath,
+        ]);
+
+        $reserva->reservaAulas()->attach($reservaAula->id);
 
         // Asociar equipos con cantidades
         $equiposConCantidad = [];

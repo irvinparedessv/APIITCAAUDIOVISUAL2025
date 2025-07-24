@@ -28,6 +28,10 @@ class ReservaEquipo extends Model
             ->using(EquipoReserva::class)
             ->withPivot('cantidad', 'comentario');
     }
+    public function reservaAulas()
+    {
+        return $this->belongsToMany(ReservaAula::class, 'reserva_equipo_aula', 'reserva_equipo_id', 'reserva_aula_id');
+    }
 
 
     public function user()

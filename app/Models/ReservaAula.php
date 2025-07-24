@@ -40,6 +40,10 @@ class ReservaAula extends Model
     {
         return $this->belongsTo(User::class);
     }
+    public function reservaEquipos()
+    {
+        return $this->belongsToMany(ReservaEquipo::class, 'reserva_equipo_aula', 'reserva_aula_id', 'reserva_equipo_id');
+    }
     public function codigoQr()
     {
         return $this->hasOne(CodigoQrAula::class, 'reserva_id');
