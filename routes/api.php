@@ -30,11 +30,10 @@ use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\ReservaAulaController;
 use App\Http\Controllers\TipoReservaController;
 use App\Http\Controllers\ValoresCaracteristicaController;
-
 use App\Http\Controllers\TipoMantenimientoController;
 use App\Http\Controllers\FuturoMantenimientoController;
 use App\Http\Controllers\MantenimientoController;
-
+use App\Http\Controllers\ModeloAccesorioController;
 
 // Rutas públicas
 Route::get('/equiposDisponiblesPorTipoYFecha', [EquipoController::class, 'equiposDisponiblesPorTipoYFecha']);
@@ -128,6 +127,10 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
 
     Route::get('/inventario/modelo/{modeloId}', [EquipoController::class, 'equiposPorModelo']);
     Route::get('/resumen-inventario', [EquipoController::class, 'getResumenInventario']);
+
+    Route::post('/modelo-accesorios', [ModeloAccesorioController::class, 'store']);
+    Route::get('/modelos/{id}/accesorios', [ModeloAccesorioController::class, 'index']); 
+    Route::get('/modelos/insumos/listar', [ModeloAccesorioController::class, 'listarInsumos']);
 
 });
 

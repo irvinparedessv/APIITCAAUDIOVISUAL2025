@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Equipo;
 use App\Models\Modelo;
 use App\Models\Marca;
 use Illuminate\Http\Request;
@@ -50,4 +51,17 @@ class ModeloController extends Controller
 
         return response()->json($modelo, 201);
     }
+
+    // En ModeloController.php
+public function modelosInsumos()
+{
+     $insumos = Equipo::with(['modelo.marca'])
+        ->where('es_componente', 1) // o tu lógica para detectar insumos
+        ->where('is_deleted', 0)
+        ->get();
+
+    return response()->json($insumos);
+}
+
+
 }
