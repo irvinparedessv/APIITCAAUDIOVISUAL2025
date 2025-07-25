@@ -188,7 +188,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::put('/reservas-equipo/{id}/estado', [ReservaEquipoController::class, 'actualizarEstado']);
     Route::get('/usuarios/rol/{nombreRol}', [UserController::class, 'getUsuariosPorRol']);
     Route::post('/reservasAula', [ReservaAulaController::class, 'store']);
-    Route::put('/reservas-equipo/{id}', [ReservaEquipoController::class, 'update']);
+    Route::post('/reservas-equipo/{id}', [ReservaEquipoController::class, 'update']);
     Route::get('/reserva-id/{id}', [ReservaEquipoController::class, 'showById']);  // Obtener reserva individual por id
     Route::put('/reservas-aula/{id}', [ReservaAulaController::class, 'update']);
     Route::post('/aulas/{aula}/encargados', [AulaController::class, 'asignarEncargados']);

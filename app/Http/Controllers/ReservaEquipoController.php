@@ -374,13 +374,6 @@ class ReservaEquipoController extends Controller
             return response()->json(['message' => 'No autorizado.'], 403);
         }
 
-        $inicioReserva = Carbon::parse($reserva->fecha_reserva);
-        if (now()->diffInMinutes($inicioReserva, false) <= 60) {
-            return response()->json([
-                'message' => 'No puedes modificar la reserva porque falta menos de una hora para que inicie.'
-            ], 422);
-        }
-
         $validated = $request->validate([
             'aula' => 'required|exists:aulas,id',
             'equipo' => 'required|array|min:1',
@@ -392,15 +385,27 @@ class ReservaEquipoController extends Controller
 
         $inicio = Carbon::parse($reserva->fecha_reserva);
         $fin = Carbon::parse($reserva->fecha_entrega);
-
         foreach ($validated['equipo'] as $item) {
             $equipo = Equipo::findOrFail($item['id']);
-            $disponibilidad = $equipo->disponibilidadPorRango($inicio, $fin, $reserva->id);
-            if ($item['cantidad'] > $disponibilidad['cantidad_disponible']) {
+
+            $traslape = ReservaEquipo::where('id', '!=', $reserva->id)
+                ->whereHas('equipos', function ($q) use ($item) {
+                    $q->where('equipos.id', $item['id']);
+                })
+                ->where(function ($query) use ($inicio, $fin) {
+                    $query->whereBetween('fecha_reserva', [$inicio, $fin])
+                        ->orWhereBetween('fecha_entrega', [$inicio, $fin])
+                        ->orWhere(function ($q) use ($inicio, $fin) {
+                            $q->where('fecha_reserva', '<=', $inicio)
+                                ->where('fecha_entrega', '>=', $fin);
+                        });
+                })
+                ->exists();
+
+            if ($traslape) {
                 return response()->json([
-                    'message' => "No hay suficientes unidades disponibles del equipo: {$equipo->nombre}.",
-                    'equipo' => $equipo->nombre,
-                    'disponible' => $disponibilidad['cantidad_disponible']
+                    'message' => "El equipo con número de serie {$equipo->numero_serie} ya ha sido seleccionado en este rango. Por favor actualiza la página para obtener la disponibilidad más reciente.",
+                    'equipo' => $equipo->numero_serie,
                 ], 400);
             }
         }
@@ -414,9 +419,9 @@ class ReservaEquipoController extends Controller
         }
 
         // Verificar cambios en equipos
-        $actuales = $reserva->equipos->pluck('pivot.cantidad', 'id')->toArray();
-        $nuevos = collect($validated['equipo'])->pluck('cantidad', 'id')->toArray();
-        if ($actuales != $nuevos) {
+        $actuales = $reserva->equipos->pluck('id')->sort()->values()->toArray();
+        $nuevos = collect($validated['equipo'])->pluck('id')->sort()->values()->toArray();
+        if ($actuales !== $nuevos) {
             $cambios = true;
         }
 
@@ -679,9 +684,8 @@ class ReservaEquipoController extends Controller
                 'nombre_modelo' => $equipo->modelo->nombre ?? '',
                 'nombre_marca' => $equipo->marca->nombre ?? '',
                 'numero_serie' => $equipo->numero_serie,
-                'modelo_path' => $equipo->modelo->path_modelo ?? null,
                 'imagen_normal' => $equipo->imagen_normal,
-                'imagen_gbl' => $equipo->imagen_gbl,
+                'imagen_gbl' => $equipo->imagen_glb ?: ($equipo->modelo->imagen_glb ?? null),
             ];
         });
 
@@ -690,6 +694,7 @@ class ReservaEquipoController extends Controller
             'fecha_reserva' => $reserva->fecha_reserva->format('Y-m-d'),
             'start_time' => $reserva->fecha_reserva->format('H:i'),
             'end_time' => $reserva->fecha_entrega->format('H:i'),
+            'path_model' => $reserva->path_model,
             'tipo_reserva' => [
                 'id' => $reserva->tipoReserva->id,
                 'nombre' => $reserva->tipoReserva->nombre,
