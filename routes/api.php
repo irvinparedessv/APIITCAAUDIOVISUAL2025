@@ -116,10 +116,11 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::post('/nuevaCaracteristica', [CaracteristicaController::class, 'store']);
     Route::get('/tipo-equipos/{id}/caracteristicas', [TipoEquipoController::class, 'getCaracteristicas']);
 
-    Route::get('/equipos/{equipo}/insumos', [EquipoAccesorioController::class, 'index']);
-    Route::post('/equipos/{equipo}/insumos', [EquipoAccesorioController::class, 'store']);
-    Route::delete('/equipos/{equipo}/insumos/{insumo}', [EquipoAccesorioController::class, 'destroy']);
-    Route::get('/equipos/{equipo}/insumos/no-asignados', [EquipoAccesorioController::class, 'insumosNoAsignados']);
+    Route::get('/equipos/{equipoId}/insumos', [EquipoAccesorioController::class, 'index']);
+    Route::post('/equipos/{equipoId}/insumos', [EquipoAccesorioController::class, 'store']);
+    Route::delete('/equipos/{equipoId}/insumos/{insumoId}', [EquipoAccesorioController::class, 'destroy']);
+    Route::get('/equipos/{equipoId}/insumos/no-asignados', [EquipoAccesorioController::class, 'insumosNoAsignados']);
+
 
     Route::get('/valores-caracteristica/{equipo}', [ValoresCaracteristicaController::class, 'index']);
     Route::get('/valores-caracteristica/equipo/{equipoId}', [ValoresCaracteristicaController::class, 'caracteristicasConValoresPorEquipo']);
@@ -133,7 +134,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/modelos/insumos/listar', [ModeloAccesorioController::class, 'listarInsumos']);
 
 
-Route::get('/detalleEquipo/{id}', [EquipoController::class, 'detalleEquipo']);
+    Route::get('/detalleEquipo/{id}', [EquipoController::class, 'detalleEquipo']);
 
 
 });

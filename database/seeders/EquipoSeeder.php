@@ -113,7 +113,7 @@ class EquipoSeeder extends Seeder
             $caracteristicas['Voltaje']->id,
         ]);
 
-        // -- Insertar equipos (inventarios) con valores de características --
+        // -- Insertar equipos con número de serie (o únicos) --
         $equipos = [
             [
                 'tipo_equipo_id' => $tipoLaptop->id,
@@ -168,7 +168,32 @@ class EquipoSeeder extends Seeder
                 ],
                 'es_componente' => false,
             ],
-            [
+        ];
+
+        // -- Guardar equipos con número de serie --
+        foreach ($equipos as $data) {
+            $caracValues = $data['caracteristicas'];
+            unset($data['caracteristicas']);
+
+            $equipo = Equipo::updateOrCreate(
+                ['numero_serie' => $data['numero_serie']],
+                $data
+            );
+
+            foreach ($caracValues as $nombreCarac => $valor) {
+                $carac = $caracteristicas[$nombreCarac] ?? null;
+                if ($carac) {
+                    ValoresCaracteristica::updateOrCreate(
+                        ['equipo_id' => $equipo->id, 'caracteristica_id' => $carac->id],
+                        ['valor' => $valor]
+                    );
+                }
+            }
+        }
+
+        // -- Insertar 3 cables HDMI sin número de serie --
+        for ($i = 0; $i < 3; $i++) {
+            $equipo = Equipo::create([
                 'tipo_equipo_id' => $tipoCable->id,
                 'modelo_id' => $modeloCable->id,
                 'estado_id' => $estadoDisponible->id,
@@ -179,31 +204,22 @@ class EquipoSeeder extends Seeder
                 'detalles' => 'Cable HDMI 2 metros',
                 'fecha_adquisicion' => '2023-03-20',
                 'is_deleted' => false,
-                'caracteristicas' => [
-                    'Largo (metros)' => '2.0',
-                    'Voltaje' => '220',
-                ],
                 'es_componente' => true,
-            ],
-        ];
+            ]);
 
-        foreach ($equipos as $data) {
-            $caracValues = $data['caracteristicas'];
-            unset($data['caracteristicas']);
+            $caracteristicasCable = [
+                'Largo (metros)' => '2.0',
+                'Voltaje' => '220',
+            ];
 
-            $equipo = Equipo::updateOrCreate(
-                ['numero_serie' => $data['numero_serie'] ?? null],
-                $data
-            );
-
-            // Guardar valores de características
-            foreach ($caracValues as $nombreCarac => $valor) {
+            foreach ($caracteristicasCable as $nombreCarac => $valor) {
                 $carac = $caracteristicas[$nombreCarac] ?? null;
                 if ($carac) {
-                    ValoresCaracteristica::updateOrCreate(
-                        ['equipo_id' => $equipo->id, 'caracteristica_id' => $carac->id],
-                        ['valor' => $valor]
-                    );
+                    ValoresCaracteristica::create([
+                        'equipo_id' => $equipo->id,
+                        'caracteristica_id' => $carac->id,
+                        'valor' => $valor,
+                    ]);
                 }
             }
         }

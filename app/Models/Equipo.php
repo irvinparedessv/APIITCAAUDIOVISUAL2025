@@ -22,7 +22,8 @@ class Equipo extends Model
         'comentario',
         'es_componente',   
         'is_deleted',
-        'cantidad',       
+        'cantidad',   
+        'serie_asociada',   
     ];
 
     protected $dates = ['fecha_adquisicion'];

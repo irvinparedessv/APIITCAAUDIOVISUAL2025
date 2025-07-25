@@ -49,6 +49,7 @@ class EquipoController extends Controller
                     'id' => $item->id,
                     'tipo' => $tipo,
                     'numero_serie' => $item->numero_serie,
+                    'serie_asociada' => $tipo === 'insumo' ? $item->serie_asociada : null,
                     'vida_util' => $item->vida_util,
                     'cantidad' => 1,
                     'detalles' => $item->detalles,
@@ -416,67 +417,97 @@ class EquipoController extends Controller
     }
 
     public function equiposPorModelo(Request $request, $modeloId)
-    {
-        $perPage = $request->input('perPage', 10);
+{
+    $perPage = $request->input('perPage', 10);
 
-        $query = Equipo::with([
-            'tipoEquipo',
-            'modelo.marca',
-            'estado',
-            'tipoReserva',
-            'valoresCaracteristicas.caracteristica',
-        ])
-            ->where('is_deleted', false)
-            ->where('modelo_id', $modeloId);
+    $query = Equipo::with([
+        'tipoEquipo',
+        'modelo.marca',
+        'estado',
+        'tipoReserva',
+        'valoresCaracteristicas.caracteristica',
+        'insumos.modelo.marca', // Relación de insumos asignados (para equipos)
+        'equiposDondeEsInsumo.modelo.marca' // Relación de equipos donde está asignado (para insumos)
+    ])
+        ->where('is_deleted', false)
+        ->where('modelo_id', $modeloId);
 
-        if ($request->filled('tipo')) {
-            if ($request->input('tipo') === 'equipo') {
-                $query->whereNotNull('numero_serie');
-            } elseif ($request->input('tipo') === 'insumo') {
-                $query->whereNotNull('cantidad');
-            }
+    if ($request->filled('tipo')) {
+        if ($request->input('tipo') === 'equipo') {
+            $query->whereNotNull('numero_serie');
+        } elseif ($request->input('tipo') === 'insumo') {
+            $query->whereNotNull('cantidad');
         }
-
-        $equipos = $query->orderBy('created_at', 'desc')->paginate($perPage);
-
-        $equipos->setCollection(
-            $equipos->getCollection()->transform(function ($item) {
-                $tipo = $item->numero_serie ? 'equipo' : 'insumo';
-
-                return [
-                    'id' => $item->id,
-                    'tipo' => $tipo,
-                    'numero_serie' => $item->numero_serie,
-                    'vida_util' => $item->vida_util,
-                    'cantidad' => 1,
-                    'detalles' => $item->detalles,
-                    'tipo_equipo_id' => $item->tipo_equipo_id,
-                    'modelo_id' => $item->modelo_id,
-                    'estado_id' => $item->estado_id,
-                    'tipo_reserva_id' => $item->tipo_reserva_id,
-                    'fecha_adquisicion' => $item->fecha_adquisicion,
-                    'imagen_url' => $item->imagen_normal
-                        ? asset('storage/equipos/' . $item->imagen_normal)
-                        : asset('storage/equipos/default.png'),
-                    'marca' => $item->modelo->marca->nombre ?? null,
-                    'tipoEquipo' => $item->tipoEquipo,
-                    'modelo' => $item->modelo,
-                    'estado' => $item->estado,
-                    'tipoReserva' => $item->tipoReserva,
-                    'caracteristicas' => $item->valoresCaracteristicas->map(function ($vc) {
-                        return [
-                            'id' => $vc->id,
-                            'caracteristica_id' => $vc->caracteristica_id,
-                            'nombre' => $vc->caracteristica->nombre ?? null,
-                            'valor' => $vc->valor,
-                        ];
-                    }),
-                ];
-            })
-        );
-
-        return response()->json($equipos);
     }
+
+    $equipos = $query->orderBy('created_at', 'desc')->paginate($perPage);
+
+    $equipos->setCollection(
+        $equipos->getCollection()->transform(function ($item) {
+            $tipo = $item->numero_serie ? 'equipo' : 'insumo';
+
+            $response = [
+                'id' => $item->id,
+                'tipo' => $tipo,
+                'numero_serie' => $item->numero_serie,
+                'serie_asociada' => $item->serie_asociada,
+                'vida_util' => $item->vida_util,
+                'cantidad' => $item->cantidad ?? 1, // Usar cantidad real
+                'detalles' => $item->detalles,
+                'tipo_equipo_id' => $item->tipo_equipo_id,
+                'modelo_id' => $item->modelo_id,
+                'estado_id' => $item->estado_id,
+                'tipo_reserva_id' => $item->tipo_reserva_id,
+                'fecha_adquisicion' => $item->fecha_adquisicion,
+                'imagen_url' => $item->imagen_normal
+                    ? asset('storage/equipos/' . $item->imagen_normal)
+                    : asset('storage/equipos/default.png'),
+                'marca' => $item->modelo->marca->nombre ?? null,
+                'tipoEquipo' => $item->tipoEquipo,
+                'modelo' => $item->modelo,
+                'estado' => $item->estado,
+                'tipoReserva' => $item->tipoReserva,
+                'caracteristicas' => $item->valoresCaracteristicas->map(function ($vc) {
+                    return [
+                        'id' => $vc->id,
+                        'caracteristica_id' => $vc->caracteristica_id,
+                        'nombre' => $vc->caracteristica->nombre ?? null,
+                        'valor' => $vc->valor,
+                    ];
+                }),
+            ];
+
+            // Agregar información de asignaciones según el tipo
+            if ($tipo === 'equipo') {
+                $response['asignaciones'] = $item->insumos->map(function ($insumo) {
+                    return [
+                        'id' => $insumo->id,
+                        'tipo' => 'insumo',
+                        'modelo' => $insumo->modelo->nombre ?? 'N/A',
+                        'marca' => $insumo->modelo->marca->nombre ?? 'N/A',
+                        'numero_serie' => $insumo->numero_serie,
+                        'serie_asociada' => $insumo->serie_asociada
+                    ];
+                });
+            } else {
+                $response['asignaciones'] = $item->equiposDondeEsInsumo->map(function ($equipo) {
+                    return [
+                        'id' => $equipo->id,
+                        'tipo' => 'equipo',
+                        'modelo' => $equipo->modelo->nombre ?? 'N/A',
+                        'marca' => $equipo->modelo->marca->nombre ?? 'N/A',
+                        'numero_serie' => $equipo->numero_serie,
+                        'serie_asociada' => $equipo->serie_asociada
+                    ];
+                });
+            }
+
+            return $response;
+        })
+    );
+
+    return response()->json($equipos);
+}
 
     public function detalleEquipo($id)
     {
