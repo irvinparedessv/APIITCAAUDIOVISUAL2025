@@ -23,7 +23,9 @@ class Equipo extends Model
         'es_componente',
         'is_deleted',
         'cantidad',
+        'serie_asociada',
         'imagen_glb'
+
     ];
 
     protected $dates = ['fecha_adquisicion'];

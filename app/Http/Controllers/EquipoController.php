@@ -49,6 +49,7 @@ class EquipoController extends Controller
                     'id' => $item->id,
                     'tipo' => $tipo,
                     'numero_serie' => $item->numero_serie,
+                    'serie_asociada' => $tipo === 'insumo' ? $item->serie_asociada : null,
                     'vida_util' => $item->vida_util,
                     'cantidad' => 1,
                     'detalles' => $item->detalles,
@@ -97,158 +98,166 @@ class EquipoController extends Controller
 
 
     public function store(Request $request)
-{
-    // Validate required fields
-    $validated = $request->validate([
-        'tipo_equipo_id' => 'required|exists:tipo_equipos,id',
-        'modelo_id' => 'required|exists:modelos,id',
-        'estado_id' => 'required|exists:estados,id',
-        'detalles' => 'required|string',
-        'imagen' => 'nullable|image|max:5120',
-        'caracteristicas' => 'nullable|json',
-    ]);
+    {
+        // Detectar tipo (puede venir como query param o form field)
+        $tipo = $request->input('tipo', 'equipo'); // default a 'equipo'
 
-    try {
-        // Handle file upload
-        $imagePath = null;
-        if ($request->hasFile('imagen')) {
-            $imagePath = $request->file('imagen')->store('equipos', 'public');
-        }
-
-        // Create equipment
-        $equipo = Equipo::create([
-            'tipo_equipo_id' => $validated['tipo_equipo_id'],
-            'modelo_id' => $validated['modelo_id'],
-            'estado_id' => $validated['estado_id'],
-            'detalles' => $validated['detalles'],
-            'imagen_url' => $imagePath,
-            // Add other fields as needed from $request
-            'numero_serie' => $request->numero_serie,
-            'vida_util' => $request->vida_util,
-            'tipo_reserva_id' => $request->tipo_reserva_id,
-            'fecha_adquisicion' => $request->fecha_adquisicion,
+        // Validación base
+        $validated = $request->validate([
+            'tipo_equipo_id' => 'required|exists:tipo_equipos,id',
+            'modelo_id' => 'required|exists:modelos,id',
+            'estado_id' => 'required|exists:estados,id',
+            'detalles' => 'required|string',
+            'imagen' => 'nullable|image|max:5120',
+            'caracteristicas' => 'nullable|json',
+            'cantidad' => $tipo === 'insumo' ? 'required|integer|min:1' : 'prohibited',
         ]);
 
-        // Handle characteristics if provided
-        if ($request->has('caracteristicas')) {
-            $caracteristicas = json_decode($request->caracteristicas, true);
-            
-            foreach ($caracteristicas as $caracteristica) {
-                $equipo->valoresCaracteristicas()->create([
-                    'caracteristica_id' => $caracteristica['caracteristica_id'],
-                    'valor' => $caracteristica['valor']
-                ]);
+        try {
+            // Subida de imagen
+            $imagePath = null;
+            if ($request->hasFile('imagen')) {
+                $imagePath = $request->file('imagen')->store('equipos', 'public');
             }
-        }
 
-        return response()->json([
-            'message' => 'Equipo creado exitosamente',
-            'data' => $equipo->load('valoresCaracteristicas')
-        ], 201);
-    } catch (\Exception $e) {
-        return response()->json([
-            'message' => 'Error al crear el equipo',
-            'error' => $e->getMessage(),
-            'trace' => config('app.debug') ? $e->getTrace() : null
-        ], 500);
+            // Cantidad: 1 por defecto si es equipo, >1 si es insumo
+            $cantidad = $tipo === 'insumo' ? (int) $request->input('cantidad', 1) : 1;
+
+            $createdEquipos = [];
+
+            for ($i = 0; $i < $cantidad; $i++) {
+                $equipo = Equipo::create([
+                    'tipo_equipo_id' => $validated['tipo_equipo_id'],
+                    'modelo_id' => $validated['modelo_id'],
+                    'estado_id' => $validated['estado_id'],
+                    'detalles' => $validated['detalles'],
+                    'imagen_url' => $imagePath,
+                    'numero_serie' => $tipo === 'equipo' ? $request->numero_serie : null,
+                    'vida_util' => $tipo === 'equipo' ? $request->vida_util : null,
+                    'tipo_reserva_id' => $request->tipo_reserva_id,
+                    'fecha_adquisicion' => $request->fecha_adquisicion,
+                ]);
+
+                // Características
+                if ($request->has('caracteristicas')) {
+                    $caracteristicas = json_decode($request->caracteristicas, true);
+                    foreach ($caracteristicas as $caracteristica) {
+                        $equipo->valoresCaracteristicas()->create([
+                            'caracteristica_id' => $caracteristica['caracteristica_id'],
+                            'valor' => $caracteristica['valor']
+                        ]);
+                    }
+                }
+
+                $createdEquipos[] = $equipo->load('valoresCaracteristicas');
+            }
+
+            return response()->json([
+                'message' => 'Ítem(s) creado(s) exitosamente',
+                'data' => $cantidad === 1 ? $createdEquipos[0] : $createdEquipos,
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al crear el ítem',
+                'error' => $e->getMessage(),
+                'trace' => config('app.debug') ? $e->getTrace() : null
+            ], 500);
+        }
     }
-}
+
 
 
 
 
     public function update(Request $request, $id)
-{
-    Log::debug('Datos recibidos en el servidor:', $request->all());
+    {
+        Log::debug('Datos recibidos en el servidor:', $request->all());
 
-    $equipo = Equipo::findOrFail($id);
-    $tipo = $equipo->numero_serie ? 'equipo' : 'insumo';
+        $equipo = Equipo::findOrFail($id);
+        $tipo = $equipo->numero_serie ? 'equipo' : 'insumo';
 
-    /**
-     * 🧠 1. Normalizar las características:
-     * - Si vienen como JSON string, decodificar.
-     * - Si vienen como form-data tipo caracteristicas[0][caracteristica_id], reestructurar.
-     */
-    $caracteristicas = [];
+        // 🧠 Normalizar características
+        $caracteristicas = [];
 
-    if ($request->has('caracteristicas')) {
-        $raw = $request->input('caracteristicas');
+        if ($request->has('caracteristicas')) {
+            $raw = $request->input('caracteristicas');
 
-        // Si viene como string JSON (probable en JSON payload)
-        if (is_string($raw)) {
-            $caracteristicas = json_decode($raw, true) ?? [];
-        }
-        // Si ya viene como array (por FormData)
-        elseif (is_array($raw)) {
-            $caracteristicas = $raw;
-        } else {
-            // Reconstrucción manual desde form keys como caracteristicas[0][caracteristica_id]
-            foreach ($request->all() as $key => $value) {
-                if (preg_match('/^caracteristicas\[(\d+)]\[caracteristica_id]$/', $key, $matches)) {
-                    $index = $matches[1];
-                    $caracteristicas[$index]['caracteristica_id'] = $value;
-                }
-                if (preg_match('/^caracteristicas\[(\d+)]\[valor]$/', $key, $matches)) {
-                    $index = $matches[1];
-                    $caracteristicas[$index]['valor'] = $value;
+            // Si viene como JSON string
+            if (is_string($raw)) {
+                $caracteristicas = json_decode($raw, true) ?? [];
+            }
+            // Si ya viene como array (por FormData)
+            elseif (is_array($raw)) {
+                $caracteristicas = $raw;
+            }
+            // Si viene como múltiples claves form-data
+            else {
+                foreach ($request->all() as $key => $value) {
+                    if (preg_match('/^caracteristicas\[(\d+)]\[caracteristica_id]$/', $key, $matches)) {
+                        $index = $matches[1];
+                        $caracteristicas[$index]['caracteristica_id'] = $value;
+                    }
+                    if (preg_match('/^caracteristicas\[(\d+)]\[valor]$/', $key, $matches)) {
+                        $index = $matches[1];
+                        $caracteristicas[$index]['valor'] = $value;
+                    }
                 }
             }
+
+            // Actualizar el request con el array normalizado
+            $request->merge(['caracteristicas' => array_values($caracteristicas)]);
         }
 
-        // Fusionar al request para validación posterior
-        $request->merge(['caracteristicas' => array_values($caracteristicas)]);
+        // ✅ Reglas de validación
+        $rules = [
+            'tipo_equipo_id' => 'sometimes|required|exists:tipo_equipos,id',
+            'modelo_id' => 'sometimes|required|exists:modelos,id',
+            'estado_id' => 'sometimes|required|exists:estados,id',
+            'tipo_reserva_id' => 'nullable|exists:tipo_reservas,id',
+            'detalles' => 'nullable|string',
+            'fecha_adquisicion' => 'nullable|date',
+            'caracteristicas' => 'sometimes|array',
+            'caracteristicas.*.caracteristica_id' => 'required|exists:caracteristicas,id',
+            'caracteristicas.*.valor' => 'required',
+        ];
+
+        if ($tipo === 'equipo') {
+            $rules['numero_serie'] = 'sometimes|required|string|unique:equipos,numero_serie,' . $id;
+            $rules['vida_util'] = 'nullable|integer';
+        } else {
+            // No permitir modificar cantidad en actualización
+            $rules['cantidad'] = 'prohibited';
+        }
+
+        $validatedData = $request->validate($rules);
+
+        // ✅ Campos que se pueden actualizar
+        $equipoFields = collect($validatedData)->only([
+            'tipo_equipo_id',
+            'modelo_id',
+            'estado_id',
+            'tipo_reserva_id',
+            'detalles',
+            'fecha_adquisicion',
+            'numero_serie',
+            'vida_util',
+        ])->toArray();
+
+        // Actualizar modelo
+        $equipo->update($equipoFields);
+
+        // ✅ Sincronizar características si existen
+        if (!empty($caracteristicas)) {
+            $this->sincronizarCaracteristicas($equipo, $caracteristicas);
+        }
+
+        Log::debug('Características sincronizadas:', ['caracteristicas' => $caracteristicas]);
+
+        return response()->json([
+            'message' => 'Equipo actualizado correctamente',
+            'data' => $equipo->fresh()->load('valoresCaracteristicas.caracteristica'),
+        ]);
     }
-
-    // ✅ VALIDACIONES
-    $rules = [
-        'tipo_equipo_id' => 'sometimes|required|exists:tipo_equipos,id',
-        'modelo_id' => 'sometimes|required|exists:modelos,id',
-        'estado_id' => 'sometimes|required|exists:estados,id',
-        'tipo_reserva_id' => 'nullable|exists:tipo_reservas,id',
-        'detalles' => 'nullable|string',
-        'fecha_adquisicion' => 'nullable|date',
-        'caracteristicas' => 'sometimes|array',
-        'caracteristicas.*.caracteristica_id' => 'required|exists:caracteristicas,id',
-        'caracteristicas.*.valor' => 'required',
-    ];
-
-    if ($tipo === 'equipo') {
-        $rules['numero_serie'] = 'sometimes|required|string|unique:equipos,numero_serie,' . $id;
-        $rules['vida_util'] = 'nullable|integer';
-    } else {
-        $rules['cantidad'] = 'sometimes|required|integer|min:1';
-    }
-
-    $validatedData = $request->validate($rules);
-
-    // ✅ ACTUALIZAR CAMPOS DEL MODELO EQUIPO
-    $equipoFields = collect($validatedData)->only([
-        'tipo_equipo_id',
-        'modelo_id',
-        'estado_id',
-        'tipo_reserva_id',
-        'detalles',
-        'fecha_adquisicion',
-        'numero_serie',
-        'vida_util',
-        'cantidad'
-    ])->toArray();
-
-    $equipo->update($equipoFields);
-
-    // ✅ ACTUALIZAR CARACTERÍSTICAS SI SE PROPORCIONAN
-    if (!empty($caracteristicas)) {
-        $this->sincronizarCaracteristicas($equipo, $caracteristicas);
-    }
-
-    Log::debug('Características sincronizadas:', ['caracteristicas' => $caracteristicas]);
-
-    return response()->json([
-        'message' => 'Equipo actualizado correctamente',
-        'data' => $equipo->fresh()->load('valoresCaracteristicas.caracteristica'),
-    ]);
-}
-
 
 
     protected function sincronizarCaracteristicas(Equipo $equipo, array $caracteristicas)
@@ -425,6 +434,8 @@ class EquipoController extends Controller
             'estado',
             'tipoReserva',
             'valoresCaracteristicas.caracteristica',
+            'insumos.modelo.marca', // Relación de insumos asignados (para equipos)
+            'equiposDondeEsInsumo.modelo.marca' // Relación de equipos donde está asignado (para insumos)
         ])
             ->where('is_deleted', false)
             ->where('modelo_id', $modeloId);
@@ -443,12 +454,13 @@ class EquipoController extends Controller
             $equipos->getCollection()->transform(function ($item) {
                 $tipo = $item->numero_serie ? 'equipo' : 'insumo';
 
-                return [
+                $response = [
                     'id' => $item->id,
                     'tipo' => $tipo,
                     'numero_serie' => $item->numero_serie,
+                    'serie_asociada' => $item->serie_asociada,
                     'vida_util' => $item->vida_util,
-                    'cantidad' => 1,
+                    'cantidad' => $item->cantidad ?? 1, // Usar cantidad real
                     'detalles' => $item->detalles,
                     'tipo_equipo_id' => $item->tipo_equipo_id,
                     'modelo_id' => $item->modelo_id,
@@ -472,6 +484,33 @@ class EquipoController extends Controller
                         ];
                     }),
                 ];
+
+                // Agregar información de asignaciones según el tipo
+                if ($tipo === 'equipo') {
+                    $response['asignaciones'] = $item->insumos->map(function ($insumo) {
+                        return [
+                            'id' => $insumo->id,
+                            'tipo' => 'insumo',
+                            'modelo' => $insumo->modelo->nombre ?? 'N/A',
+                            'marca' => $insumo->modelo->marca->nombre ?? 'N/A',
+                            'numero_serie' => $insumo->numero_serie,
+                            'serie_asociada' => $insumo->serie_asociada
+                        ];
+                    });
+                } else {
+                    $response['asignaciones'] = $item->equiposDondeEsInsumo->map(function ($equipo) {
+                        return [
+                            'id' => $equipo->id,
+                            'tipo' => 'equipo',
+                            'modelo' => $equipo->modelo->nombre ?? 'N/A',
+                            'marca' => $equipo->modelo->marca->nombre ?? 'N/A',
+                            'numero_serie' => $equipo->numero_serie,
+                            'serie_asociada' => $equipo->serie_asociada
+                        ];
+                    });
+                }
+
+                return $response;
             })
         );
 
