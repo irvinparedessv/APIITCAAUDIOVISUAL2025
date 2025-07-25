@@ -20,12 +20,14 @@ class Equipo extends Model
         'detalles',
         'fecha_adquisicion',
         'comentario',
-        'es_componente',   
+        'es_componente',
         'is_deleted',
-        'cantidad',       
+        'cantidad',
+        'imagen_glb'
     ];
 
     protected $dates = ['fecha_adquisicion'];
+
 
     // Relaciones existentes ...
 
@@ -61,15 +63,15 @@ class Equipo extends Model
     }
 
     // Método para adjuntar características fácilmente
-public function agregarCaracteristicas(array $caracteristicas)
-{
-    foreach ($caracteristicas as $caract) {
-        $this->valoresCaracteristicas()->updateOrCreate(
-            ['caracteristica_id' => $caract['caracteristica_id']],
-            ['valor' => $caract['valor']]
-        );
+    public function agregarCaracteristicas(array $caracteristicas)
+    {
+        foreach ($caracteristicas as $caract) {
+            $this->valoresCaracteristicas()->updateOrCreate(
+                ['caracteristica_id' => $caract['caracteristica_id']],
+                ['valor' => $caract['valor']]
+            );
+        }
     }
-}
 
     public function valoresCaracteristicas()
     {
@@ -104,7 +106,7 @@ public function agregarCaracteristicas(array $caracteristicas)
         )->withTimestamps();
     }
 
-      // NUEVAS RELACIONES para mantenimiento y futuro mantenimiento
+    // NUEVAS RELACIONES para mantenimiento y futuro mantenimiento
 
     /**
      * Mantenimientos realizados a este equipo

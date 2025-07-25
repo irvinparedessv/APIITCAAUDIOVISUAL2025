@@ -21,6 +21,10 @@ class ReservaEquipo extends Model
         'documento_evento',
         'path_model'
     ];
+    protected $casts = [
+        'fecha_reserva' => 'datetime',
+        'fecha_entrega' => 'datetime',
+    ];
 
     public function equipos()
     {
