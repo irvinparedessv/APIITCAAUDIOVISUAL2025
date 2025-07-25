@@ -10,7 +10,7 @@ class ModeloAccesorioController extends Controller
     public function index($modeloEquipoId)
     {
         $modelo = Modelo::with(['accesorios.marca'])->findOrFail($modeloEquipoId);
-        
+
         return $modelo->accesorios->map(function ($accesorio) {
             return [
                 'id' => $accesorio->id,
@@ -25,7 +25,7 @@ class ModeloAccesorioController extends Controller
         $insumos = Modelo::with('marca')
             ->whereHas('equipos', function ($q) {
                 $q->where('es_componente', true)
-                  ->where('is_deleted', false);
+                    ->where('is_deleted', false);
             })
             ->where('is_deleted', false)
             ->get()
@@ -44,12 +44,13 @@ class ModeloAccesorioController extends Controller
     {
         $request->validate([
             'modelo_equipo_id' => 'required|exists:modelos,id',
-            'modelo_insumo_ids' => 'required|array',
+            'modelo_insumo_ids' => 'nullable|array',
             'modelo_insumo_ids.*' => 'exists:modelos,id',
         ]);
 
+
         $modeloEquipo = Modelo::with(['equipos.tipoEquipo.categoria'])
-                        ->findOrFail($request->modelo_equipo_id);
+            ->findOrFail($request->modelo_equipo_id);
 
         // Verificar que el modelo tenga equipos asociados
         if ($modeloEquipo->equipos->isEmpty()) {
@@ -58,17 +59,17 @@ class ModeloAccesorioController extends Controller
 
         // Verificar que sea de tipo Equipo
         $tipoEquipo = $modeloEquipo->equipos->first()->tipoEquipo;
-        
+
         if (!$tipoEquipo || $tipoEquipo->categoria->nombre !== 'Equipo') {
             return response()->json(['error' => 'Solo se pueden asociar accesorios a modelos de tipo Equipo.'], 422);
         }
 
         // Verificar que los insumos sean válidos
         $insumosInvalidos = Modelo::whereIn('id', $request->modelo_insumo_ids)
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->whereDoesntHave('equipos', function ($q) {
-                        $q->where('es_componente', true);
-                    })
+                    $q->where('es_componente', true);
+                })
                     ->orWhere('is_deleted', true);
             })
             ->exists();

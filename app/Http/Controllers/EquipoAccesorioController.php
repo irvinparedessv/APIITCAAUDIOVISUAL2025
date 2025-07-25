@@ -49,8 +49,14 @@ class EquipoAccesorioController extends Controller
         return response()->json($insumosAgrupados);
     }
 
+    // Retorna el equipo con sus insumos (modelo y marca incluidos)
+    public function show($id)
+    {
+        $equipo = Equipo::with(['insumos.modelo.marca', 'modelo', 'marca'])
+            ->findOrFail($id);
 
-
+        return response()->json($equipo);
+    }
 
     // ✅ Asociar un insumo a un equipo
     public function store(Request $request, $equipoId)
@@ -106,11 +112,24 @@ class EquipoAccesorioController extends Controller
         ], 201);
     }
 
+
     // ✅ Quitar un insumo de un equipo
     public function destroy($equipoId, $insumoId)
     {
         $equipo = Equipo::findOrFail($equipoId);
+        $insumo = Equipo::findOrFail($insumoId);
+
+        // Verificamos que el insumo esté asociado al equipo antes de intentar eliminarlo
+        if (!$equipo->insumos->contains($insumoId)) {
+            return response()->json(['message' => 'El insumo no está asociado a este equipo.'], 404);
+        }
+
+        // Eliminar la relación
         $equipo->insumos()->detach($insumoId);
+
+        // Limpiar el campo `serie_asociada` del insumo
+        $insumo->serie_asociada = null;
+        $insumo->save();
 
         return response()->json(['message' => 'Insumo eliminado correctamente.']);
     }

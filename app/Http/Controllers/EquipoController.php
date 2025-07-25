@@ -136,6 +136,7 @@ class EquipoController extends Controller
                     'vida_util' => $tipo === 'equipo' ? $request->vida_util : null,
                     'tipo_reserva_id' => $request->tipo_reserva_id,
                     'fecha_adquisicion' => $request->fecha_adquisicion,
+                    'es_componente' => $tipo === 'insumo' ? true : false,
                 ]);
 
                 // Características
