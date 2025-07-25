@@ -109,6 +109,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/marcas', [MarcaController::class, 'index']);
     Route::post('/marcas', [MarcaController::class, 'store']);
     Route::get('/modelos', [ModeloController::class, 'index']);
+    Route::get('/modelos/por-marca/{marcaId}', [ModeloController::class, 'porMarca']);
     Route::post('/modelos', [ModeloController::class, 'store']);
     Route::get('/estados', [EstadoController::class, 'index']);
     Route::get('/categorias', [CategoriaController::class, 'index']);

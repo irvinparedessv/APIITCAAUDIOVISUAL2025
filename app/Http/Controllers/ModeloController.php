@@ -53,15 +53,24 @@ class ModeloController extends Controller
     }
 
     // En ModeloController.php
-public function modelosInsumos()
-{
-     $insumos = Equipo::with(['modelo.marca'])
-        ->where('es_componente', 1) // o tu lógica para detectar insumos
-        ->where('is_deleted', 0)
-        ->get();
+    public function modelosInsumos()
+    {
+        $insumos = Equipo::with(['modelo.marca'])
+            ->where('es_componente', 1) // o tu lógica para detectar insumos
+            ->where('is_deleted', 0)
+            ->get();
 
-    return response()->json($insumos);
-}
+        return response()->json($insumos);
+    }
 
 
+    public function porMarca($marcaId)
+    {
+        return Modelo::where('marca_id', $marcaId)
+            ->when(request('search'), function ($query, $search) {
+                return $query->where('nombre', 'like', "%{$search}%");
+            })
+            ->limit(10)
+            ->get();
+    }
 }
