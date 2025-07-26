@@ -13,8 +13,22 @@ class TipoEquipoController extends Controller
      */
     public function index(Request $request)
     {
-        $tiposEquipos = TipoEquipo::where('is_deleted', false)->get();
-        return response()->json($tiposEquipos);
+        $query = TipoEquipo::query()
+            ->where('is_deleted', false)
+            ->with('categoria'); // Opcional: carga relaciones necesarias
+
+        // Búsqueda por nombre (si se envía el parámetro 'search')
+        if ($request->has('search') && !empty($request->search)) {
+            $searchTerm = strtolower($request->search);
+            $query->whereRaw('LOWER(nombre) LIKE ?', ["%{$searchTerm}%"]);
+        }
+
+        // Paginación (si se envía 'limit')
+        if ($request->has('limit')) {
+            return response()->json($query->paginate($request->limit));
+        }
+
+        return response()->json($query->get());
     }
 
     public function obtenerTipo(Request $request)
@@ -91,19 +105,19 @@ class TipoEquipoController extends Controller
     /**
      * Display the specified resource.
      */
-   public function show(string $id)
-{
-    $tipoEquipo = TipoEquipo::with('caracteristicas') // <--- incluye las características
-        ->where('id', $id)
-        ->where('is_deleted', false)
-        ->first();
+    public function show(string $id)
+    {
+        $tipoEquipo = TipoEquipo::with('caracteristicas') // <--- incluye las características
+            ->where('id', $id)
+            ->where('is_deleted', false)
+            ->first();
 
-    if (!$tipoEquipo) {
-        return response()->json(['error' => 'Tipo de equipo no encontrado'], 404);
+        if (!$tipoEquipo) {
+            return response()->json(['error' => 'Tipo de equipo no encontrado'], 404);
+        }
+
+        return response()->json($tipoEquipo);
     }
-
-    return response()->json($tipoEquipo);
-}
 
 
     /**

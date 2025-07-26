@@ -8,10 +8,19 @@ use Illuminate\Support\Facades\Validator;
 
 class MarcaController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $marcas = Marca::where('is_deleted', false)->get();
-        return response()->json($marcas);
+        $query = Marca::where('is_deleted', false);
+
+        if ($request->has('search')) {
+            $query->where('nombre', 'LIKE', '%' . $request->search . '%');
+        }
+
+        if ($request->has('limit')) {
+            return response()->json($query->paginate($request->limit));
+        }
+
+        return response()->json($query->get());
     }
 
     public function store(Request $request)

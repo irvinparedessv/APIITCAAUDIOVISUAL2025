@@ -64,13 +64,30 @@ class ModeloController extends Controller
     }
 
 
-    public function porMarca($marcaId)
+    public function porMarcaYTipo($marcaId)
     {
-        return Modelo::where('marca_id', $marcaId)
-            ->when(request('search'), function ($query, $search) {
-                return $query->where('nombre', 'like', "%{$search}%");
-            })
-            ->limit(10)
-            ->get();
+        $query = Modelo::where('marca_id', $marcaId)
+            ->where('is_deleted', false);
+
+        if (request('tipoEquipoId')) {
+            $query->where(function ($q) {
+                $q->whereDoesntHave('equipos') // Modelos sin equipos
+                    ->orWhereHas('equipos', function ($q) {
+                        // Modelos con equipos del tipo seleccionado
+                        $q->where('tipo_equipo_id', request('tipoEquipoId'))
+                            ->where('is_deleted', false);
+                    });
+            });
+        }
+
+        if (request('search')) {
+            $query->where('nombre', 'LIKE', '%' . request('search') . '%');
+        }
+
+        if (request('limit')) {
+            $query->limit(request('limit'));
+        }
+
+        return $query->get();
     }
 }
