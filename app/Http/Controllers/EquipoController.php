@@ -520,23 +520,36 @@ class EquipoController extends Controller
     {
         $query = DB::table('vista_resumen_inventario');
 
+        // Filtros individuales
         if ($request->filled('categoria')) {
-            $query->where('nombre_categoria', $request->categoria);
+            $query->where('nombre_categoria', 'like', '%' . $request->categoria . '%');
         }
 
         if ($request->filled('tipo_equipo')) {
-            $query->where('nombre_tipo_equipo', $request->tipo_equipo);
+            $query->where('nombre_tipo_equipo', 'like', '%' . $request->tipo_equipo . '%');
         }
 
         if ($request->filled('marca')) {
-            $query->where('nombre_marca', $request->marca);
+            $query->where('nombre_marca', 'like', '%' . $request->marca . '%');
         }
 
-        // paginar, por ejemplo 10 por página
-        $result = $query->paginate(10);
+        // Filtro global de búsqueda (modelo, tipo, marca)
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('nombre_modelo', 'like', "%$search%")
+                    ->orWhere('nombre_marca', 'like', "%$search%")
+                    ->orWhere('nombre_tipo_equipo', 'like', "%$search%");
+            });
+        }
+
+        $perPage = $request->input('perPage', 10); // usa perPage del frontend
+        $result = $query->paginate($perPage);
 
         return response()->json($result);
     }
+
+
 
     public function equiposPorModelo(Request $request, $modeloId)
     {
