@@ -157,11 +157,4 @@ class ModeloController extends Controller
 
         return response()->json($modelo);
     }
-
-    public function mod_destroy($id)
-    {
-        $modelo = Modelo::findOrFail($id);
-        $modelo->update(['is_deleted' => true]);
-        return response()->json(['message' => 'Modelo eliminado.']);
-    }
 }

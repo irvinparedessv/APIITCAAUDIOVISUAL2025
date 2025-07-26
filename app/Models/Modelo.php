@@ -18,7 +18,8 @@ class Modelo extends Model
         'marca_id',
         'imagen_normal',
         'imagen_glb',
-        'is_deleted'
+        'is_deleted',
+        'reposo'
     ];
 
     // Marca del modelo
