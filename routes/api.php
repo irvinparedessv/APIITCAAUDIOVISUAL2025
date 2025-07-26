@@ -147,6 +147,8 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
         Route::post('/modelos', [ModeloController::class, 'mod_store']);
         Route::put('/modelos/{id}', [ModeloController::class, 'mod_update']);
         Route::delete('/modelos/{id}', [ModeloController::class, 'mod_destroy']);
+        Route::post('/modUpload', [ModeloController::class, 'mod_Upload']);
+        Route::get('/modelos/{id}', [ModeloController::class, 'mod_show']);
     });
 });
 

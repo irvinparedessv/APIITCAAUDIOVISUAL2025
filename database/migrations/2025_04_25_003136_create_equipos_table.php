@@ -33,6 +33,7 @@ return new class extends Migration {
             // Para combos
             $table->boolean('es_componente')->default(false);
             $table->integer('reposo')->nullable();
+            $table->decimal('escala', 5, 2)->default(1.00);
 
 
             $table->boolean('is_deleted')->default(false);

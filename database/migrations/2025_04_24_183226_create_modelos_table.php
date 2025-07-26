@@ -15,6 +15,7 @@ return new class extends Migration {
             $table->string('imagen_glb')->nullable();   // imagen para visualización global
             $table->boolean('is_deleted')->default(false);
             $table->integer('reposo')->nullable();
+            $table->decimal('escala', 5, 2)->default(1.00);
             $table->timestamps();
         });
     }

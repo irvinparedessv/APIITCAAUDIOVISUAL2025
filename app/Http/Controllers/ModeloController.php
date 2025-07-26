@@ -7,6 +7,8 @@ use App\Models\Modelo;
 use App\Models\Marca;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 
 class ModeloController extends Controller
@@ -15,6 +17,11 @@ class ModeloController extends Controller
     {
         $modelos = Modelo::where('is_deleted', false)->get();
         return response()->json($modelos);
+    }
+    public function mod_show($id)
+    {
+        $modelo = Modelo::findOrFail($id);
+        return response()->json($modelo);
     }
 
     public function store(Request $request)
@@ -156,5 +163,62 @@ class ModeloController extends Controller
         ]);
 
         return response()->json($modelo);
+    }
+
+    public function mod_Upload(Request $request)
+    {
+        $request->validate([
+            'producto_id' => 'required|exists:modelos,id',
+            'file' => 'nullable|file|mimes:jpg,jpeg,png,glb,gltf|max:10240',
+            'scale' => 'nullable|numeric|min:0.01|max:10',
+            'tipo' => 'required|in:normal,3d',
+        ]);
+
+        $modelo = Modelo::findOrFail($request->producto_id);
+        $file = $request->file('file');
+
+        if ($request->tipo === 'normal') {
+            // Si se sube imagen
+            if ($file) {
+                $extension = $file->getClientOriginalExtension();
+                $uuidName = Str::uuid() . '.' . $extension;
+                $path = $file->storeAs('images', $uuidName, 'public');
+                $modelo->imagen_normal = $path;
+            }
+
+            // Borrar modelo 3D si existe
+            if ($modelo->imagen_glb && Storage::disk('public')->exists($modelo->imagen_glb)) {
+                Storage::disk('public')->delete($modelo->imagen_glb);
+            }
+
+            $modelo->imagen_glb = null;
+            $modelo->escala = 1; // Reiniciar escala si se usa imagen
+        } elseif ($request->tipo === '3d') {
+            // Si se sube modelo 3D
+            if ($file) {
+                $extension = $file->getClientOriginalExtension();
+                $uuidName = Str::uuid() . '.' . $extension;
+                $path = $file->storeAs('models', $uuidName, 'public');
+                $modelo->imagen_glb = $path;
+            }
+
+            // Borrar imagen si existe
+            if ($modelo->imagen_normal && Storage::disk('public')->exists($modelo->imagen_normal)) {
+                Storage::disk('public')->delete($modelo->imagen_normal);
+            }
+
+            $modelo->imagen_normal = null;
+
+            if ($request->filled('scale')) {
+                $modelo->escala = $request->scale;
+            }
+        }
+
+        $modelo->save();
+
+        return response()->json([
+            'message' => 'Archivo actualizado correctamente.',
+            'path_modelo' => $modelo->imagen_normal ?? $modelo->imagen_glb,
+        ]);
     }
 }
