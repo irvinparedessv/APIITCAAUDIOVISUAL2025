@@ -403,6 +403,97 @@ class EquipoController extends Controller
 
         return response()->json($paginador);
     }
+
+    public function obtenerEquiposDisponibilidad(Request $request)
+    {
+        $request->validate([
+            'tipo_equipo_id' => 'nullable|integer',
+            'modelo_id' => 'nullable|array',
+            'modelo_id.*' => 'integer',
+            'page' => 'nullable|integer|min:1',
+            'limit' => 'nullable|integer|min:1|max:100',
+            'fecha' => 'nullable|date',
+            'startTime' => 'nullable|string',
+            'endTime' => 'nullable|string',
+        ]);
+
+        $page = $request->input('page', 1);
+        $limit = $request->input('limit', 5);
+        $modeloIds = $request->input('modelo_id', []);
+
+        $fechaInicio = $request->filled(['fecha', 'startTime']) ? $request->fecha . ' ' . $request->startTime : null;
+        $fechaFin = $request->filled(['fecha', 'endTime']) ? $request->fecha . ' ' . $request->endTime : null;
+
+        $equiposReservados = collect();
+        if ($fechaInicio && $fechaFin) {
+            $equiposReservados = DB::table('reserva_equipos as re')
+                ->join('equipo_reserva as er', 're.id', '=', 'er.reserva_equipo_id')
+                ->whereIn('re.estado', ['Aprobada', 'Pendiente'])
+                ->where(function ($query) use ($fechaInicio, $fechaFin) {
+                    $query->whereBetween('re.fecha_reserva', [$fechaInicio, $fechaFin])
+                        ->orWhereBetween('re.fecha_entrega', [$fechaInicio, $fechaFin])
+                        ->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
+                            $q->where('re.fecha_reserva', '<=', $fechaInicio)
+                                ->where('re.fecha_entrega', '>=', $fechaFin);
+                        });
+                })
+                ->pluck('er.equipo_id');
+        }
+
+        $todosEquipos = VistaEquipo::query()
+            ->when($request->filled('tipo_equipo_id'), fn($q) => $q->where('tipo_equipo_id', $request->tipo_equipo_id))
+            ->when(!empty($modeloIds), fn($q) => $q->whereIn('modelo_id', $modeloIds))
+            ->get();
+
+        $agrupados = $todosEquipos
+            ->groupBy('modelo_id')
+            ->map(function ($equipos, $modelo_id) use ($equiposReservados) {
+                $primer = $equipos->first();
+
+                $disponibles = $equipos->where('estado', 'Disponible')
+                    ->when($equiposReservados->isNotEmpty(), fn($q) => $q->whereNotIn('equipo_id', $equiposReservados))
+                    ->count();
+
+                $mantenimiento = $equipos->where('estado', 'Mantenimiento')->count();
+                $reservados = $equipos->whereIn('equipo_id', $equiposReservados)->count();
+
+                return [
+                    'modelo_id' => $modelo_id,
+                    'nombre_modelo' => $primer->nombre_modelo,
+                    'imagen_normal' => $primer->imagen_normal,
+                    'imagen_glb' => $primer->imagen_glb,
+                    'nombre_marca' => $primer->nombre_marca,
+                    'disponibles' => $disponibles,
+                    'mantenimiento' => $mantenimiento,
+                    'reservados' => $reservados,
+                    'equipos' => $equipos->map(fn($e) => [
+                        'equipo_id' => $e->equipo_id,
+                        'modelo_id' => $e->modelo_id,
+                        'numero_serie' => $e->numero_serie,
+                        'tipo_equipo' => $e->tipo_equipo,
+                        'imagen_glb' => $e->imagen_glb,
+                        'imagen_normal' => $e->imagen_normal,
+                        'estado' => $e->estado,
+                    ])->values(),
+                ];
+            })->values();
+
+        $total = $agrupados->count();
+        $resultados = $agrupados->slice(($page - 1) * $limit, $limit)->values();
+
+        return response()->json(new LengthAwarePaginator(
+            $resultados,
+            $total,
+            $limit,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        ));
+    }
+
+
+
+
+
     public function getResumenInventario(Request $request)
     {
         $query = DB::table('vista_resumen_inventario');

@@ -6,6 +6,7 @@ use App\Models\Equipo;
 use App\Models\Modelo;
 use App\Models\Marca;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class ModeloController extends Controller
@@ -89,5 +90,16 @@ class ModeloController extends Controller
         }
 
         return $query->get();
+    }
+
+    public function modelosEquiposDisponibles()
+    {
+        $modelos = DB::table('vista_equipos')
+            ->select('modelo_id', 'nombre_modelo')
+            ->groupBy('modelo_id', 'nombre_modelo')
+            ->orderBy('nombre_modelo', 'asc')
+            ->get();
+
+        return response()->json($modelos);
     }
 }

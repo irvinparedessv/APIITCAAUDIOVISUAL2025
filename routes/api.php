@@ -173,14 +173,14 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::delete('/notifications', [NotificationController::class, 'destroyAll']);
     Route::get('/getaulas', [AulaController::class, 'getaulas']);
     Route::apiResource('equipos', EquipoController::class);
-
+    Route::get('/modelosEquiposDisponibles', [ModeloController::class, 'modelosEquiposDisponibles']);
     Route::get('/detail/{id}', [ReservaEquipoController::class, 'detail']); // edit reserva
 
     Route::get('/reservas/{id}', [ReservaEquipoController::class, 'getByUser']); // Ver reservas de un usuario
     Route::get('/reservas-aula/{id}', [ReservaAulaController::class, 'show']);
     Route::get('/reservas-aula', [ReservaAulaController::class, 'reservas']);
     Route::get('/equipos/{id}/disponibilidad', [ReservaEquipoController::class, 'verificarDisponibilidad']);
-    Route::get('/obtenerEquipos', [EquipoController::class, 'obtenerEquipos']);
+    Route::get('/obtenerEquipos', [EquipoController::class, 'obtenerEquiposDisponibilidad']);
     Route::get('/aulasEquipos', [AulaController::class, 'index']);
     Route::get('/aulas/{id}/horarios', [ReservaAulaController::class, 'horariosDisponibles']);
     Route::get('/aulas', [ReservaAulaController::class, 'aulas']);

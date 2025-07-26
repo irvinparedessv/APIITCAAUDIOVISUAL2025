@@ -15,6 +15,7 @@ return new class extends Migration {
                 modelos.nombre AS nombre_modelo,
                 marcas.nombre AS nombre_marca,
                 tipo_equipos.nombre AS tipo_equipo,
+                tipo_equipo_id,
                 equipos.tipo_reserva_id,
                 estados.nombre AS estado,
 
