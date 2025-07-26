@@ -23,7 +23,7 @@ class AulaSeeder extends Seeder
             Aula::firstOrCreate(
                 ['name' => $data['name']],
                 [
-                    'path_modelo' => '/models/room.glb',
+                    'path_modelo' => 'models/room.glb',
                     'capacidad_maxima' => $data['capacidad_maxima'],
                     'descripcion' => $data['descripcion']
                 ]
