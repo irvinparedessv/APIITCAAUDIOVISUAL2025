@@ -84,57 +84,40 @@ class ValoresCaracteristicaController extends Controller
 
 public function actualizarValoresPorEquipo(Request $request, $equipoId)
 {
-    $caracteristicas = $request->input('caracteristicas');
+    $request->validate([
+        'caracteristicas' => 'required|array',
+        'caracteristicas.*.id' => 'required_without:caracteristicas.*.caracteristica_id',
+        'caracteristicas.*.caracteristica_id' => 'required_without:caracteristicas.*.id',
+        'caracteristicas.*.valor' => 'present' // Acepta valores vacíos pero debe existir la clave
+    ]);
 
-    // Validar que venga un array
-    if (!is_array($caracteristicas)) {
-        return response()->json(['error' => 'Datos inválidos para características'], 422);
-    }
-
-    // Validar cada característica
-    foreach ($caracteristicas as $caracteristica) {
-        if (!isset($caracteristica['id']) || !array_key_exists('valor', $caracteristica)) {
-            return response()->json(['error' => 'Datos incompletos en características'], 422);
-        }
-    }
+    $caracteristicas = collect($request->input('caracteristicas'))->map(function ($item) {
+        return [
+            'id' => $item['id'] ?? $item['caracteristica_id'] ?? null,
+            'valor' => $item['valor'] ?? null
+        ];
+    })->filter();
 
     DB::transaction(function () use ($equipoId, $caracteristicas) {
-        $idsEnviados = collect($caracteristicas)
-            ->pluck('id')
-            ->filter()
-            ->toArray();
+        $idsEnviados = $caracteristicas->pluck('id')->filter()->toArray();
 
-        // Eliminar valores que no están en la nueva lista
         ValoresCaracteristica::where('equipo_id', $equipoId)
             ->whereNotIn('caracteristica_id', $idsEnviados)
             ->delete();
 
-        // Insertar o actualizar
-        foreach ($caracteristicas as $caracteristica) {
-            $valor = trim($caracteristica['valor']);
-            // Solo actualizar si valor no está vacío (si quieres permitir valores vacíos, quita esta condición)
-            if ($valor !== '') {
-                ValoresCaracteristica::updateOrCreate(
-                    [
-                        'equipo_id' => $equipoId,
-                        'caracteristica_id' => $caracteristica['id'],
-                    ],
-                    ['valor' => $valor]
-                );
-            } else {
-                // Si el valor está vacío, puedes decidir eliminar el registro
-                ValoresCaracteristica::where('equipo_id', $equipoId)
-                    ->where('caracteristica_id', $caracteristica['id'])
-                    ->delete();
-            }
-        }
+        $caracteristicas->each(function ($caracteristica) use ($equipoId) {
+            ValoresCaracteristica::updateOrCreate(
+                [
+                    'equipo_id' => $equipoId,
+                    'caracteristica_id' => $caracteristica['id']
+                ],
+                ['valor' => $caracteristica['valor']]
+            );
+        });
     });
 
-    return response()->json([
-        'message' => 'Valores de características actualizados correctamente'
-    ]);
+    return response()->json(['message' => 'Valores actualizados correctamente']);
 }
-
 
 
 

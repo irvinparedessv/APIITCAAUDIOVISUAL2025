@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class EquipoController extends Controller
 {
@@ -84,26 +85,13 @@ class EquipoController extends Controller
 
 
 
-    public function show($id)
-    {
-        $equipo = Equipo::with(['tipoEquipo', 'modelo', 'estado', 'tipoReserva', 'valoresCaracteristicas.caracteristica'])->findOrFail($id);
-
-        $equipo->tipo = $equipo->numero_serie ? 'equipo' : 'insumo';
-        $equipo->imagen_url = $equipo->imagen_normal
-            ? asset('storage/equipos/' . $equipo->imagen_normal)
-            : asset('storage/equipos/default.png');
-
-        return response()->json($equipo);
-    }
-
-
     public function store(Request $request)
     {
         // Detectar tipo (puede venir como query param o form field)
         $tipo = $request->input('tipo', 'equipo'); // default a 'equipo'
 
-        // Validación base
-        $validated = $request->validate([
+        // Validación base con manejo explícito
+        $rules = [
             'tipo_equipo_id' => 'required|exists:tipo_equipos,id',
             'modelo_id' => 'required|exists:modelos,id',
             'estado_id' => 'required|exists:estados,id',
@@ -111,7 +99,36 @@ class EquipoController extends Controller
             'imagen' => 'nullable|image|max:5120',
             'caracteristicas' => 'nullable|json',
             'cantidad' => $tipo === 'insumo' ? 'required|integer|min:1' : 'prohibited',
-        ]);
+            'tipo_reserva_id' => 'required|exists:tipo_reservas,id',
+            'fecha_adquisicion' => 'required|date',
+        ];
+
+        // Solo validar número_serie si es equipo
+        if ($tipo === 'equipo') {
+            $rules['numero_serie'] = 'required|string|unique:equipos,numero_serie';
+            $rules['vida_util'] = 'required|integer|min:1';
+        }
+
+        $validator = Validator::make($request->all(), $rules);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+
+            // Mensaje más descriptivo si el error es por número de serie duplicado
+            if ($errors->has('numero_serie') && str_contains($errors->first('numero_serie'), 'unique')) {
+                return response()->json([
+                    'message' => 'El número de serie ya existe en el sistema',
+                    'errors' => $errors,
+                ], 422);
+            }
+
+            // Otras validaciones
+            return response()->json([
+                'message' => 'Hay errores en el formulario',
+                'errors' => $errors
+            ], 422);
+        }
+
 
         try {
             // Subida de imagen
@@ -126,18 +143,23 @@ class EquipoController extends Controller
             $createdEquipos = [];
 
             for ($i = 0; $i < $cantidad; $i++) {
-                $equipo = Equipo::create([
-                    'tipo_equipo_id' => $validated['tipo_equipo_id'],
-                    'modelo_id' => $validated['modelo_id'],
-                    'estado_id' => $validated['estado_id'],
-                    'detalles' => $validated['detalles'],
+                $equipoData = [
+                    'tipo_equipo_id' => $request->tipo_equipo_id,
+                    'modelo_id' => $request->modelo_id,
+                    'estado_id' => $request->estado_id,
+                    'detalles' => $request->detalles,
                     'imagen_url' => $imagePath,
-                    'numero_serie' => $tipo === 'equipo' ? $request->numero_serie : null,
-                    'vida_util' => $tipo === 'equipo' ? $request->vida_util : null,
                     'tipo_reserva_id' => $request->tipo_reserva_id,
                     'fecha_adquisicion' => $request->fecha_adquisicion,
-                    'es_componente' => $tipo === 'insumo' ? true : false,
-                ]);
+                    'es_componente' => $tipo === 'insumo',
+                ];
+
+                if ($tipo === 'equipo') {
+                    $equipoData['numero_serie'] = $request->numero_serie;
+                    $equipoData['vida_util'] = $request->vida_util;
+                }
+
+                $equipo = Equipo::create($equipoData);
 
                 // Características
                 if ($request->has('caracteristicas')) {
@@ -160,7 +182,7 @@ class EquipoController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error al crear el ítem',
-                'error' => $e->getMessage(),
+                'error' => config('app.debug') ? $e->getMessage() : 'Error interno del servidor',
                 'trace' => config('app.debug') ? $e->getTrace() : null
             ], 500);
         }

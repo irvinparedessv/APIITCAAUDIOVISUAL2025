@@ -135,7 +135,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/modelos/{id}/accesorios', [ModeloAccesorioController::class, 'index']);
     Route::get('/modelos/insumos/listar', [ModeloAccesorioController::class, 'listarInsumos']);
     Route::delete('/equipos/{equipo}/asignaciones/{insumo}', [EquipoAccesorioController::class, 'destroy']);
-    Route::get('/equipos/{equipo}', [EquipoAccesorioController::class, 'show']);
+    Route::get('/equipoInsumo/{equipo}', [EquipoAccesorioController::class, 'show']);
 
     Route::get('/detalleEquipo/{id}', [EquipoController::class, 'detalleEquipo']);
 
