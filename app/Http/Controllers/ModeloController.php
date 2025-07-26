@@ -102,4 +102,66 @@ class ModeloController extends Controller
 
         return response()->json($modelos);
     }
+
+
+
+
+
+    public function mod_index(Request $request)
+    {
+        $search = $request->query('search');
+        $perPage = $request->query('perPage', 10);
+
+        $query = Modelo::with('marca')->where('is_deleted', false);
+
+        if ($search) {
+            $query->where('nombre', 'like', "%$search%");
+        }
+
+        return $query->paginate($perPage);
+    }
+
+
+    public function mod_marcas()
+    {
+        return Marca::all();
+    }
+
+    public function mod_store(Request $request)
+    {
+        $request->validate([
+            'nombre' => 'required|string',
+            'marca_id' => 'required|exists:marcas,id',
+        ]);
+
+        $modelo = Modelo::create([
+            'nombre' => $request->nombre,
+            'marca_id' => $request->marca_id,
+        ]);
+
+        return response()->json($modelo, 201);
+    }
+
+    public function mod_update(Request $request, $id)
+    {
+        $request->validate([
+            'nombre' => 'required|string',
+            'marca_id' => 'required|exists:marcas,id',
+        ]);
+
+        $modelo = Modelo::findOrFail($id);
+        $modelo->update([
+            'nombre' => $request->nombre,
+            'marca_id' => $request->marca_id,
+        ]);
+
+        return response()->json($modelo);
+    }
+
+    public function mod_destroy($id)
+    {
+        $modelo = Modelo::findOrFail($id);
+        $modelo->update(['is_deleted' => true]);
+        return response()->json(['message' => 'Modelo eliminado.']);
+    }
 }

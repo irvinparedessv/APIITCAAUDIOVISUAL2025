@@ -138,6 +138,16 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/equipos/{equipo}', [EquipoAccesorioController::class, 'show']);
 
     Route::get('/detalleEquipo/{id}', [EquipoController::class, 'detalleEquipo']);
+
+
+
+    Route::prefix('mod')->group(function () {
+        Route::get('/modelos', [ModeloController::class, 'mod_index']);
+        Route::get('/marcas', [ModeloController::class, 'mod_marcas']);
+        Route::post('/modelos', [ModeloController::class, 'mod_store']);
+        Route::put('/modelos/{id}', [ModeloController::class, 'mod_update']);
+        Route::delete('/modelos/{id}', [ModeloController::class, 'mod_destroy']);
+    });
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador,Encargado'])->group(function () {
