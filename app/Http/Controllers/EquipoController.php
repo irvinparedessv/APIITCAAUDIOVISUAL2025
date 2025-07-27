@@ -555,6 +555,9 @@ class EquipoController extends Controller
     public function equiposPorModelo(Request $request, $modeloId)
     {
         $perPage = $request->input('perPage', 10);
+        $search = $request->input('search');
+        $tipo = $request->input('tipo');
+        $estadoId = $request->input('estado_id');
 
         $query = Equipo::with([
             'tipoEquipo',
@@ -562,18 +565,43 @@ class EquipoController extends Controller
             'estado',
             'tipoReserva',
             'valoresCaracteristicas.caracteristica',
-            'insumos.modelo.marca', // Relación de insumos asignados (para equipos)
-            'equiposDondeEsInsumo.modelo.marca' // Relación de equipos donde está asignado (para insumos)
+            'insumos.modelo.marca',
+            'equiposDondeEsInsumo.modelo.marca'
         ])
             ->where('is_deleted', false)
             ->where('modelo_id', $modeloId);
 
-        if ($request->filled('tipo')) {
-            if ($request->input('tipo') === 'equipo') {
+        // Filtro por tipo (equipo o insumo)
+        if ($tipo) {
+            if ($tipo === 'equipo') {
                 $query->whereNotNull('numero_serie');
-            } elseif ($request->input('tipo') === 'insumo') {
+            } elseif ($tipo === 'insumo') {
                 $query->whereNotNull('cantidad');
             }
+        }
+
+        // Filtro por estado
+        if ($estadoId) {
+            $query->where('estado_id', $estadoId);
+        }
+
+
+        // Filtro de búsqueda general
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('numero_serie', 'like', "%$search%")
+                    ->orWhere('serie_asociada', 'like', "%$search%")
+                    ->orWhere('detalles', 'like', "%$search%")
+                    ->orWhereHas('modelo', function ($q) use ($search) {
+                        $q->where('nombre', 'like', "%$search%")
+                            ->orWhereHas('marca', function ($q) use ($search) {
+                                $q->where('nombre', 'like', "%$search%");
+                            });
+                    })
+                    ->orWhereHas('tipoEquipo', function ($q) use ($search) {
+                        $q->where('nombre', 'like', "%$search%");
+                    });
+            });
         }
 
         $equipos = $query->orderBy('created_at', 'desc')->paginate($perPage);
