@@ -99,6 +99,30 @@ class ModeloController extends Controller
         return $query->get();
     }
 
+    public function getModelosPorMarcaYTipo(Request $request)
+    {
+        $marcaId = $request->input('marca_id');
+        $tipoEquipoId = $request->input('tipo_equipo_id');
+        $search = $request->input('search', null);
+        $perPage = $request->input('per_page', 10);  // default 10 por página
+
+        $query = DB::table('modelos as mo')
+            ->join('equipos as e', 'e.modelo_id', '=', 'mo.id')
+            ->where('mo.marca_id', $marcaId)
+            ->where('e.tipo_equipo_id', $tipoEquipoId)
+            ->select('mo.id', 'mo.nombre', 'mo.marca_id')
+            ->distinct();
+
+        if ($search) {
+            $query->where('mo.nombre', 'like', "%{$search}%");
+        }
+
+        $modelosPaginados = $query->paginate($perPage);
+
+        return response()->json($modelosPaginados);
+    }
+
+
     public function modelosEquiposDisponibles()
     {
         $modelos = DB::table('vista_equipos')
