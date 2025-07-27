@@ -43,4 +43,19 @@ class MarcaController extends Controller
 
         return response()->json($marca, 201);
     }
+
+    public function obtenerMarcas(Request $request)
+    {
+        $query = Marca::where('is_deleted', false);
+
+        if ($request->filled('search')) {
+            $query->where('nombre', 'LIKE', '%' . $request->search . '%');
+        }
+
+        $perPage = $request->input('per_page', 10); 
+
+        $marcas = $query->orderBy('nombre')->paginate($perPage);
+
+        return response()->json($marcas);
+    }
 }
