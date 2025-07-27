@@ -406,6 +406,7 @@ class EquipoController extends Controller
                             'imagen_glb' => $e->imagen_glb,
                             'imagen_normal' => $e->imagen_normal,
                             'estado' => $e->estado,
+                            'escala' => $e->escala,
                         ];
                     })->values(),
                 ];

@@ -175,7 +175,6 @@ class Equipos3DSeeder extends Seeder
                     'fecha_adquisicion' => now()->toDateString(),
                     'is_deleted' => false,
                     'reposo' => 30,
-                    'imagen_glb' => $modelo->imagen_glb,
                 ];
 
                 $equipo = Equipo::updateOrCreate(

@@ -21,8 +21,11 @@ return new class extends Migration {
 
                 -- Imágenes, prioridad: equipo > modelo
                 COALESCE(equipos.imagen_glb, modelos.imagen_glb) AS imagen_glb,
-                COALESCE(equipos.imagen_normal, modelos.imagen_normal) AS imagen_normal
-
+                COALESCE(equipos.imagen_normal, modelos.imagen_normal) AS imagen_normal,
+        CASE 
+            WHEN equipos.imagen_glb IS NOT NULL THEN equipos.escala
+            ELSE modelos.escala
+        END AS escala
             FROM equipos
             JOIN modelos ON equipos.modelo_id = modelos.id
             JOIN marcas ON modelos.marca_id = marcas.id

@@ -169,7 +169,7 @@ class ModeloController extends Controller
     {
         $request->validate([
             'producto_id' => 'required|exists:modelos,id',
-            'file' => 'nullable|file|mimes:jpg,jpeg,png,glb,gltf|max:10240',
+            'file' => 'nullable|file|mimes:jpg,jpeg,png,glb,gltf|max:20480',
             'scale' => 'nullable|numeric|min:0.01|max:10',
             'tipo' => 'required|in:normal,3d',
         ]);
@@ -220,5 +220,35 @@ class ModeloController extends Controller
             'message' => 'Archivo actualizado correctamente.',
             'path_modelo' => $modelo->imagen_normal ?? $modelo->imagen_glb,
         ]);
+    }
+
+    public function mod_destroy($id)
+    {
+        $modelo = Modelo::with('equipos')->findOrFail($id);
+
+        if ($modelo->equipos()->exists()) {
+            return response()->json([
+                'message' => 'No se puede eliminar el modelo porque tiene equipos asociados.'
+            ], 409);
+        }
+
+        // Eliminar archivos asociados si existen
+        if ($modelo->imagen_normal && Storage::disk('public')->exists($modelo->imagen_normal)) {
+            Storage::disk('public')->delete($modelo->imagen_normal);
+        }
+
+        if ($modelo->imagen_glb && Storage::disk('public')->exists($modelo->imagen_glb)) {
+            Storage::disk('public')->delete($modelo->imagen_glb);
+        }
+
+        // Eliminación lógica
+        $modelo->update([
+            'is_deleted' => true,
+            'imagen_normal' => null,
+            'imagen_glb' => null,
+            'escala' => 1
+        ]);
+
+        return response()->json(['message' => 'Modelo eliminado correctamente.']);
     }
 }
