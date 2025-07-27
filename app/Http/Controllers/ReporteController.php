@@ -313,31 +313,79 @@ class ReporteController extends Controller
 
     public function reporteInventarioEquipos(Request $request)
     {
-        $tipo = $request->input('tipo_id'); // Coincide con el frontend
-        $estado = $request->input('estado');
-        $perPage = $request->input('per_page', 20); // Valor por defecto: 20
+        $tipoId = $request->input('tipo_id');
+        $estadoId = $request->input('estado');
+        $busqueda = $request->input('busqueda'); // Nuevo parámetro de búsqueda
+        $perPage = $request->input('per_page', 20);
 
         $query = DB::table('equipos')
-            ->select('equipos.id', 'equipos.nombre', 'equipos.cantidad', 'equipos.estado', 'tipo_equipos.nombre as tipo_nombre')
+            ->select(
+                'equipos.id',
+                'equipos.numero_serie',
+                'equipos.comentario',
+                'equipos.created_at',
+                'equipos.estado_id',
+                'estados.nombre as estado_nombre',
+                'tipo_equipos.id as tipo_equipo_id',
+                'tipo_equipos.nombre as tipo_nombre',
+                'categorias.nombre as categoria_nombre',
+                'modelos.id as modelo_id',
+                'modelos.nombre as modelo_nombre',
+                'marcas.nombre as marca_nombre'
+            )
             ->leftJoin('tipo_equipos', 'equipos.tipo_equipo_id', '=', 'tipo_equipos.id')
-            ->where('equipos.is_deleted', 0);
+            ->leftJoin('categorias', 'tipo_equipos.categoria_id', '=', 'categorias.id')
+            ->leftJoin('modelos', 'equipos.modelo_id', '=', 'modelos.id')
+            ->leftJoin('marcas', 'modelos.marca_id', '=', 'marcas.id')
+            ->leftJoin('estados', 'equipos.estado_id', '=', 'estados.id')
+            ->where('equipos.is_deleted', false);
 
-        if ($tipo) {
-            $query->where('equipos.tipo_equipo_id', $tipo);
+        // Filtro por tipo
+        if ($tipoId) {
+            $query->where('equipos.tipo_equipo_id', $tipoId);
         }
 
-        if ($estado === '1') {
-            $query->where('equipos.estado', 1)
-                ->where('equipos.cantidad', '>', 0);
-        } elseif ($estado === '0') {
-            $query->where(function ($q) {
-                $q->where('equipos.estado', 0)
-                    ->orWhere('equipos.cantidad', '=', 0);
+        // Filtro por estado
+        if ($estadoId && $estadoId !== '') {
+            $query->where('equipos.estado_id', $estadoId);
+        }
+
+        // Filtro de búsqueda general (incluyendo características)
+        if ($busqueda) {
+            $query->where(function ($q) use ($busqueda) {
+                $q->where('equipos.numero_serie', 'like', "%{$busqueda}%")
+                    ->orWhere('equipos.comentario', 'like', "%{$busqueda}%")
+                    ->orWhere('tipo_equipos.nombre', 'like', "%{$busqueda}%")
+                    ->orWhere('categorias.nombre', 'like', "%{$busqueda}%")
+                    ->orWhere('modelos.nombre', 'like', "%{$busqueda}%")
+                    ->orWhere('marcas.nombre', 'like', "%{$busqueda}%")
+                    ->orWhere('estados.nombre', 'like', "%{$busqueda}%")
+                    ->orWhereExists(function ($subQuery) use ($busqueda) {
+                        $subQuery->select(DB::raw(1))
+                            ->from('valores_caracteristicas')
+                            ->join('caracteristicas', 'valores_caracteristicas.caracteristica_id', '=', 'caracteristicas.id')
+                            ->whereColumn('valores_caracteristicas.equipo_id', 'equipos.id')
+                            ->where(function ($innerQuery) use ($busqueda) {
+                                $innerQuery->where('caracteristicas.nombre', 'like', "%{$busqueda}%")
+                                    ->orWhere('valores_caracteristicas.valor', 'like', "%{$busqueda}%");
+                            });
+                    });
             });
         }
 
+        // Paginación
+        $equipos = $query->orderBy('equipos.created_at', 'desc')->paginate($perPage);
 
-        $equipos = $query->orderBy('equipos.nombre')->paginate($perPage);
+        $equipos->getCollection()->transform(function ($equipo) {
+            $valores = DB::table('valores_caracteristicas')
+                ->join('caracteristicas', 'valores_caracteristicas.caracteristica_id', '=', 'caracteristicas.id')
+                ->where('valores_caracteristicas.equipo_id', $equipo->id)
+                ->select('caracteristicas.nombre', 'valores_caracteristicas.valor')
+                ->get();
+
+            $equipo->caracteristicas = $valores;
+            return $equipo;
+        });
 
         return response()->json($equipos);
     }
