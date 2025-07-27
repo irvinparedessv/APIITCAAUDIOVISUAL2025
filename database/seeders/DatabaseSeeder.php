@@ -20,7 +20,7 @@ class DatabaseSeeder extends Seeder
             AulaSeeder::class,
             Equipos3DSeeder::class,
             //EquipoSeeder::class,
-            //ReservaEquipoSeeder::class,
+            ReservaEquipoSeeder::class,
             HorarioAulasSeeder::class,
             ImagenesAulaSeeder::class,
             UsuariosEncargadosSeeder::class,
