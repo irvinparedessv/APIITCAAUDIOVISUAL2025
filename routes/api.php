@@ -71,7 +71,9 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador'])->group(function (
     Route::get('/obtenerTipo', [TipoEquipoController::class, 'obtenerTipo']);
 });
 
-
+Route::middleware(['auth:sanctum', 'checkrole:Prestamista'])->group(function () {
+    Route::post('/sugerir-espacios', [ChatGPTController::class, 'sugerirEspacios']);
+});
 
 Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEncargado'])->group(function () {
     //Route::apiResource('equipos', EquipoController::class);
