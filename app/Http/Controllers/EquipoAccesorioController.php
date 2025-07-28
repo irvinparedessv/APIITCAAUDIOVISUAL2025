@@ -37,6 +37,7 @@ class EquipoAccesorioController extends Controller
         $insumosAgrupados = Equipo::select('modelo_id', DB::raw('COUNT(*) as cantidad'))
             ->where('es_componente', true)
             ->where('is_deleted', 0)
+            ->where('estado_id', 1) // Added condition for estado = 1
             ->whereIn('modelo_id', $modelosPermitidos)
             ->whereNotIn('modelo_id', $modelosAsignados) // filtro para no mostrar modelos ya asignados
             ->whereNotIn('id', function ($query) {
