@@ -12,7 +12,9 @@ class EquipoReserva extends Pivot
         'reserva_equipo_id',
         'equipo_id',
         'comentario',
-        'cantidad', // si usás cantidad en la tabla también
+        'cantidad',
+        'fecha_inicio_reposo',
+        'fecha_fin_reposo'
     ];
 
     public $timestamps = false;

@@ -16,8 +16,8 @@ return new class extends Migration
             $table->foreignId('reserva_equipo_id')->constrained('reserva_equipos')->onDelete('cascade');
             $table->foreignId('equipo_id')->constrained('equipos')->onDelete('cascade');
             $table->text('comentario')->nullable();
-            $table->date('fecha_inicio_reposo')->nullable();
-            $table->date('fecha_fin_reposo')->nullable();
+            $table->dateTime('fecha_inicio_reposo')->nullable();
+            $table->dateTime('fecha_fin_reposo')->nullable();
         });
     }
 

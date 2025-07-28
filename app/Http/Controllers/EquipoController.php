@@ -373,6 +373,18 @@ class EquipoController extends Controller
             })
             ->pluck('er.equipo_id');
 
+        // Equipos en reposo
+        $equiposEnReposo = DB::table('equipo_reserva')
+            ->where(function ($query) use ($fechaInicio, $fechaFin) {
+                $query->whereBetween('fecha_inicio_reposo', [$fechaInicio, $fechaFin])
+                    ->orWhereBetween('fecha_fin_reposo', [$fechaInicio, $fechaFin])
+                    ->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
+                        $q->where('fecha_inicio_reposo', '<=', $fechaInicio)
+                            ->where('fecha_fin_reposo', '>=', $fechaFin);
+                    });
+            })
+            ->pluck('equipo_id');
+
         // Equipos disponibles (sin paginar todavía)
         $equiposDisponibles = VistaEquipo::query()
             ->where('tipo_reserva_id', $request->tipo_reserva_id)
@@ -389,26 +401,33 @@ class EquipoController extends Controller
         // Agrupar por modelo_id
         $agrupados = $equiposDisponibles
             ->groupBy('modelo_id')
-            ->map(function ($equipos, $modelo_id) {
+            ->map(function ($equipos, $modelo_id) use ($equiposEnReposo) {
                 $primer = $equipos->first();
+
+                $equiposFormateados = $equipos->map(function ($e) use ($equiposEnReposo) {
+                    return [
+                        'equipo_id' => $e->equipo_id,
+                        'modelo_id' => $e->modelo_id,
+                        'numero_serie' => $e->numero_serie,
+                        'tipo_equipo' => $e->tipo_equipo,
+                        'imagen_glb' => $e->imagen_glb,
+                        'imagen_normal' => $e->imagen_normal,
+                        'estado' => $e->estado,
+                        'escala' => $e->escala,
+                        'en_reposo' => $equiposEnReposo->contains($e->equipo_id),
+                    ];
+                });
+
+                $enReposoCount = $equiposFormateados->where('en_reposo', true)->count();
+
                 return [
                     'modelo_id' => $modelo_id,
                     'nombre_modelo' => $primer->nombre_modelo,
                     'imagen_normal' => $primer->imagen_normal,
                     'imagen_glb' => $primer->imagen_glb,
                     'nombre_marca' => $primer->nombre_marca,
-                    'equipos' => $equipos->map(function ($e) {
-                        return [
-                            'equipo_id' => $e->equipo_id,
-                            'modelo_id' => $e->modelo_id,
-                            'numero_serie' => $e->numero_serie,
-                            'tipo_equipo' => $e->tipo_equipo,
-                            'imagen_glb' => $e->imagen_glb,
-                            'imagen_normal' => $e->imagen_normal,
-                            'estado' => $e->estado,
-                            'escala' => $e->escala,
-                        ];
-                    })->values(),
+                    'en_reposo' => $enReposoCount, // cantidad de equipos con reposo en este grupo
+                    'equipos' => $equiposFormateados->values(),
                 ];
             })->values();
 
@@ -426,6 +445,7 @@ class EquipoController extends Controller
 
         return response()->json($paginador);
     }
+
 
     public function obtenerEquiposDisponibilidad(Request $request)
     {
@@ -462,7 +482,19 @@ class EquipoController extends Controller
                 })
                 ->pluck('er.equipo_id');
         }
-
+        $equiposEnReposo = collect();
+        if ($fechaInicio && $fechaFin) {
+            $equiposEnReposo = DB::table('equipo_reserva')
+                ->where(function ($query) use ($fechaInicio, $fechaFin) {
+                    $query->whereBetween('fecha_inicio_reposo', [$fechaInicio, $fechaFin])
+                        ->orWhereBetween('fecha_fin_reposo', [$fechaInicio, $fechaFin])
+                        ->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
+                            $q->where('fecha_inicio_reposo', '<=', $fechaInicio)
+                                ->where('fecha_fin_reposo', '>=', $fechaFin);
+                        });
+                })
+                ->pluck('equipo_id');
+        }
         $todosEquipos = VistaEquipo::query()
             ->when($request->filled('tipo_equipo_id'), fn($q) => $q->where('tipo_equipo_id', $request->tipo_equipo_id))
             ->when(!empty($modeloIds), fn($q) => $q->whereIn('modelo_id', $modeloIds))
@@ -470,7 +502,7 @@ class EquipoController extends Controller
 
         $agrupados = $todosEquipos
             ->groupBy('modelo_id')
-            ->map(function ($equipos, $modelo_id) use ($equiposReservados) {
+            ->map(function ($equipos, $modelo_id) use ($equiposReservados, $equiposEnReposo) {
                 $primer = $equipos->first();
 
                 $disponibles = $equipos->where('estado', 'Disponible')
@@ -479,6 +511,7 @@ class EquipoController extends Controller
 
                 $mantenimiento = $equipos->where('estado', 'Mantenimiento')->count();
                 $reservados = $equipos->whereIn('equipo_id', $equiposReservados)->count();
+                $enReposo = $equipos->whereIn('equipo_id', $equiposEnReposo)->count();
 
                 return [
                     'modelo_id' => $modelo_id,
@@ -487,6 +520,7 @@ class EquipoController extends Controller
                     'imagen_glb' => $primer->imagen_glb,
                     'nombre_marca' => $primer->nombre_marca,
                     'disponibles' => $disponibles,
+                    'en_reposo' => $enReposo,
                     'mantenimiento' => $mantenimiento,
                     'reservados' => $reservados,
                     'equipos' => $equipos->map(fn($e) => [
