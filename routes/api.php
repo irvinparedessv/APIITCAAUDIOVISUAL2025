@@ -195,7 +195,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::apiResource('equipos', EquipoController::class);
     Route::get('/modelosEquiposDisponibles', [ModeloController::class, 'modelosEquiposDisponibles']);
     Route::get('/detail/{id}', [ReservaEquipoController::class, 'detail']); // edit reserva
-
+    Route::post('/aulas-disponibles', [AulaController::class, 'aulasDisponiblesPorFechas']);
     Route::get('/reservas/{id}', [ReservaEquipoController::class, 'getByUser']); // Ver reservas de un usuario
     Route::get('/reservas-aula/{id}', [ReservaAulaController::class, 'show']);
     Route::get('/reservas-aula', [ReservaAulaController::class, 'reservas']);

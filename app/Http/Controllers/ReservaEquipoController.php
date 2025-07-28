@@ -12,12 +12,14 @@ use App\Models\CodigoQrReservaEquipo;
 use App\Models\EquipmentReservation;
 use App\Models\Equipo;
 use App\Models\ReservaAula;
+use App\Models\ReservaAulaBloque;
 use App\Models\ReservaEquipo;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\CancelarReservaEquipoPrestamista;
 use Illuminate\Support\Facades\Auth;
 use App\Notifications\ConfirmarReservaUsuario;
+use App\Notifications\EmailEdicionReservaAula;
 use App\Notifications\EstadoReservaEquipoNotification;
 use App\Notifications\EstadoReservaNotification;
 use App\Notifications\NotificarResponsableReserva;
@@ -291,6 +293,17 @@ class ReservaEquipoController extends Controller
             'path_model'  => $modelPath,
         ]);
 
+        $bloque = new ReservaAulaBloque([
+            'fecha_inicio' => $validated['fecha_reserva'],
+            'fecha_fin' => $validated['fecha_reserva'],
+            'hora_inicio' => trim($validated['startTime']),
+            'hora_fin' => trim($validated['endTime']),
+            'dia' => Carbon::parse($validated['fecha_reserva'])->locale('es')->dayName,
+            'estado' => 'Pendiente',
+            'recurrente' => false
+        ]);
+        $reservaAula->bloques()->save($bloque);
+
         $reserva->reservaAulas()->attach($reservaAula->id);
 
         // Asociar equipos con cantidades
@@ -381,7 +394,7 @@ class ReservaEquipoController extends Controller
 
     public function update(Request $request, $id)
     {
-        $reserva = ReservaEquipo::with(['equipos', 'reservaAulas'])->findOrFail($id);
+        $reserva = ReservaEquipo::with(['equipos', 'reservaAulas', 'user.role'])->findOrFail($id);
         $user = $request->user();
 
         if (!in_array($user->role->nombre, ['Administrador', 'Encargado']) && $reserva->user_id !== $user->id) {
@@ -395,14 +408,18 @@ class ReservaEquipoController extends Controller
             'equipo.*.cantidad' => 'required|integer|min:1',
             'documento_evento' => 'nullable|file|mimes:pdf,doc,docx|max:5120',
             'modelo_3d' => 'nullable|file|mimetypes:model/gltf-binary,application/octet-stream|max:102400',
+            'fecha_reserva' => 'required|date',
+            'startTime' => 'required|date_format:H:i',
+            'endTime' => 'required|date_format:H:i',
+            'tipo_reserva_id' => 'required|exists:tipo_reservas,id',
         ]);
 
-        $inicio = Carbon::parse($reserva->fecha_reserva);
-        $fin = Carbon::parse($reserva->fecha_entrega);
+        $inicio = Carbon::parse($validated['fecha_reserva'] . ' ' . $validated['startTime']);
+        $fin = Carbon::parse($validated['fecha_reserva'] . ' ' . $validated['endTime']);
 
+        // Verifica traslapes por equipo
         foreach ($validated['equipo'] as $item) {
             $equipo = Equipo::findOrFail($item['id']);
-
             $traslape = ReservaEquipo::where('id', '!=', $reserva->id)
                 ->whereHas('equipos', function ($q) use ($item) {
                     $q->where('equipos.id', $item['id']);
@@ -427,20 +444,30 @@ class ReservaEquipoController extends Controller
 
         $cambios = false;
 
-        // Verificar cambios en aula
+        // Cambios en campos base
         if ((int) $reserva->aula_id !== (int) $validated['aula']) {
             $reserva->aula_id = $validated['aula'];
             $cambios = true;
         }
-
-        // Verificar cambios en equipos (solo comparando IDs)
         $actuales = $reserva->equipos->pluck('id')->sort()->values()->toArray();
         $nuevos = collect($validated['equipo'])->pluck('id')->sort()->values()->toArray();
         if ($actuales !== $nuevos) {
             $cambios = true;
         }
+        if ($reserva->fecha_reserva != $inicio) {
+            $reserva->fecha_reserva = $inicio;
+            $cambios = true;
+        }
+        if ($reserva->fecha_entrega != $fin) {
+            $reserva->fecha_entrega = $fin;
+            $cambios = true;
+        }
+        if ((int) $reserva->tipo_reserva_id !== (int) $validated['tipo_reserva_id']) {
+            $reserva->tipo_reserva_id = $validated['tipo_reserva_id'];
+            $cambios = true;
+        }
 
-        // Reemplazar documento si se sube uno nuevo
+        // Documento nuevo
         if ($request->hasFile('documento_evento')) {
             if ($reserva->documento_evento && Storage::disk('public')->exists($reserva->documento_evento)) {
                 Storage::disk('public')->delete($reserva->documento_evento);
@@ -449,7 +476,7 @@ class ReservaEquipoController extends Controller
             $cambios = true;
         }
 
-        // Reemplazar modelo 3D si se sube uno nuevo
+        // Modelo 3D nuevo
         if ($request->hasFile('modelo_3d')) {
             if ($reserva->path_model && Storage::disk('public')->exists(ltrim($reserva->path_model, '/'))) {
                 Storage::disk('public')->delete(ltrim($reserva->path_model, '/'));
@@ -468,57 +495,73 @@ class ReservaEquipoController extends Controller
 
         // Actualizar equipos con datos en el pivot
         $equiposConPivot = [];
-
         foreach ($validated['equipo'] as $item) {
             $equipoModel = Equipo::findOrFail($item['id']);
-
             $pivotData = [
                 'cantidad' => $item['cantidad'],
             ];
-
             if (!is_null($equipoModel->reposo) && $equipoModel->reposo > 0) {
-                $fechaFinReserva = Carbon::parse($reserva->fecha_entrega);
-
+                $fechaFinReserva = $fin;
                 $pivotData['fecha_inicio_reposo'] = $fechaFinReserva;
                 $pivotData['fecha_fin_reposo'] = $fechaFinReserva->copy()->addMinutes($equipoModel->reposo);
             }
-
             $equiposConPivot[$item['id']] = $pivotData;
         }
-
         $reserva->equipos()->sync($equiposConPivot);
 
-        // Calcular la página donde cae esta reserva
+        // === ACTUALIZAR/REGENERAR RESERVA AULA ASOCIADA Y SUS BLOQUES ===
+        $reservaAula = $reserva->reservaAulas()->first();
+        if ($reservaAula) {
+            $reservaAula->update([
+                'aula_id'   => $validated['aula'],
+                'fecha'     => $inicio,
+                'fecha_fin' => $fin,
+                'dias'      => [Carbon::parse($validated['fecha_reserva'])->format('l')],
+                'tipo'      => 'evento',
+                'horario'   => $validated['startTime'] . ' - ' . $validated['endTime'],
+                'user_id'   => $reserva->user_id,
+                'estado'    => 'Pendiente',
+                'titulo'    => 'Reserva asociada a equipo',
+                'comentario' => 'Editada automáticamente junto a la reserva de equipo.',
+                'path_model' => $reserva->path_model,
+            ]);
+            // Elimina bloques previos y crea nuevo
+            $reservaAula->bloques()->delete();
+            $bloque = new ReservaAulaBloque([
+                'fecha_inicio' => $validated['fecha_reserva'],
+                'fecha_fin'    => $validated['fecha_reserva'],
+                'hora_inicio'  => trim($validated['startTime']),
+                'hora_fin'     => trim($validated['endTime']),
+                'dia'          => Carbon::parse($validated['fecha_reserva'])->locale('es')->dayName,
+                'estado'       => 'Pendiente',
+                'recurrente'   => false
+            ]);
+            $reservaAula->bloques()->save($bloque);
+        }
+
+        // === NOTIFICACIONES ===
         $pagina = $this->calcularPaginaReserva($reserva->id);
-
         $userId = $reserva->user->id;
-
         $usuarioAutenticado = $request->user();
 
-        // Si es administrador o encargado y viene el user_id, usarlo
-        if (in_array($usuarioAutenticado->role->nombre, ['Administrador', 'Encargado']) && $request->filled('user_id')) {
-            $userIdReserva = $reserva->user->id;
-        } else {
-            // Si es prestamista (u otro), usar su propio ID
-            $userIdReserva = $usuarioAutenticado->id;
-        }
         // Obtener responsables (encargados y administradores), excluyendo al usuario que hizo la reserva
         $responsableRoleIds = Role::whereIn('nombre', ['encargado', 'administrador'])->pluck('id');
         $responsables = User::whereIn('role_id', $responsableRoleIds)
-            ->where('id', '!=', $userId) // Excluye al usuario que hizo la reserva
+            ->where('id', '!=', $userId)
             ->get();
         Log::info('Responsables encontrados:', $responsables->pluck('id')->toArray());
-
 
         $esAdminOEncargado = in_array($usuarioAutenticado->role->nombre, ['Administrador', 'Encargado']);
         $esMismaPersona = $usuarioAutenticado->id === $reserva->user->id;
 
+        // Notifica al prestamista si la edición la hace un admin/encargado para otro
         if ($esAdminOEncargado && !$esMismaPersona) {
-            // 🔔 Si un admin/encargado hizo la reserva para un prestamista, notificar al prestamista
             $reserva->user->notify(new NuevaReservaNotification($reserva, $reserva->user->id, $pagina, $usuarioAutenticado->id));
             Log::info("Notificación enviada al prestamista {$reserva->user->id}");
+            // Correo de edición
+            $reserva->user->notify(new EmailEdicionReservaAula($reservaAula)); // Usa la notificación/correo que prefieras
         } elseif (!$esAdminOEncargado) {
-            // 🔔 Si un prestamista hizo la reserva, notificar a todos los responsables
+            // Si la edición la hace un prestamista, notifica a responsables
             foreach ($responsables as $responsable) {
                 $responsable->notify(new NuevaReservaNotification($reserva, $responsable->id, $pagina, $usuarioAutenticado->id));
                 Log::info("Notificación enviada a responsable {$responsable->id}");
@@ -526,12 +569,13 @@ class ReservaEquipoController extends Controller
                 $responsable->notify(new NotificarResponsableReserva($reserva));
             }
         }
-        // Notificación por correo al usuario
-        $reserva->user->notify(new ConfirmarReservaUsuario($reserva));
 
+        // Siempre notifica al usuario dueño (confirmación/correo)
+        $reserva->user->notify(new ConfirmarReservaUsuario($reserva));
 
         return response()->json(['message' => 'Reserva actualizada correctamente.'], 200);
     }
+
 
 
 

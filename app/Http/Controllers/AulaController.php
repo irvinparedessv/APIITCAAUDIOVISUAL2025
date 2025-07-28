@@ -7,11 +7,13 @@ use App\Models\Aula;
 use App\Models\User;
 use App\Models\ImagenesAula;
 use App\Models\HorarioAulas;
+use App\Models\ReservaAula;
 use App\Models\ReservaAulaBloque;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class AulaController extends Controller
 {
@@ -378,6 +380,59 @@ class AulaController extends Controller
 
         return response()->json($aulas);
     }
+
+
+
+
+
+
+    public function aulasDisponiblesPorFechas(Request $request): JsonResponse
+    {
+        $request->validate([
+            'fecha_inicio' => 'required|date_format:Y-m-d H:i',
+            'fecha_fin' => 'required|date_format:Y-m-d H:i|after:fecha_inicio',
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $fechaInicio = Carbon::parse($request->fecha_inicio);
+        $fechaFin = Carbon::parse($request->fecha_fin);
+        $userId = $request->user_id;
+
+        // IDs de aulas que tienen bloqueos por conflicto de horario y otro usuario
+        $aulasOcupadas = ReservaAulaBloque::whereIn('estado', ['Pendiente', 'Aprobado'])
+            ->whereHas('reserva', function ($q) use ($userId) {
+                $q->where('user_id', '!=', $userId);
+            })
+            ->where(function ($q) use ($fechaInicio, $fechaFin) {
+                $q->whereRaw("STR_TO_DATE(CONCAT(fecha_inicio, ' ', hora_fin), '%Y-%m-%d %H:%i') > ?", [$fechaInicio])
+                    ->whereRaw("STR_TO_DATE(CONCAT(fecha_fin, ' ', hora_inicio), '%Y-%m-%d %H:%i') < ?", [$fechaFin]);
+            })
+            ->with('reserva')
+            ->get()
+            ->pluck('reserva.aula_id')
+            ->unique();
+
+        $aulasDisponibles = Aula::with('primeraImagen')
+            ->where('deleted', false)
+            ->whereNotIn('id', $aulasOcupadas)
+            ->select('id', 'name', 'path_modelo')
+            ->get()
+            ->map(function ($aula) {
+                return [
+                    'id' => $aula->id,
+                    'name' => $aula->name,
+                    'path_modelo' => $aula->path_modelo,
+                    'image_path' => $aula->primeraImagen
+                        ? url($aula->primeraImagen->image_path)
+                        : null,
+                ];
+            });
+
+        return response()->json($aulasDisponibles);
+    }
+
+
+
     public function show($id)
     {
         $aula = Aula::with(['imagenes', 'horarios'])->where('deleted', false)
