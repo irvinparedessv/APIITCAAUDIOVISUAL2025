@@ -12,7 +12,7 @@ class Mantenimiento extends Model
         'hora_mantenimiento_inicio',
         'hora_mantenimiento_final',
         'detalles',
-        'tipo_id',
+        'tipo_mantenimiento_id',
         'user_id',
         'futuro_mantenimiento_id',
         'vida_util',
@@ -20,7 +20,7 @@ class Mantenimiento extends Model
 
     public function equipo()
     {
-        return $this->belongsTo(Equipo::class);
+        return $this->belongsTo(Equipo::class, 'equipo_id');
     }
 
     public function tipoMantenimiento()

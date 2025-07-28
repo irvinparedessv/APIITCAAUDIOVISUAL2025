@@ -15,15 +15,16 @@ class FuturoMantenimientoSeeder extends Seeder
         $tipos = TipoMantenimiento::all();
 
         foreach ($equipos as $equipo) {
-            // Elegir tipo aleatorio
-            $tipo = $tipos->random();
-
-            // Crear futuros mantenimientos para cada equipo, por ejemplo 1 o 2 registros
+            // Crear 1 o 2 registros futuros
             $cantidadFuturos = rand(1, 2);
 
             for ($i = 0; $i < $cantidadFuturos; $i++) {
+                // Elegir tipo aleatorio para cada mantenimiento
+                $tipo = $tipos->random();
+
                 FuturoMantenimiento::create([
                     'equipo_id' => $equipo->id,
+                    'tipo_mantenimiento_id' => $tipo->id, // <-- Agregar esta línea
                     'fecha_mantenimiento' => now()->addDays(rand(1, 30))->toDateString(),
                     'hora_mantenimiento_inicio' => '09:00:00',
                     'hora_mantenimiento_final' => '11:00:00',

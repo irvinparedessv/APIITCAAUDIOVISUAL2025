@@ -170,8 +170,8 @@ Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador,Encargad
 
     // RUTAS DE MANTENIMIENTO
     Route::apiResource('tipoMantenimiento', TipoMantenimientoController::class);
-    Route::apiResource('futuroMantenimiento', FuturoMantenimientoController::class);
-    Route::apiResource('mantenimiento', MantenimientoController::class);
+    Route::apiResource('/futuroMantenimiento', FuturoMantenimientoController::class);
+    Route::apiResource('/mantenimientos', MantenimientoController::class);
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamista,EspacioEncargado'])->group(function () {

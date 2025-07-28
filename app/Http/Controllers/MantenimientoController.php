@@ -11,44 +11,45 @@ class MantenimientoController extends Controller
      * Listar todos los mantenimientos con paginación y relaciones.
      */
     public function index(Request $request)
-    {
-        $perPage = $request->input('perPage', 10);
+{
+    $perPage = $request->input('perPage', 10);
 
-        $query = Mantenimiento::with([
-            'equipo.modelo.marca', 
-            'tipoMantenimiento', 
-            'usuario', 
-            'futuroMantenimiento'
-        ]);
+    $query = Mantenimiento::with([
+        'equipo.modelo.marca', // para que modelo y marca también se incluyan
+        'tipoMantenimiento',
+        'usuario',
+        'futuroMantenimiento'
+    ]);
 
-        if ($request->filled('equipo_id')) {
-            $query->where('equipo_id', $request->equipo_id);
-        }
-
-        if ($request->filled('tipo_id')) {
-            $query->where('tipo_id', $request->tipo_id);
-        }
-
-        $mantenimientos = $query->orderBy('fecha_mantenimiento', 'desc')
-            ->paginate($perPage);
-
-        return response()->json($mantenimientos);
+    if ($request->filled('equipo_id')) {
+        $query->where('equipo_id', $request->equipo_id);
     }
+
+    if ($request->filled('tipo_id')) {
+        $query->where('tipo_mantenimiento_id', $request->tipo_id);
+    }
+
+    $mantenimientos = $query->orderBy('fecha_mantenimiento', 'desc')
+        ->paginate($perPage);
+
+    return response()->json($mantenimientos);
+}
 
     /**
      * Mostrar un mantenimiento específico.
      */
     public function show($id)
-    {
-        $mantenimiento = Mantenimiento::with([
-            'equipo.modelo.marca', 
-            'tipoMantenimiento', 
-            'usuario', 
-            'futuroMantenimiento'
-        ])->findOrFail($id);
+{
+    $mantenimiento = Mantenimiento::with([
+        'equipo.modelo.marca',
+        'tipoMantenimiento',
+        'usuario',
+        'futuroMantenimiento'
+    ])->findOrFail($id);
 
-        return response()->json($mantenimiento);
-    }
+    return response()->json($mantenimiento);
+}
+
 
     /**
      * Crear un nuevo mantenimiento.

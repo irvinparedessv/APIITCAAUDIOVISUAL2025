@@ -98,4 +98,9 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Aula::class, 'aula_user', 'user_id', 'aula_id')->where('deleted', false);
     }
+    public function mantenimientos()
+{
+    return $this->hasMany(Mantenimiento::class, 'user_id');
+}
+
 }

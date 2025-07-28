@@ -10,20 +10,26 @@ class FuturoMantenimientoController extends Controller
     /**
      * Listar todos los futuros mantenimientos con paginación.
      */
-    public function index(Request $request)
-    {
-        $perPage = $request->input('perPage', 10);
+   public function index(Request $request)
+{
+    $perPage = $request->input('perPage', 10);
 
-        $query = FuturoMantenimiento::with(['equipo', 'tipoMantenimiento']);
+    $query = FuturoMantenimiento::with(['equipo', 'tipoMantenimiento']);
 
-        if ($request->filled('equipo_id')) {
-            $query->where('equipo_id', $request->equipo_id);
-        }
-
-        $futuros = $query->orderBy('fecha_mantenimiento', 'asc')->paginate($perPage);
-
-        return response()->json($futuros);
+    if ($request->filled('equipo_id')) {
+        $query->where('equipo_id', $request->equipo_id);
     }
+
+    $futuros = $query->orderBy('fecha_mantenimiento', 'asc')->paginate($perPage);
+
+    // Aquí hacemos que la colección paginada incluya las relaciones serializadas
+    $futuros->getCollection()->transform(function ($item) {
+        return $item;
+    });
+
+    return response()->json($futuros);
+}
+
 
     /**
      * Mostrar un futuro mantenimiento específico.
