@@ -42,7 +42,7 @@ class TipoEquipoController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'nombre' => 'required|string|unique:tipo_equipos,nombre',
+            'nombre' => 'required|string',
             'categoria_id' => 'required|exists:categorias,id',
             'caracteristicas' => 'array',
             'caracteristicas.*.id' => 'sometimes|exists:caracteristicas,id',
@@ -50,39 +50,40 @@ class TipoEquipoController extends Controller
             'caracteristicas.*.tipo_dato' => 'sometimes|in:string,integer,decimal,boolean',
         ]);
 
-        // Iniciar transacción para asegurar integridad de datos
+        // Validar nombre único manualmente entre activos
+        $existe = TipoEquipo::whereRaw('LOWER(nombre) = ?', [strtolower($validated['nombre'])])
+            ->where('is_deleted', false)
+            ->exists();
+
+        if ($existe) {
+            return response()->json(['message' => 'El nombre ya existe.'], 422);
+        }
+
         DB::beginTransaction();
 
         try {
-            // 1. Crear el tipo de equipo
             $tipoEquipo = TipoEquipo::create([
                 'nombre' => $validated['nombre'],
                 'categoria_id' => $validated['categoria_id'],
             ]);
 
-            // 2. Procesar características
-            if (isset($validated['caracteristicas'])) {
-                $caracteristicasIds = [];
+            // Procesar características (igual que antes)
+            $caracteristicasIds = [];
 
+            if (isset($validated['caracteristicas'])) {
                 foreach ($validated['caracteristicas'] as $caracteristica) {
-                    // Si tiene ID, es una característica existente
-                    if (isset($caracteristica['id']) && $caracteristica['id'] > 0) {
+                    if (isset($caracteristica['id'])) {
                         $caracteristicasIds[] = $caracteristica['id'];
-                    }
-                    // Si no tiene ID pero tiene nombre, es nueva
-                    elseif (isset($caracteristica['nombre'])) {
-                        $nuevaCaracteristica = \App\Models\Caracteristica::create([
+                    } elseif (isset($caracteristica['nombre'])) {
+                        $nueva = \App\Models\Caracteristica::create([
                             'nombre' => $caracteristica['nombre'],
                             'tipo_dato' => $caracteristica['tipo_dato'] ?? 'string',
                         ]);
-                        $caracteristicasIds[] = $nuevaCaracteristica->id;
+                        $caracteristicasIds[] = $nueva->id;
                     }
                 }
 
-                // 3. Relacionar características con el tipo de equipo
-                if (!empty($caracteristicasIds)) {
-                    $tipoEquipo->caracteristicas()->attach($caracteristicasIds);
-                }
+                $tipoEquipo->caracteristicas()->attach($caracteristicasIds);
             }
 
             DB::commit();
@@ -99,6 +100,7 @@ class TipoEquipoController extends Controller
             ], 500);
         }
     }
+
 
 
 
@@ -141,6 +143,7 @@ class TipoEquipoController extends Controller
         }
 
         // Validar nombre único ignorando el actual
+        // Validar nombre único ignorando el actual
         $existe = TipoEquipo::whereRaw('LOWER(nombre) = ?', [strtolower($validated['nombre'])])
             ->where('id', '!=', $id)
             ->where('is_deleted', false)
@@ -149,6 +152,7 @@ class TipoEquipoController extends Controller
         if ($existe) {
             return response()->json(['message' => 'El nombre ya existe.'], 422);
         }
+
 
         DB::beginTransaction();
 
@@ -226,5 +230,33 @@ class TipoEquipoController extends Controller
         }])->findOrFail($id);
 
         return response()->json($tipoEquipo->caracteristicas);
+    }
+
+    public function checkEquipos($id)
+    {
+        $count = DB::table('equipos')
+            ->where('tipo_equipo_id', $id)
+            ->count();
+
+        return response()->json([
+            'tiene_equipos' => $count > 0,
+            'count' => $count // ← Devuelve el número exacto (útil para mensajes)
+        ]);
+    }
+
+
+    // En tu controlador (ej: TipoEquipoController.php)
+    public function checkEquiposMasivo(Request $request)
+    {
+        $ids = $request->input('ids', []); // IDs de tipos a verificar
+
+        $resultados = DB::table('equipos')
+            ->select('tipo_equipo_id', DB::raw('COUNT(*) as count'))
+            ->whereIn('tipo_equipo_id', $ids)
+            ->groupBy('tipo_equipo_id')
+            ->pluck('count', 'tipo_equipo_id')
+            ->toArray();
+
+        return response()->json($resultados);
     }
 }
