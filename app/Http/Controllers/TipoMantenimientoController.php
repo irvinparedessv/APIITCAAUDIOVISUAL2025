@@ -71,12 +71,26 @@ class TipoMantenimientoController extends Controller
      * Eliminar un tipo de mantenimiento.
      */
     public function destroy($id)
-    {
+{
+    try {
         $tipo = TipoMantenimiento::findOrFail($id);
         $tipo->delete();
 
         return response()->json([
             'message' => 'Tipo de mantenimiento eliminado correctamente',
         ]);
+    } catch (\Illuminate\Database\QueryException $e) {
+        // Código 23000 indica error de restricción de integridad (foreign key)
+        if ($e->getCode() === '23000') {
+            return response()->json([
+                'message' => 'No se puede eliminar este tipo de mantenimiento porque hay mantenimientos asociados. Primero elimina o reasigna esos mantenimientos.',
+            ], 409); // Código HTTP 409 Conflict
+        }
+        // Otros errores
+        return response()->json([
+            'message' => 'Error al eliminar el tipo de mantenimiento',
+        ], 500);
     }
+}
+
 }
