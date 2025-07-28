@@ -11,8 +11,6 @@ use App\Models\TipoEquipo;
 use App\Models\TipoReserva;
 use App\Models\Caracteristica;
 use App\Models\ValoresCaracteristica;
-use App\Models\ModeloAccesorio;
-use App\Models\EquipoAccesorio;
 use Illuminate\Database\Seeder;
 
 class Equipos3DSeeder extends Seeder
@@ -36,88 +34,121 @@ class Equipos3DSeeder extends Seeder
             ['nombre' => 'Parlante', 'categoria_id' => $categoriaEquipo->id, 'is_deleted' => false],
             ['nombre' => 'Proyector', 'categoria_id' => $categoriaEquipo->id, 'is_deleted' => false],
             ['nombre' => 'Mouse', 'categoria_id' => $categoriaEquipo->id, 'is_deleted' => false],
-            ['nombre' => 'Cable', 'categoria_id' => $categoriaInsumo->id, 'is_deleted' => false],
-            ['nombre' => 'Control', 'categoria_id' => $categoriaInsumo->id, 'is_deleted' => false],
         ];
         foreach ($tipos as $tipo) {
             TipoEquipo::updateOrCreate(['nombre' => $tipo['nombre']], $tipo);
         }
 
         // -- Marcas --
-        $marcaGen3D = Marca::updateOrCreate(['nombre' => 'Generic 3D Models'], ['is_deleted' => false]);
+        $marcas = ['Generic 3D Models'];
+        foreach ($marcas as $nombre) {
+            Marca::updateOrCreate(['nombre' => $nombre], ['is_deleted' => false]);
+        }
+        $marcaGen3D = Marca::where('nombre', 'Generic 3D Models')->first();
 
-        // -- Modelos 3D --
+        // -- Modelos 3D con solo imagen glb --
         $modelos3D = [
-            ['nombre' => 'laptop_low-poly', 'imagen_glb' => 'models/laptop_low-poly.glb', 'reposo' => 30, 'escala' => 1.90],
-            ['nombre' => 'laptop_alienpredator', 'imagen_glb' => 'models/laptop_alienpredator.glb', 'reposo' => 30, 'escala' => 0.40],
-            ['nombre' => 'laptop_windows_menu', 'imagen_glb' => 'models/laptop_windows_menu.glb', 'reposo' => 30, 'escala' => 1.6],
-            ['nombre' => 'laptop_dell_g7', 'imagen_glb' => 'models/laptop_dell_g7.glb', 'reposo' => 30, 'escala' => 0.08],
-            ['nombre' => 'laptop_acer', 'imagen_glb' => 'models/laptop_acer.glb', 'reposo' => 30, 'escala' => 0.30],
-            ['nombre' => 'microfono', 'imagen_glb' => 'models/microfono.glb', 'reposo' => 30],
-            ['nombre' => 'razer_seiren_x', 'imagen_glb' => 'models/razer_seiren_x.glb', 'reposo' => 30, 'escala' => 0.06],
-            ['nombre' => 'skp_pro_40_microphone', 'imagen_glb' => 'models/skp_pro_40_microphone.glb', 'reposo' => 30, 'escala' => 0.05],
-            ['nombre' => 'jbl_charge_3_speaker', 'imagen_glb' => 'models/jbl_charge_3_speaker.glb', 'reposo' => 30],
-            ['nombre' => 'logitech_speaker', 'imagen_glb' => 'models/logitech_speaker.glb', 'reposo' => 30],
-            ['nombre' => 'bluetooth_speaker', 'imagen_glb' => 'models/bluetooth_speaker.glb', 'reposo' => 30],
-            ['nombre' => 'jbl_speaker', 'imagen_glb' => 'models/jbl_speaker.glb', 'reposo' => 30, 'escala' => 0.10],
-            ['nombre' => 'video_projector', 'imagen_glb' => 'models/video_projector.glb', 'reposo' => 30],
-            ['nombre' => 'generic_white_digital_projector', 'imagen_glb' => 'models/generic_white_digital_projector.glb', 'reposo' => 30],
-            ['nombre' => 'pc_mouse_type-r', 'imagen_glb' => 'models/pc_mouse_type-r.glb', 'reposo' => 30, 'escala' => 0.04],
-            ['nombre' => 'computer_mouse', 'imagen_glb' => 'models/computer_mouse.glb', 'reposo' => 30],
-            ['nombre' => 'computer_mouse_a4tech_bloody_v7', 'imagen_glb' => 'models/computer_mouse_a4tech_bloody_v7.glb', 'reposo' => 30, 'escala' => 0.04],
-        ];
+            ['nombre' => 'laptop_low-poly', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/laptop_low-poly.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 1.90],
+            ['nombre' => 'laptop_alienpredator', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/laptop_alienpredator.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 0.40],
+            ['nombre' => 'laptop_windows_menu', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/laptop_windows_menu.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 1.6],
+            ['nombre' => 'laptop_dell_g7', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/laptop_dell_g7.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 0.08],
+            ['nombre' => 'laptop_acer', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/laptop_acer.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 0.30],
 
+            ['nombre' => 'microfono', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/microfono.glb', 'is_deleted' => false, 'reposo' => 30],
+            ['nombre' => 'razer_seiren_x', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/razer_seiren_x.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 0.06],
+            ['nombre' => 'skp_pro_40_microphone', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/skp_pro_40_microphone.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 0.05],
+
+            ['nombre' => 'jbl_charge_3_speaker', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/jbl_charge_3_speaker.glb', 'is_deleted' => false, 'reposo' => 30],
+            ['nombre' => 'logitech_speaker', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/logitech_speaker.glb', 'is_deleted' => false, 'reposo' => 30],
+            ['nombre' => 'bluetooth_speaker', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/bluetooth_speaker.glb', 'is_deleted' => false, 'reposo' => 30],
+            ['nombre' => 'jbl_speaker', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/jbl_speaker.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 0.10],
+
+            ['nombre' => 'video_projector', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/video_projector.glb', 'is_deleted' => false, 'reposo' => 30],
+            ['nombre' => 'generic_white_digital_projector', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/generic_white_digital_projector.glb', 'is_deleted' => false, 'reposo' => 30],
+
+            ['nombre' => 'pc_mouse_type-r', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/pc_mouse_type-r.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 0.04],
+            ['nombre' => 'computer_mouse', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/computer_mouse.glb', 'is_deleted' => false, 'reposo' => 30],
+            ['nombre' => 'computer_mouse_a4tech_bloody_v7', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/computer_mouse_a4tech_bloody_v7.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 0.04],
+        ];
         foreach ($modelos3D as $mod) {
             Modelo::updateOrCreate(
-                ['nombre' => $mod['nombre'], 'marca_id' => $marcaGen3D->id],
+                ['nombre' => $mod['nombre'], 'marca_id' => $mod['marca_id']],
                 [
                     'imagen_glb' => $mod['imagen_glb'],
-                    'is_deleted' => false,
+                    'is_deleted' => $mod['is_deleted'],
                     'reposo' => $mod['reposo'],
-                    'escala' => $mod['escala'] ?? 1,
+                    'escala' => $mod['escala'] ?? 1
                 ]
             );
         }
 
         // -- Estados --
-        $estadoDisponible = Estado::updateOrCreate(['nombre' => 'Disponible'], ['is_deleted' => false]);
+        $estados = ['Disponible', 'En reparación', 'En reposo', 'Dañado'];
+        foreach ($estados as $nombre) {
+            Estado::updateOrCreate(['nombre' => $nombre], ['is_deleted' => false]);
+        }
+        $estadoDisponible = Estado::where('nombre', 'Disponible')->first();
 
-        // -- Tipos de equipo
+        // -- Obtener tipos equipo para asignar a equipos 3D --
         $tipoLaptop = TipoEquipo::where('nombre', 'Laptop')->first();
         $tipoMicrofono = TipoEquipo::where('nombre', 'Micrófono')->first();
         $tipoParlante = TipoEquipo::where('nombre', 'Parlante')->first();
         $tipoProyector = TipoEquipo::where('nombre', 'Proyector')->first();
         $tipoMouse = TipoEquipo::where('nombre', 'Mouse')->first();
-        $tipoCable = TipoEquipo::where('nombre', 'Cable')->first();
-        $tipoControl = TipoEquipo::where('nombre', 'Control')->first();
 
         // -- Características --
-        $caracteristicas = [
-            'Peso (kg)' => Caracteristica::updateOrCreate(['nombre' => 'Peso (kg)'], ['tipo_dato' => 'decimal', 'is_deleted' => false]),
-            'Color' => Caracteristica::updateOrCreate(['nombre' => 'Color'], ['tipo_dato' => 'string', 'is_deleted' => false]),
-            'Resolución (px)' => Caracteristica::updateOrCreate(['nombre' => 'Resolución (px)'], ['tipo_dato' => 'integer', 'is_deleted' => false]),
+        $caracteristicasData = [
+            ['nombre' => 'Peso (kg)', 'tipo_dato' => 'decimal'],
+            ['nombre' => 'Color', 'tipo_dato' => 'string'],
+            ['nombre' => 'Resolución (px)', 'tipo_dato' => 'integer'],
         ];
+        $caracteristicas = [];
+        foreach ($caracteristicasData as $carac) {
+            $caracteristicas[$carac['nombre']] = Caracteristica::updateOrCreate(
+                ['nombre' => $carac['nombre']],
+                ['tipo_dato' => $carac['tipo_dato'], 'is_deleted' => false]
+            );
+        }
 
-        $tipoLaptop->caracteristicas()->syncWithoutDetaching(array_column($caracteristicas, 'id'));
-        $tipoMicrofono->caracteristicas()->syncWithoutDetaching(array_column($caracteristicas, 'id'));
-        $tipoParlante->caracteristicas()->syncWithoutDetaching(array_column($caracteristicas, 'id'));
-        $tipoProyector->caracteristicas()->syncWithoutDetaching(array_column($caracteristicas, 'id'));
-        $tipoMouse->caracteristicas()->syncWithoutDetaching(array_column($caracteristicas, 'id'));
+        // -- Asociar características a tipos de equipo --
+        $tipoLaptop->caracteristicas()->syncWithoutDetaching([
+            $caracteristicas['Peso (kg)']->id,
+            $caracteristicas['Color']->id,
+            $caracteristicas['Resolución (px)']->id,
+        ]);
+        $tipoMicrofono->caracteristicas()->syncWithoutDetaching([
+            $caracteristicas['Peso (kg)']->id,
+            $caracteristicas['Color']->id,
+        ]);
+        $tipoParlante->caracteristicas()->syncWithoutDetaching([
+            $caracteristicas['Peso (kg)']->id,
+            $caracteristicas['Color']->id,
+        ]);
+        $tipoProyector->caracteristicas()->syncWithoutDetaching([
+            $caracteristicas['Peso (kg)']->id,
+            $caracteristicas['Color']->id,
+        ]);
+        $tipoMouse->caracteristicas()->syncWithoutDetaching([
+            $caracteristicas['Peso (kg)']->id,
+            $caracteristicas['Color']->id,
+        ]);
 
-        // -- Tipo reserva
+        // -- Tipo reserva --
         $tipoReservaId = 3;
 
-        // -- Obtener modelos
+        // -- Obtener todos los modelos ya guardados en BD --
         $modelos = [];
         foreach ($modelos3D as $mod) {
             $modelos[$mod['nombre']] = Modelo::where('nombre', $mod['nombre'])->first();
         }
 
-        // -- Crear equipos físicos
+        // -- Crear un equipo 3D para cada modelo 3D --
         foreach ($modelos as $nombreModelo => $modelo) {
+
+            // Detectar tipo equipo según nombre modelo (ejemplo rápido)
             if (str_contains($nombreModelo, 'laptop')) {
                 $tipoEquipo = $tipoLaptop;
-            } elseif (str_contains($nombreModelo, 'microfono') || str_contains($nombreModelo, 'microphone')) {
+            } elseif (str_contains($nombreModelo, 'microfono') || str_contains($nombreModelo, 'microphone') || str_contains($nombreModelo, 'razer')) {
                 $tipoEquipo = $tipoMicrofono;
             } elseif (str_contains($nombreModelo, 'speaker')) {
                 $tipoEquipo = $tipoParlante;
@@ -126,118 +157,49 @@ class Equipos3DSeeder extends Seeder
             } elseif (str_contains($nombreModelo, 'mouse')) {
                 $tipoEquipo = $tipoMouse;
             } else {
+                // Default si no se reconoce
                 $tipoEquipo = $tipoLaptop;
             }
 
             for ($i = 1; $i <= 2; $i++) {
                 $numeroSerie = strtoupper("3D-" . str_replace('_', '-', $nombreModelo) . "-{$i}");
 
+
+                $equipoData = [
+                    'tipo_equipo_id' => $tipoEquipo->id,
+                    'modelo_id' => $modelo->id,
+                    'estado_id' => $estadoDisponible->id,
+                    'tipo_reserva_id' => $tipoReservaId,
+                    'numero_serie' => $numeroSerie,
+                    'vida_util' => 3,  // Puedes ajustar valor por defecto
+                    'es_componente' => 0,
+                    'detalles' => 'Equipo 3D generado automáticamente para modelo ' . $nombreModelo,
+                    'fecha_adquisicion' => now()->toDateString(),
+                    'is_deleted' => false,
+                    'reposo' => 30,
+                ];
+
                 $equipo = Equipo::updateOrCreate(
                     ['numero_serie' => $numeroSerie],
-                    [
-                        'tipo_equipo_id' => $tipoEquipo->id,
-                        'modelo_id' => $modelo->id,
-                        'estado_id' => $estadoDisponible->id,
-                        'tipo_reserva_id' => $tipoReservaId,
-                        'numero_serie' => $numeroSerie,
-                        'vida_util' => 3,
-                        'es_componente' => false,
-                        'detalles' => 'Equipo 3D generado automáticamente para modelo ' . $nombreModelo,
-                        'fecha_adquisicion' => now()->toDateString(),
-                        'is_deleted' => false,
-                        'reposo' => 30,
-                    ]
+                    $equipoData
                 );
 
-                $valores = [
+                // Características por defecto (puedes ajustar si quieres valores distintos)
+                $caracteristicasPorDefecto = [
                     'Peso (kg)' => 1.0,
                     'Color' => 'Negro',
                     'Resolución (px)' => 1080,
                 ];
 
-                foreach ($valores as $nombreCarac => $valor) {
-                    if (isset($caracteristicas[$nombreCarac])) {
+                foreach ($caracteristicasPorDefecto as $nombreCarac => $valor) {
+                    $carac = $caracteristicas[$nombreCarac] ?? null;
+                    if ($carac) {
                         ValoresCaracteristica::updateOrCreate(
-                            ['equipo_id' => $equipo->id, 'caracteristica_id' => $caracteristicas[$nombreCarac]->id],
+                            ['equipo_id' => $equipo->id, 'caracteristica_id' => $carac->id],
                             ['valor' => $valor]
                         );
                     }
                 }
-            }
-        }
-
-        // === Agregar modelos de insumos ===
-        $insumoModelsData = [
-            ['nombre' => 'cable_hdmi', 'imagen_glb' => 'models/cable_hdmi.glb'],
-            ['nombre' => 'control_remoto', 'imagen_glb' => 'models/control_remoto.glb'],
-        ];
-        $modelosInsumo = [];
-        foreach ($insumoModelsData as $data) {
-            $modelo = Modelo::updateOrCreate(
-                ['nombre' => $data['nombre'], 'marca_id' => $marcaGen3D->id],
-                ['imagen_glb' => $data['imagen_glb'], 'is_deleted' => false, 'reposo' => 0, 'escala' => 1]
-            );
-            $modelosInsumo[$data['nombre']] = $modelo;
-        }
-
-        // === Asociar modelos accesorios ===
-        $modeloAsociaciones = [
-            'video_projector' => ['cable_hdmi', 'control_remoto'],
-            'generic_white_digital_projector' => ['cable_hdmi', 'control_remoto'],
-            'laptop_low-poly' => ['mouse'],
-            'laptop_alienpredator' => ['mouse'],
-            'microfono' => ['cable_hdmi'],
-            'razer_seiren_x' => ['cable_hdmi'],
-            'jbl_charge_3_speaker' => ['cable_hdmi'],
-        ];
-
-        foreach ($modeloAsociaciones as $modeloEquipo => $insumos) {
-            $modeloEquipoObj = $modelos[$modeloEquipo] ?? null;
-            if (!$modeloEquipoObj) continue;
-
-            foreach ($insumos as $insumoNombre) {
-                $modeloInsumo = $modelosInsumo[$insumoNombre] ?? null;
-                if ($modeloInsumo) {
-                    ModeloAccesorio::updateOrCreate([
-                        'modelo_equipo_id' => $modeloEquipoObj->id,
-                        'modelo_insumo_id' => $modeloInsumo->id,
-                    ]);
-                }
-            }
-        }
-
-        // === Crear equipos insumos asociados ===
-        $equipos = Equipo::whereIn('modelo_id', array_column($modelos, 'id'))->get();
-        foreach ($equipos as $equipo) {
-            $modeloNombre = $equipo->modelo->nombre;
-            if (!isset($modeloAsociaciones[$modeloNombre])) continue;
-
-            foreach ($modeloAsociaciones[$modeloNombre] as $insumoNombre) {
-                $modeloInsumo = $modelosInsumo[$insumoNombre] ?? null;
-                if (!$modeloInsumo) continue;
-
-                $tipoEquipoId = str_contains($insumoNombre, 'control') ? $tipoControl->id : $tipoCable->id;
-
-                $insumo = Equipo::updateOrCreate(
-                    [
-                        'modelo_id' => $modeloInsumo->id,
-                        'serie_asociada' => $equipo->numero_serie,
-                        'es_componente' => true,
-                    ],
-                    [
-                        'tipo_equipo_id' => $tipoEquipoId,
-                        'estado_id' => $estadoDisponible->id,
-                        'tipo_reserva_id' => $tipoReservaId,
-                        'detalles' => "Insumo asociado a {$equipo->numero_serie}",
-                        'fecha_adquisicion' => now(),
-                        'is_deleted' => false,
-                    ]
-                );
-
-                EquipoAccesorio::updateOrCreate([
-                    'equipo_id' => $equipo->id,
-                    'insumo_id' => $insumo->id,
-                ]);
             }
         }
     }
