@@ -34,17 +34,15 @@ class ChatGPTController extends Controller
             ->filter(function ($aula) use ($horaInicio, $horaFin) {
                 // Verifica que no haya reservas que se crucen con el horario solicitado
                 foreach ($aula->reservas as $reserva) {
-                    $resHoraInicio = $reserva->horario ? explode('-', $reserva->horario)[0] : null;
-                    $resHoraFin    = $reserva->horario ? explode('-', $reserva->horario)[1] : null;
-
+                    $resHorario = $reserva->horario ? explode('-', $reserva->horario) : [null, null];
+                    $resHoraInicio = trim($resHorario[0]);
+                    $resHoraFin = trim($resHorario[1]);
                     if (
                         $resHoraInicio && $resHoraFin &&
-                        !(
-                            $horaFin   <= $resHoraInicio ||
-                            $horaInicio >= $resHoraFin
-                        )
+                        // Detecta cruce: inicio < fin reserva Y fin > inicio reserva
+                        (strtotime($horaInicio) < strtotime($resHoraFin) && strtotime($horaFin) > strtotime($resHoraInicio))
                     ) {
-                        return false; // Cruce detectado, aula NO disponible
+                        return false; // Cruce detectado
                     }
                 }
                 return true; // No cruza con ninguna reserva, aula disponible
