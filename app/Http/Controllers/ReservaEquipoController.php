@@ -172,6 +172,7 @@ class ReservaEquipoController extends Controller
             'endTime' => 'required|date_format:H:i',
             'tipo_reserva_id' => 'required|exists:tipo_reservas,id',
             'documento_evento' => 'nullable|file|mimes:pdf,doc,docx|max:5120',
+            'en_reposo' => 'required|boolean',
         ]);
 
 
@@ -278,6 +279,7 @@ class ReservaEquipoController extends Controller
             'tipo_reserva_id' => $validated['tipo_reserva_id'],
             'documento_evento' => $documentoPath,
             'path_model' => $modelPath,
+            'esPrioridad' => $validated['en_reposo'],
         ]);
         $reservaAula = ReservaAula::create([
             'aula_id'     => $validated['aula'],
@@ -490,6 +492,7 @@ class ReservaEquipoController extends Controller
         if (!$cambios) {
             return response()->json(['message' => 'No se detectaron cambios en la reserva.'], 200);
         }
+        $reserva->esPrioridad = $validated['en_reposo'];
 
         $reserva->save();
 

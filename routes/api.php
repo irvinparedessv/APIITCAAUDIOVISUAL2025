@@ -232,6 +232,9 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::get('/getreservasmonth', [ReservaAulaController::class, 'getReservasPorMes']);
     Route::get('/aulas-encargados', [ReservaAulaController::class, 'getAulasEncargado']);
     Route::match(['get', 'patch'], '/user/preferences', [UserController::class, 'preferences']);
+
+    Route::post('/aula/aulaUpload', [AulaController::class, 'aulaUpload']);
+    Route::post('/aulas-disponibles', [AulaController::class, 'aulasDisponiblesPorFechas']);
 });
 
 

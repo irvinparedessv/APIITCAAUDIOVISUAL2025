@@ -474,11 +474,23 @@ class AulaController extends Controller
 
     public function aulaUpload(Request $request)
     {
-        $request->validate([
+
+        $rules = [
             'aula_id' => 'required|exists:aulas,id',
-            'file'    => 'nullable|file|mimes:jpg,jpeg,png,glb,gltf|max:20480',
             'scale'   => 'nullable|numeric|min:0.01|max:10',
             'tipo'    => 'required|in:normal,3d',
+        ];
+
+        if ($request->input('tipo') === 'normal') {
+            $rules['file'] = 'nullable|file|mimes:jpg,jpeg,png|max:20480';
+        } else if ($request->input('tipo') === '3d') {
+            // Solo valida mimetype, acepta glb/gltf aunque mime sea application/octet-stream
+            $rules['file'] = 'nullable|file|mimetypes:model/gltf-binary,model/gltf+json,application/octet-stream|max:20480';
+        }
+
+        $request->validate($rules, [
+            'file.mimes' => 'Solo se permiten imágenes .jpg, .jpeg, .png.',
+            'file.mimetypes' => 'Solo se permiten modelos 3D .glb o .gltf.',
         ]);
 
         $aula = Aula::findOrFail($request->aula_id);

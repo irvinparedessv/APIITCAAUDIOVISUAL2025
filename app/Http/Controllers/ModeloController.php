@@ -191,15 +191,33 @@ class ModeloController extends Controller
 
     public function mod_Upload(Request $request)
     {
-        $request->validate([
+        $rules = [
             'producto_id' => 'required|exists:modelos,id',
-            'file' => 'nullable|file|mimes:jpg,jpeg,png,glb,gltf|max:20480',
             'scale' => 'nullable|numeric|min:0.01|max:10',
             'tipo' => 'required|in:normal,3d',
+        ];
+
+        if ($request->input('tipo') === 'normal') {
+            $rules['file'] = 'nullable|file|mimes:jpg,jpeg,png|max:20480';
+        } else if ($request->input('tipo') === '3d') {
+            $rules['file'] = 'nullable|file|mimetypes:model/gltf-binary,model/gltf+json,application/octet-stream|max:20480';
+        }
+
+        $request->validate($rules, [
+            'file.mimes' => 'Solo se permiten imágenes .jpg, .jpeg, .png.',
+            'file.mimetypes' => 'Solo se permiten modelos 3D .glb o .gltf.',
         ]);
 
         $modelo = Modelo::findOrFail($request->producto_id);
         $file = $request->file('file');
+
+        // (opcional) Validar manualmente la extensión para 3d
+        if ($request->input('tipo') === '3d' && $file) {
+            $ext = strtolower($file->getClientOriginalExtension());
+            if (!in_array($ext, ['glb', 'gltf'])) {
+                return response()->json(['error' => 'El archivo debe ser .glb o .gltf'], 422);
+            }
+        }
 
         if ($request->tipo === 'normal') {
             // Si se sube imagen
