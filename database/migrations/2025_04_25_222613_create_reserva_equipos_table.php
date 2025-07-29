@@ -19,6 +19,7 @@ return new class extends Migration
             $table->dateTime('fecha_entrega');
             $table->string('estado')->default('Pendiente');
             $table->string('path_model')->nullable();
+            $table->boolean('esPrioridad')->default(false);
             $table->timestamps();
         });
     }

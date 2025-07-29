@@ -19,6 +19,7 @@ return new class extends Migration
             $table->text('descripcion')->nullable();
             $table->timestamps();
             $table->boolean('deleted')->default(false);
+            $table->decimal('escala', 5, 2)->default(1.00);
         });
     }
 

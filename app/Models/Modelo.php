@@ -19,7 +19,8 @@ class Modelo extends Model
         'imagen_normal',
         'imagen_glb',
         'is_deleted',
-        'reposo'
+        'reposo',
+        'escala'
     ];
 
     // Marca del modelo

@@ -7,11 +7,13 @@ use App\Models\Aula;
 use App\Models\User;
 use App\Models\ImagenesAula;
 use App\Models\HorarioAulas;
+use App\Models\ReservaAula;
 use App\Models\ReservaAulaBloque;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class AulaController extends Controller
 {
@@ -378,6 +380,60 @@ class AulaController extends Controller
 
         return response()->json($aulas);
     }
+
+
+
+
+
+
+    public function aulasDisponiblesPorFechas(Request $request): JsonResponse
+    {
+        $request->validate([
+            'fecha_inicio' => 'required|date_format:Y-m-d H:i',
+            'fecha_fin' => 'required|date_format:Y-m-d H:i|after:fecha_inicio',
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $fechaInicio = Carbon::parse($request->fecha_inicio);
+        $fechaFin = Carbon::parse($request->fecha_fin);
+        $userId = $request->user_id;
+
+        // IDs de aulas que tienen bloqueos por conflicto de horario y otro usuario
+        $aulasOcupadas = ReservaAulaBloque::whereIn('estado', ['Pendiente', 'Aprobado'])
+            ->whereHas('reserva', function ($q) use ($userId) {
+                $q->where('user_id', '!=', $userId);
+            })
+            ->where(function ($q) use ($fechaInicio, $fechaFin) {
+                $q->whereRaw("STR_TO_DATE(CONCAT(fecha_inicio, ' ', hora_fin), '%Y-%m-%d %H:%i') > ?", [$fechaInicio])
+                    ->whereRaw("STR_TO_DATE(CONCAT(fecha_fin, ' ', hora_inicio), '%Y-%m-%d %H:%i') < ?", [$fechaFin]);
+            })
+            ->with('reserva')
+            ->get()
+            ->pluck('reserva.aula_id')
+            ->unique();
+
+        $aulasDisponibles = Aula::with('primeraImagen')
+            ->where('deleted', false)
+            ->whereNotIn('id', $aulasOcupadas)
+            ->select('id', 'name', 'path_modelo', 'escala')
+            ->get()
+            ->map(function ($aula) {
+                return [
+                    'id' => $aula->id,
+                    'name' => $aula->name,
+                    'path_modelo' => $aula->path_modelo,
+                    'escala' => $aula->escala,
+                    'image_path' => $aula->primeraImagen
+                        ? url($aula->primeraImagen->image_path)
+                        : null,
+                ];
+            });
+
+        return response()->json($aulasDisponibles);
+    }
+
+
+
     public function show($id)
     {
         $aula = Aula::with(['imagenes', 'horarios'])->where('deleted', false)
@@ -412,5 +468,80 @@ class AulaController extends Controller
     {
         $aula = Aula::with('encargados')->findOrFail($id);
         return response()->json($aula);
+    }
+
+
+
+    public function aulaUpload(Request $request)
+    {
+        $request->validate([
+            'aula_id' => 'required|exists:aulas,id',
+            'file'    => 'nullable|file|mimes:jpg,jpeg,png,glb,gltf|max:20480',
+            'scale'   => 'nullable|numeric|min:0.01|max:10',
+            'tipo'    => 'required|in:normal,3d',
+        ]);
+
+        $aula = Aula::findOrFail($request->aula_id);
+        $file = $request->file('file');
+
+        if ($request->tipo === 'normal') {
+            // Borra imagen anterior (solo la última o todas si quieres)
+            foreach ($aula->imagenes as $img) {
+                if ($img->image_path && Storage::disk('public')->exists(str_replace('storage/', '', $img->image_path))) {
+                    Storage::disk('public')->delete(str_replace('storage/', '', $img->image_path));
+                }
+                $img->delete();
+            }
+
+            // Si se sube imagen, guarda en tabla imagenes_aula
+            if ($file) {
+                $extension = $file->getClientOriginalExtension();
+                $uuidName = Str::uuid() . '.' . $extension;
+                $path = $file->storeAs('render_images', $uuidName, 'public');
+
+                // Crea registro en imagenes_aula (solo 1 a la vez)
+                ImagenesAula::create([
+                    'aula_id'    => $aula->id,
+                    'image_path' => 'storage/render_images/' . $uuidName,
+                    'is360'      => false
+                ]);
+            }
+
+            // Borra modelo 3D si existe
+            if ($aula->path_modelo && Storage::disk('public')->exists($aula->path_modelo)) {
+                Storage::disk('public')->delete($aula->path_modelo);
+            }
+            $aula->path_modelo = null;
+            $aula->escala = 1;
+        } elseif ($request->tipo === '3d') {
+            // Si se sube modelo 3D, guarda en campo path_modelo
+            if ($file) {
+                $extension = $file->getClientOriginalExtension();
+                $uuidName = Str::uuid() . '.' . $extension;
+                $path = $file->storeAs('models', $uuidName, 'public');
+                $aula->path_modelo = $path;
+            }
+
+            // Borra imágenes normales asociadas
+            foreach ($aula->imagenes as $img) {
+                if ($img->image_path && Storage::disk('public')->exists(str_replace('storage/', '', $img->image_path))) {
+                    Storage::disk('public')->delete(str_replace('storage/', '', $img->image_path));
+                }
+                $img->delete();
+            }
+
+            if ($request->filled('scale')) {
+                $aula->escala = $request->scale;
+            }
+        }
+
+        $aula->save();
+
+        return response()->json([
+            'message'      => 'Recurso actualizado correctamente.',
+            'path_modelo'  => $aula->path_modelo,
+            'imagenes'     => $aula->imagenes()->get(),
+            'escala'       => $aula->escala,
+        ]);
     }
 }

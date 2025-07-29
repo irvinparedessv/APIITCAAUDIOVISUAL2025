@@ -9,7 +9,7 @@ class Marca extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['nombre'];
+    protected $fillable = ['nombre', 'is_deleted'];
 
     public function modelos()
     {
