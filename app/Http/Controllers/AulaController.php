@@ -485,17 +485,25 @@ class AulaController extends Controller
         $file = $request->file('file');
 
         if ($request->tipo === 'normal') {
+            // Borra imagen anterior (solo la última o todas si quieres)
+            foreach ($aula->imagenes as $img) {
+                if ($img->image_path && Storage::disk('public')->exists(str_replace('storage/', '', $img->image_path))) {
+                    Storage::disk('public')->delete(str_replace('storage/', '', $img->image_path));
+                }
+                $img->delete();
+            }
+
             // Si se sube imagen, guarda en tabla imagenes_aula
             if ($file) {
                 $extension = $file->getClientOriginalExtension();
                 $uuidName = Str::uuid() . '.' . $extension;
                 $path = $file->storeAs('render_images', $uuidName, 'public');
 
-                // Crea registro en imagenes_aula
+                // Crea registro en imagenes_aula (solo 1 a la vez)
                 ImagenesAula::create([
                     'aula_id'    => $aula->id,
                     'image_path' => 'storage/render_images/' . $uuidName,
-                    'is360'      => false // o true si quieres permitir imágenes 360, aquí lo dejo false
+                    'is360'      => false
                 ]);
             }
 
@@ -504,7 +512,7 @@ class AulaController extends Controller
                 Storage::disk('public')->delete($aula->path_modelo);
             }
             $aula->path_modelo = null;
-            $aula->escala = 1; // Reiniciar escala si se usa imagen
+            $aula->escala = 1;
         } elseif ($request->tipo === '3d') {
             // Si se sube modelo 3D, guarda en campo path_modelo
             if ($file) {
