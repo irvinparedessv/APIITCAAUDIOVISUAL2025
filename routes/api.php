@@ -85,7 +85,6 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/Getaulas', [AulaController::class, 'list']);
     Route::delete('/aulas/{id}', [AulaController::class, 'destroy']);
     Route::post('/aulas/{id}/update', [AulaController::class, 'update']);
-    Route::post('/aula/aulaUpload', [AulaController::class, 'aulaUpload']);
     Route::get('/aulas/{id}', [AulaController::class, 'show']);
     Route::get('/prediccion/reservas', [PrediccionEquipoController::class, 'predecirReservas']);
     Route::get('/prediccion/reservas/por-tipo', [PrediccionEquipoController::class, 'tiposEquipoConPrediccion']);
@@ -149,6 +148,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/detalleEquipo/{id}', [EquipoController::class, 'detalleEquipo']);
 
 
+
     Route::prefix('mod')->group(function () {
         Route::get('/modelos', [ModeloController::class, 'mod_index']);
         Route::get('/marcas', [ModeloController::class, 'mod_marcas']);
@@ -179,7 +179,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador,Encargad
     // RUTAS DE MANTENIMIENTO
     Route::apiResource('tipoMantenimiento', TipoMantenimientoController::class);
     Route::apiResource('futuroMantenimiento', FuturoMantenimientoController::class);
-    Route::apiResource('mantenimiento', MantenimientoController::class);
+    Route::apiResource('mantenimientos', MantenimientoController::class);
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamista,EspacioEncargado'])->group(function () {
@@ -203,7 +203,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::apiResource('equipos', EquipoController::class);
     Route::get('/modelosEquiposDisponibles', [ModeloController::class, 'modelosEquiposDisponibles']);
     Route::get('/detail/{id}', [ReservaEquipoController::class, 'detail']); // edit reserva
-    Route::post('/aulas-disponibles', [AulaController::class, 'aulasDisponiblesPorFechas']);
+
     Route::get('/reservas/{id}', [ReservaEquipoController::class, 'getByUser']); // Ver reservas de un usuario
     Route::get('/reservas-aula/{id}', [ReservaAulaController::class, 'show']);
     Route::get('/reservas-aula', [ReservaAulaController::class, 'reservas']);
