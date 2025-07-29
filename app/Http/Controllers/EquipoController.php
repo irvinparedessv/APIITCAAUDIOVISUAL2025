@@ -734,6 +734,7 @@ class EquipoController extends Controller
         $search = $request->input('search');
         $tipo = $request->input('tipo');
         $estadoId = $request->input('estado_id');
+        $caracteristicas = $request->input('caracteristicas'); // Nuevo parámetro para características
 
         $query = Equipo::with([
             'tipoEquipo',
@@ -761,6 +762,17 @@ class EquipoController extends Controller
             $query->where('estado_id', $estadoId);
         }
 
+        // Filtro por características
+        if ($caracteristicas && is_array($caracteristicas)) {
+            foreach ($caracteristicas as $caracteristica) {
+                if (isset($caracteristica['id']) && isset($caracteristica['valor'])) {
+                    $query->whereHas('valoresCaracteristicas', function ($q) use ($caracteristica) {
+                        $q->where('caracteristica_id', $caracteristica['id'])
+                            ->where('valor', 'like', '%' . $caracteristica['valor'] . '%');
+                    });
+                }
+            }
+        }
 
         // Filtro de búsqueda general
         if ($search) {
@@ -776,10 +788,15 @@ class EquipoController extends Controller
                     })
                     ->orWhereHas('tipoEquipo', function ($q) use ($search) {
                         $q->where('nombre', 'like', "%$search%");
+                    })
+                    ->orWhereHas('valoresCaracteristicas', function ($q) use ($search) {
+                        $q->where('valor', 'like', "%$search%")
+                            ->orWhereHas('caracteristica', function ($q) use ($search) {
+                                $q->where('nombre', 'like', "%$search%");
+                            });
                     });
             });
         }
-
         $equipos = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
         $equipos->setCollection(

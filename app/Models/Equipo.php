@@ -24,7 +24,8 @@ class Equipo extends Model
         'is_deleted',
         'cantidad',
         'serie_asociada',
-        'imagen_glb'
+        'imagen_glb',
+        'reposo',
 
     ];
 
