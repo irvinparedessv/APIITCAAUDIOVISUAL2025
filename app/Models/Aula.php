@@ -15,6 +15,7 @@ class Aula extends Model
         'path_modelo',
         'capacidad_maxima',
         'descripcion',
+        'escala'
     ];
 
     public function imagenes()

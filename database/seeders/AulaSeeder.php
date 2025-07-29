@@ -13,9 +13,9 @@ class AulaSeeder extends Seeder
     public function run(): void
     {
         $aulas = [
-            ['name' => 'Aula 101', 'capacidad_maxima' => 30, 'descripcion' => 'Aula estándar para clases teóricas.'],
-            ['name' => 'Aula 202', 'capacidad_maxima' => 25, 'descripcion' => 'Aula con equipo multimedia.'],
-            ['name' => 'Auditorio', 'capacidad_maxima' => 100, 'descripcion' => 'Auditorio con tarima y sonido.'],
+            ['name' => 'Aula 101', 'capacidad_maxima' => 40, 'descripcion' => 'Aula estándar para clases teóricas.'],
+            ['name' => 'Aula 202', 'capacidad_maxima' => 40, 'descripcion' => 'Aula con pupitres y pizarra.'],
+            ['name' => 'Auditorio', 'capacidad_maxima' => 200, 'descripcion' => 'Auditorio para eventos deportivos y educativos.'],
             ['name' => 'Sala de grabación', 'capacidad_maxima' => 10, 'descripcion' => 'Sala acondicionada para grabaciones.'],
         ];
 
@@ -25,7 +25,8 @@ class AulaSeeder extends Seeder
                 [
                     'path_modelo' => 'models/room.glb',
                     'capacidad_maxima' => $data['capacidad_maxima'],
-                    'descripcion' => $data['descripcion']
+                    'descripcion' => $data['descripcion'],
+                    'escala' => 0.01
                 ]
             );
         }

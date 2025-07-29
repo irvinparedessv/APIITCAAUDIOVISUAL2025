@@ -19,7 +19,8 @@ class ReservaEquipo extends Model
         'estado',
         'tipo_reserva_id',
         'documento_evento',
-        'path_model'
+        'path_model',
+        'esPrioridad'
     ];
     protected $casts = [
         'fecha_reserva' => 'datetime',

@@ -85,6 +85,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/Getaulas', [AulaController::class, 'list']);
     Route::delete('/aulas/{id}', [AulaController::class, 'destroy']);
     Route::post('/aulas/{id}/update', [AulaController::class, 'update']);
+    Route::post('/aula/aulaUpload', [AulaController::class, 'aulaUpload']);
     Route::get('/aulas/{id}', [AulaController::class, 'show']);
     Route::get('/prediccion/reservas', [PrediccionEquipoController::class, 'predecirReservas']);
     Route::get('/prediccion/reservas/por-tipo', [PrediccionEquipoController::class, 'tiposEquipoConPrediccion']);
@@ -146,7 +147,6 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/equipoInsumo/{equipo}', [EquipoAccesorioController::class, 'show']);
 
     Route::get('/detalleEquipo/{id}', [EquipoController::class, 'detalleEquipo']);
-
 
 
     Route::prefix('mod')->group(function () {
