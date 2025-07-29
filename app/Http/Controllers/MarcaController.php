@@ -111,4 +111,19 @@ class MarcaController extends Controller
 
         return response()->json($marcas);
     }
+
+    public function searchForSelect(Request $request)
+    {
+        $query = Marca::where('is_deleted', false);
+
+        if ($request->has('search')) {
+            $query->where('nombre', 'LIKE', '%' . $request->search . '%');
+        }
+
+        if ($request->has('limit')) {
+            return response()->json($query->paginate($request->limit));
+        }
+
+        return response()->json($query->get());
+    }
 }

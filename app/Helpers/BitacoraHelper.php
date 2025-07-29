@@ -39,6 +39,56 @@ class BitacoraHelper
         ]);
     }
 
+    // En tu BitacoraHelper.php, añade estos métodos:
+
+public static function registrarActualizacionEquipo($equipo, $cambios, $caracteristicasCambiadas = [])
+{
+    $user = Auth::user();
+    $tipo = $equipo->numero_serie ? 'Equipo' : 'Insumo';
+    
+    $descripcion = ($user ? "{$user->first_name} {$user->last_name}" : 'Sistema') . 
+                   " actualizó el {$tipo} ID: {$equipo->id}";
+    
+    if (!empty($cambios)) {
+        $descripcion .= "\nCambios:";
+        foreach ($cambios as $campo => $valor) {
+            $descripcion .= "\n- {$campo}: {$valor['anterior']} → {$valor['nuevo']}";
+        }
+    }
+    
+    if (!empty($caracteristicasCambiadas)) {
+        $descripcion .= "\nCaracterísticas actualizadas:";
+        foreach ($caracteristicasCambiadas as $caracteristica) {
+            $descripcion .= "\n- {$caracteristica['nombre']}: {$caracteristica['anterior']} → {$caracteristica['nuevo']}";
+        }
+    }
+
+    Bitacora::create([
+        'user_id' => $user?->id,
+        'nombre_usuario' => $user ? "{$user->first_name} {$user->last_name}" : 'Sistema',
+        'accion' => 'Actualización de ' . $tipo,
+        'modulo' => 'Inventario',
+        'descripcion' => $descripcion,
+    ]);
+}
+
+public static function detectarCambios($original, $actualizado, $excluir = ['updated_at'])
+{
+    $cambios = [];
+    
+    foreach ($actualizado as $key => $value) {
+        if (in_array($key, $excluir)) continue;
+        
+        if (array_key_exists($key, $original) && $original[$key] != $value) {
+            $cambios[$key] = [
+                'anterior' => $original[$key],
+                'nuevo' => $value
+            ];
+        }
+    }
+    
+    return $cambios;
+}
 
     private static function mapearEstado(string $estado): string
     {

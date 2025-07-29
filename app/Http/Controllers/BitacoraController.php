@@ -58,6 +58,15 @@ class BitacoraController extends Controller
         ->get();
 }
 
+public function historialEquipo($equipoId)
+{
+    return Bitacora::where('modulo', 'Inventario')
+        ->where('descripcion', 'like', "%ID: {$equipoId}%")
+        ->select(['id', 'nombre_usuario', 'accion', 'created_at', 'descripcion'])
+        ->orderBy('created_at', 'desc')
+        ->get();
+}
+
 }
 
     
