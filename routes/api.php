@@ -158,6 +158,14 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
         Route::post('/modUpload', [ModeloController::class, 'mod_Upload']);
         Route::get('/modelos/{id}', [ModeloController::class, 'mod_show']);
     });
+
+    Route::prefix('mar')->group(function () {
+        Route::get('/marcas', [MarcaController::class, 'index']);
+        Route::post('/marcas', [MarcaController::class, 'store']);
+        Route::put('/marcas/{id}', [MarcaController::class, 'update']);
+        Route::delete('/marcas/{id}', [MarcaController::class, 'destroy']);
+        Route::get('/marcas/{id}', [MarcaController::class, 'show']); // opcional
+    });
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador,Encargado'])->group(function () {
