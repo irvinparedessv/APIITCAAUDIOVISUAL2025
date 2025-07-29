@@ -795,6 +795,7 @@ class ReservaEquipoController extends Controller
                 'id' => $reserva->aula->id,
                 'name' => $reserva->aula->name,
                 'path_modelo' => $reserva->aula->path_modelo,
+                'escala' => $reserva->aula->escala,
             ],
             'equipos' => $equipos,
             'documento_evento' => $reserva->documento_evento,
