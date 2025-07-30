@@ -32,6 +32,7 @@ return new class extends Migration {
             JOIN tipo_equipos ON equipos.tipo_equipo_id = tipo_equipos.id
             JOIN estados ON equipos.estado_id = estados.id
             WHERE equipos.is_deleted = false
+              AND equipos.es_componente = false
               AND modelos.is_deleted = false
               AND marcas.is_deleted = false
         ");
