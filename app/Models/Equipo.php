@@ -21,6 +21,7 @@ class Equipo extends Model
         'fecha_adquisicion',
         'comentario',
         'es_componente',
+        'reposo',
         'is_deleted',
         'cantidad',
         'serie_asociada',

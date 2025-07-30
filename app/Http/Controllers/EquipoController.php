@@ -111,10 +111,13 @@ class EquipoController extends Controller
             'fecha_adquisicion' => 'required|date',
         ];
 
-        // Solo validar número_serie si es equipo
+        // Solo validar número_serie y reposo si es equipo
         if ($tipo === 'equipo') {
             $rules['numero_serie'] = 'required|string|unique:equipos,numero_serie';
             $rules['vida_util'] = 'required|integer|min:1';
+            $rules['reposo'] = 'nullable|integer|min:0'; // Nuevo campo
+        } else {
+            $rules['reposo'] = 'prohibited'; // No permitir para insumos
         }
 
         $validator = Validator::make($request->all(), $rules);
@@ -136,7 +139,6 @@ class EquipoController extends Controller
                 'errors' => $errors
             ], 422);
         }
-
 
         try {
             // Subida de imagen
@@ -165,6 +167,7 @@ class EquipoController extends Controller
                 if ($tipo === 'equipo') {
                     $equipoData['numero_serie'] = $request->numero_serie;
                     $equipoData['vida_util'] = $request->vida_util;
+                    $equipoData['reposo'] = $request->reposo ?? 0; // Nuevo campo con valor por defecto
                 }
 
                 $equipo = Equipo::create($equipoData);
@@ -259,9 +262,11 @@ class EquipoController extends Controller
 
             if ($tipo === 'equipo') {
                 $rules['numero_serie'] = 'sometimes|required|string|unique:equipos,numero_serie,' . $id;
-                $rules['vida_util'] = 'nullable|integer';
+                $rules['vida_util'] = 'nullable|integer|min:1';
+                $rules['reposo'] = 'nullable|integer|min:0';
             } else {
                 $rules['cantidad'] = 'prohibited';
+                $rules['reposo'] = 'prohibited';
             }
 
             $validatedData = $request->validate($rules);
@@ -276,6 +281,7 @@ class EquipoController extends Controller
                 'fecha_adquisicion',
                 'numero_serie',
                 'vida_util',
+                'reposo',
             ])->toArray();
 
             // Detectar cambios en campos principales
@@ -313,13 +319,11 @@ class EquipoController extends Controller
             if (!empty($caracteristicas)) {
                 $caracteristicasActuales = $equipo->valoresCaracteristicas->keyBy('caracteristica_id');
 
-                // Procesar características nuevas/actualizadas
                 foreach ($caracteristicas as $caracteristica) {
                     $caracteristicaId = $caracteristica['caracteristica_id'];
                     $valorNuevo = $caracteristica['valor'];
 
                     if ($caracteristicasActuales->has($caracteristicaId)) {
-                        // Actualizar característica existente
                         $valorAnterior = $caracteristicasActuales[$caracteristicaId]->valor;
 
                         if ($valorAnterior != $valorNuevo) {
@@ -332,7 +336,6 @@ class EquipoController extends Controller
                             ];
                         }
                     } else {
-                        // Crear nueva característica
                         $nueva = $equipo->valoresCaracteristicas()->create([
                             'caracteristica_id' => $caracteristicaId,
                             'valor' => $valorNuevo
@@ -346,7 +349,6 @@ class EquipoController extends Controller
                     }
                 }
 
-                // Eliminar características que ya no están en la lista
                 $idsNuevos = collect($caracteristicas)->pluck('caracteristica_id')->toArray();
                 foreach ($caracteristicasActuales as $id => $caracteristica) {
                     if (!in_array($id, $idsNuevos)) {
@@ -363,15 +365,13 @@ class EquipoController extends Controller
                 }
             }
 
-            // Registrar en bitácora solo si hubo cambios
+            // Bitácora si hay cambios
             if (!empty($cambios) || !empty($caracteristicasCambiadas)) {
                 $user = Auth::user();
                 $tipoEquipo = $equipo->numero_serie ? 'Equipo' : 'Insumo';
 
-                // Asegurar que las relaciones están cargadas
                 $equipo->loadMissing('modelo.marca');
 
-                // Construir el nombre completo en formato "Marca Modelo"
                 $nombreEquipo = trim(sprintf(
                     '%s %s',
                     $equipo->modelo->marca->nombre ?? 'Sin marca',
@@ -381,7 +381,6 @@ class EquipoController extends Controller
                 $descripcion = ($user ? "{$user->first_name} {$user->last_name}" : 'Sistema') .
                     " actualizó el {$tipoEquipo} ID: {$equipo->id}";
 
-                // Agregar información de marca y modelo en el formato deseado
                 $descripcion .= "\nEquipo: " . $nombreEquipo;
 
                 if (!empty($cambios)) {
@@ -407,7 +406,6 @@ class EquipoController extends Controller
                     'descripcion' => $descripcion,
                 ]);
             }
-
 
             DB::commit();
 
