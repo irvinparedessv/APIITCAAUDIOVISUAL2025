@@ -51,6 +51,7 @@ class CancelarReservaEquipoPrestamista extends Notification implements ShouldQue
                     'escala' => $this->reserva->aula->escala,
                 ] : null,
                 'tipo_reserva' => $this->reserva->tipoReserva?->nombre,
+                'estado' => $this->reserva->estado,
                 'usuario' => $this->reserva->user?->first_name . ' ' . $this->reserva->user?->last_name,
                 'fecha_reserva' => $this->reserva->fecha_reserva,
                 'fecha_entrega' => $this->reserva->fecha_entrega,
