@@ -433,6 +433,7 @@ class ReservaEquipoController extends Controller
             'startTime' => 'required|date_format:H:i',
             'endTime' => 'required|date_format:H:i',
             'tipo_reserva_id' => 'required|exists:tipo_reservas,id',
+            'en_reposo' => 'required|boolean',
         ]);
 
         $inicio = Carbon::parse($validated['fecha_reserva'] . ' ' . $validated['startTime']);
