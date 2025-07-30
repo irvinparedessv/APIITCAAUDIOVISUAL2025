@@ -69,7 +69,6 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador'])->group(function (
     Route::apiResource('users', UserController::class);
     Route::apiResource('equipos', EquipoController::class);
     Route::apiResource('tipoEquipos', TipoEquipoController::class);
-    Route::get('/obtenerTipo', [TipoEquipoController::class, 'obtenerTipo']);
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista'])->group(function () {
@@ -98,6 +97,8 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
 
     Route::get('/prediccion/equipos/buscarVidaUtil', [PrediccionEquipoController::class, 'buscarEquiposVidaUtil']);
     Route::get('/prediccionVidaUtil/equipos/{id}', [PrediccionEquipoService::class, 'predecirVidaUtil']);
+    Route::get('/prediccion/vida-util/{id}', [PrediccionEquipoController::class, 'vidaUtilPorEquipo']);
+
 
 
     Route::post('/equipo-reserva/observacion', [EquipoController::class, 'guardarObservacion']);
@@ -154,6 +155,8 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/detalleEquipo/{id}', [EquipoController::class, 'detalleEquipo']);
 
 
+    Route::get('/obtenerTipo', [TipoEquipoController::class, 'obtenerTipo']);
+    Route::apiResource('tipoEquipos', TipoEquipoController::class);
 
     Route::prefix('mod')->group(function () {
         Route::get('/modelos', [ModeloController::class, 'mod_index']);

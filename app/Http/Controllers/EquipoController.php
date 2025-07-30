@@ -262,7 +262,7 @@ class EquipoController extends Controller
 
             if ($tipo === 'equipo') {
                 $rules['numero_serie'] = 'sometimes|required|string|unique:equipos,numero_serie,' . $id;
-                $rules['vida_util'] = 'nullable|integer|min:1';
+                $rules['vida_util'] = 'nullable|integer|min:0';
                 $rules['reposo'] = 'nullable|integer|min:0';
             } else {
                 $rules['cantidad'] = 'prohibited';
