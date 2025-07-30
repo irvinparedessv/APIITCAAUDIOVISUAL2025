@@ -726,7 +726,8 @@ class ReservaEquipoController extends Controller
                     'tipoReserva' => $reserva->tipoReserva->nombre ?? null,
                     'id'  => $reserva->id,
                     'path_model'  => $reserva->path_model,
-                    'isRoom' => false
+                    'isRoom' => false,
+                    'esPrioridad' => $reserva->esPrioridad,
                 ]);
             }
 

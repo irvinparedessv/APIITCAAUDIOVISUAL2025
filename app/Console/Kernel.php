@@ -11,6 +11,7 @@ class Kernel extends ConsoleKernel
     {
         // Aquí registras tus comandos
         // Ejemplo:
+        $schedule->command('equipos:revisar-vida-util')->dailyAt('00:05');
         $schedule->command('reservas:cancelar-vencidas')->dailyAt('00:05');
         $schedule->command('reservas:recordatorio-devolucion')->everyTenMinutes();
     }
