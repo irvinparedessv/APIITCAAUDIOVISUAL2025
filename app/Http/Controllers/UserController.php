@@ -66,7 +66,11 @@ class UserController extends Controller
         return response()->json($usuarios);
     }
 
-
+    public function getUserM()
+    {
+        $usuarios = User::where('role_id', 2)->get();
+        return response()->json($usuarios);
+    }
 
     public function preferences(Request $request)
     {
@@ -158,7 +162,7 @@ class UserController extends Controller
             $confirmationUrl = "{$baseUrl}/confirm-account/{$confirmationToken}";
 
             try {
-               Mail::to($usuario->email)->send(new ConfirmAccountMail($usuario, $tempPassword, $confirmationUrl));
+                Mail::to($usuario->email)->send(new ConfirmAccountMail($usuario, $tempPassword, $confirmationUrl));
             } catch (\Throwable $e) {
                 Log::error("Error al enviar el correo a {$usuario->email}: " . $e->getMessage());
 

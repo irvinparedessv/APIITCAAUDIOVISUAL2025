@@ -13,6 +13,7 @@ class CreateFuturoMantenimientosTable extends Migration
             $table->foreignId('equipo_id')->constrained('equipos')->onDelete('cascade');
             $table->foreignId('tipo_mantenimiento_id')->constrained('tipo_mantenimientos')->onDelete('cascade');
             $table->date('fecha_mantenimiento');
+            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
             $table->time('hora_mantenimiento_inicio')->nullable();
             $table->time('hora_mantenimiento_final')->nullable();
             $table->timestamps();

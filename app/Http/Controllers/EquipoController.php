@@ -91,6 +91,54 @@ class EquipoController extends Controller
     }
 
 
+    public function show($id)
+    {
+        $item = Equipo::with([
+            'tipoEquipo',
+            'modelo.marca',
+            'modelo',
+            'estado',
+            'tipoReserva',
+            'valoresCaracteristicas.caracteristica',
+        ])
+            ->where('is_deleted', false)
+            ->findOrFail($id);
+
+        $tipo = $item->numero_serie ? 'equipo' : 'insumo';
+
+        $equipo = [
+            'id' => $item->id,
+            'tipo' => $tipo,
+            'numero_serie' => $item->numero_serie,
+            'serie_asociada' => $tipo === 'insumo' ? $item->serie_asociada : null,
+            'vida_util' => $item->vida_util,
+            'cantidad' => 1,
+            'detalles' => $item->detalles,
+            'tipo_equipo_id' => $item->tipo_equipo_id,
+            'modelo_id' => $item->modelo_id,
+            'estado_id' => $item->estado_id,
+            'tipo_reserva_id' => $item->tipo_reserva_id,
+            'fecha_adquisicion' => $item->fecha_adquisicion,
+            'imagen_url' => $item->imagen_normal
+                ? asset('storage/equipos/' . $item->imagen_normal)
+                : asset('storage/equipos/default.png'),
+            'marca' => $item->modelo->marca->nombre ?? null,
+            'tipoEquipo' => $item->tipoEquipo,
+            'modelo' => $item->modelo,
+            'estado' => $item->estado,
+            'tipoReserva' => $item->tipoReserva,
+            'caracteristicas' => $item->valoresCaracteristicas->map(function ($vc) {
+                return [
+                    'id' => $vc->id,
+                    'caracteristica_id' => $vc->caracteristica_id,
+                    'nombre' => $vc->caracteristica->nombre ?? null,
+                    'valor' => $vc->valor,
+                ];
+            }),
+        ];
+
+        return response()->json($equipo);
+    }
 
 
     public function store(Request $request)
