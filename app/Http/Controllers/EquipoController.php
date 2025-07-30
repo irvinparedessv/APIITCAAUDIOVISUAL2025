@@ -8,6 +8,7 @@ namespace App\Http\Controllers;
 use App\Models\Bitacora;
 use App\Models\Caracteristica;
 use App\Models\Equipo;
+use App\Models\EquipoReserva;
 use App\Models\Estado;
 use App\Models\Modelo;
 use App\Models\ReservaEquipo;
@@ -586,6 +587,27 @@ class EquipoController extends Controller
         );
 
         return response()->json($paginador);
+    }
+    public function guardarObservacion(Request $request)
+    {
+        $validated = $request->validate([
+            'reserva_id' => 'required|exists:reserva_equipos,id',
+            'equipo_id' => 'required|exists:equipos,id',
+            'comentario' => 'required|string|max:500',
+        ]);
+
+        $pivot = EquipoReserva::where('reserva_equipo_id', $request->reserva_id)
+            ->where('equipo_id', $request->equipo_id)
+            ->first();
+
+        if (!$pivot) {
+            return response()->json(['error' => 'No existe el equipo en la reserva.'], 404);
+        }
+
+        $pivot->comentario = $request->comentario;
+        $pivot->save();
+
+        return response()->json(['message' => 'Observación guardada correctamente.']);
     }
 
 

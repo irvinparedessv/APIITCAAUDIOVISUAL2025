@@ -96,6 +96,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     Route::get('/prediccion/aulas/general', [PrediccionAulaController::class, 'prediccionGeneralAulas']);
 
 
+    Route::post('/equipo-reserva/observacion', [EquipoController::class, 'guardarObservacion']);
 
 
     Route::get('/reservas/dia', [ReservaEquipoController::class, 'reservasDelDia']);

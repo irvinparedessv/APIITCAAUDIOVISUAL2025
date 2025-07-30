@@ -670,7 +670,17 @@ class ReservaEquipoController extends Controller
                 return response()->json([
                     'usuario' => $reserva->user->first_name . ' ' . $reserva->user->last_name,
                     'image_url' => $reserva->user->image ? asset('storage/users/' . $reserva->user->image) : null,
-                    'equipo' => $reserva->equipos->pluck('nombre')->toArray(),
+                    'equipo' => $reserva->equipos->map(function ($equipo) {
+                        return [
+                            'id' => $equipo->id,
+                            'numero_serie' => $equipo->numero_serie,
+                            'modelo' => [
+                                'id' => $equipo->model->id ?? null,
+                                'nombre' => $equipo->model->nombre ?? null,
+                            ],
+                            'comentario' => $equipo->pivot->comentario ?? null,
+                        ];
+                    })->toArray(),
                     'aula' => $reserva->aula,
                     'dia' => $reserva->fecha_reserva,
                     'horaSalida' => $reserva->fecha_reserva,
