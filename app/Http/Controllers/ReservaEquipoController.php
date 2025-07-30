@@ -11,6 +11,7 @@ use App\Models\CodigoQrReserva;
 use App\Models\CodigoQrReservaEquipo;
 use App\Models\EquipmentReservation;
 use App\Models\Equipo;
+use App\Models\EquipoAccesorio;
 use App\Models\ReservaAula;
 use App\Models\ReservaAulaBloque;
 use App\Models\ReservaEquipo;
@@ -327,6 +328,24 @@ class ReservaEquipoController extends Controller
             }
 
             $equiposConCantidad[$equipo['id']] = $datosPivot;
+
+
+            // Buscar los insumos relacionados a este equipo
+            $accesorios = EquipoAccesorio::where('equipo_id', $equipo['id'])->get();
+
+            foreach ($accesorios as $accesorio) {
+                // Agregar el insumo con la misma cantidad (puedes cambiar la lógica si necesitas otra cantidad)
+                // IMPORTANTE: si ya se agregó ese insumo, suma la cantidad
+                $insumoId = $accesorio->insumo_id;
+
+                if (isset($equiposConCantidad[$insumoId])) {
+                    $equiposConCantidad[$insumoId]['cantidad'] += $equipo['cantidad'];
+                } else {
+                    $equiposConCantidad[$insumoId] = [
+                        'cantidad' => $equipo['cantidad']
+                    ];
+                }
+            }
         }
         $reserva->equipos()->attach($equiposConCantidad);
 
@@ -507,6 +526,23 @@ class ReservaEquipoController extends Controller
                 $fechaFinReserva = $fin;
                 $pivotData['fecha_inicio_reposo'] = $fechaFinReserva;
                 $pivotData['fecha_fin_reposo'] = $fechaFinReserva->copy()->addMinutes($equipoModel->reposo);
+            }
+
+            // Buscar los insumos relacionados a este equipo
+            $accesorios = EquipoAccesorio::where('equipo_id', $item['id'])->get();
+
+            foreach ($accesorios as $accesorio) {
+                // Agregar el insumo con la misma cantidad (puedes cambiar la lógica si necesitas otra cantidad)
+                // IMPORTANTE: si ya se agregó ese insumo, suma la cantidad
+                $insumoId = $accesorio->insumo_id;
+
+                if (isset($equiposConPivot[$insumoId])) {
+                    $equiposConPivot[$insumoId]['cantidad'] += $item['cantidad'];
+                } else {
+                    $equiposConPivot[$insumoId] = [
+                        'cantidad' => $item['cantidad']
+                    ];
+                }
             }
             $equiposConPivot[$item['id']] = $pivotData;
         }
