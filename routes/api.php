@@ -34,6 +34,7 @@ use App\Http\Controllers\TipoMantenimientoController;
 use App\Http\Controllers\FuturoMantenimientoController;
 use App\Http\Controllers\MantenimientoController;
 use App\Http\Controllers\ModeloAccesorioController;
+use App\Services\PrediccionEquipoService;
 
 // Rutas públicas
 Route::get('/equiposDisponiblesPorTipoYFecha', [EquipoController::class, 'equiposDisponiblesPorTipoYFecha']);
@@ -94,6 +95,9 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
 
     Route::get('/prediccion/aula/{aulaId}', [PrediccionAulaController::class, 'predecir']);
     Route::get('/prediccion/aulas/general', [PrediccionAulaController::class, 'prediccionGeneralAulas']);
+
+    Route::get('/prediccion/equipos/buscarVidaUtil', [PrediccionEquipoController::class, 'buscarEquiposVidaUtil']);
+    Route::get('/prediccionVidaUtil/equipos/{id}', [PrediccionEquipoService::class, 'predecirVidaUtil']);
 
 
     Route::post('/equipo-reserva/observacion', [EquipoController::class, 'guardarObservacion']);

@@ -49,7 +49,12 @@ class InsumosSeeder extends Seeder
         $insumoModelsData = [
             ['nombre' => 'cable_hdmi', 'imagen_glb' => 'models/cable_hdmi.glb'],
             ['nombre' => 'control_remoto', 'imagen_glb' => 'models/control_remoto.glb'],
+            ['nombre' => 'adaptador_usb_c', 'imagen_glb' => 'models/adaptador_usb_c.glb'],
+            ['nombre' => 'cable_vga', 'imagen_glb' => 'models/cable_vga.glb'],
+            ['nombre' => 'control_bluetooth', 'imagen_glb' => 'models/control_bluetooth.glb'],
+            ['nombre' => 'extensor_hdmi', 'imagen_glb' => 'models/extensor_hdmi.glb'],
         ];
+
         $modelosInsumo = [];
         foreach ($insumoModelsData as $data) {
             $modelo = Modelo::updateOrCreate(
@@ -72,9 +77,9 @@ class InsumosSeeder extends Seeder
 
         // === Asociar modelos accesorios ===
         $modeloAsociaciones = [
-            'video_projector' => ['cable_hdmi', 'control_remoto'],
+            'video_projector' => ['cable_hdmi', 'control_remoto', 'extensor_hdmi'],
             'generic_white_digital_projector' => ['cable_hdmi', 'control_remoto'],
-            'laptop_low-poly' => ['cable_hdmi'],
+            'laptop_low-poly' => ['cable_hdmi', 'adaptador_usb_c'],
             'laptop_alienpredator' => ['cable_hdmi'],
             'microfono' => ['cable_hdmi'],
             'razer_seiren_x' => ['cable_hdmi'],
@@ -130,6 +135,33 @@ class InsumosSeeder extends Seeder
                     'insumo_id' => $insumo->id,
                 ]);
             }
+        }
+
+        // === Crear insumos independientes (no asociados a equipos) ===
+        $insumosIndependientes = ['cable_vga', 'control_bluetooth'];
+
+        foreach ($insumosIndependientes as $insumoNombre) {
+            $modeloInsumo = $modelosInsumo[$insumoNombre] ?? null;
+            if (!$modeloInsumo) continue;
+
+            $tipoEquipoId = str_contains($insumoNombre, 'control') ? $tipoControl->id : $tipoCable->id;
+
+            Equipo::updateOrCreate(
+                [
+                    'modelo_id' => $modeloInsumo->id,
+                    'serie_asociada' => null,
+                    'es_componente' => true,
+                ],
+                [
+                    'tipo_equipo_id' => $tipoEquipoId,
+                    'estado_id' => $estadoDisponible->id,
+                    'tipo_reserva_id' => $tipoReservaId,
+                    'numero_serie' => strtoupper($insumoNombre) . '-' . uniqid(),
+                    'detalles' => "Insumo independiente",
+                    'fecha_adquisicion' => now(),
+                    'is_deleted' => false,
+                ]
+            );
         }
     }
 }

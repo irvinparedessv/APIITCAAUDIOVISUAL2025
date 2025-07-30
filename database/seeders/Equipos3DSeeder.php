@@ -170,7 +170,7 @@ class Equipos3DSeeder extends Seeder
                     'estado_id' => $estadoDisponible->id,
                     'tipo_reserva_id' => $tipoReservaId,
                     'numero_serie' => $numeroSerie,
-                    'vida_util' => 3,  // Puedes ajustar valor por defecto
+                    'vida_util' => 300,  // Puedes ajustar valor por defecto
                     'es_componente' => 0,
                     'detalles' => 'Equipo 3D generado automáticamente para modelo ' . $nombreModelo,
                     'fecha_adquisicion' => now()->toDateString(),

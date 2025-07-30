@@ -97,22 +97,55 @@ class PrediccionEquipoController extends Controller
             });
         }
 
-        $equipos = $query->limit($request->input('limit', 10))->get();
-
-        return response()->json([
-            'success' => true,
-            'data' => $equipos->map(function ($equipo) {
-                return [
-                    'id' => $equipo->id,
-                    'numero_serie' => $equipo->numero_serie,
-                    'marca' => $equipo->modelo->marca->nombre ?? 'Sin marca',
-                    'modelo' => $equipo->modelo->nombre ?? 'Sin modelo',
-                    'marca_modelo' => ($equipo->modelo->marca->nombre ?? '') . ' ' . ($equipo->modelo->nombre ?? ''),
-                    'tipo' => $equipo->tipoEquipo->nombre ?? 'Sin tipo'
-                ];
-            })
-        ]);
     }
+
+    public function buscarEquiposVidaUtil(Request $request)
+{
+    $request->validate([
+        'search' => 'sometimes|string|max:100',
+        'limit' => 'sometimes|integer|min:1|max:50'
+    ]);
+
+    $query = Equipo::where('is_deleted', false)
+        ->where('estado_id', 1)
+        ->where('es_componente', 0) // Solo equipos que no son componentes
+        ->where(function($q) {
+            $q->whereNotNull('vida_util')
+              ->where('vida_util', '>', 0);
+        })
+        ->with(['modelo.marca', 'tipoEquipo'])
+        ->orderBy('numero_serie');
+
+    if ($request->has('search')) {
+        $searchTerm = $request->search;
+        $query->where(function ($q) use ($searchTerm) {
+            $q->where('numero_serie', 'like', '%' . $searchTerm . '%')
+                ->orWhereHas('modelo', function ($modeloQuery) use ($searchTerm) {
+                    $modeloQuery->where('nombre', 'like', '%' . $searchTerm . '%')
+                        ->orWhereHas('marca', function ($marcaQuery) use ($searchTerm) {
+                            $marcaQuery->where('nombre', 'like', '%' . $searchTerm . '%');
+                        });
+                });
+        });
+    }
+
+    $equipos = $query->limit($request->input('limit', 10))->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => $equipos->map(function ($equipo) {
+            return [
+                'id' => $equipo->id,
+                'numero_serie' => $equipo->numero_serie,
+                'marca' => $equipo->modelo->marca->nombre ?? 'Sin marca',
+                'modelo' => $equipo->modelo->nombre ?? 'Sin modelo',
+                'marca_modelo' => ($equipo->modelo->marca->nombre ?? '') . ' ' . ($equipo->modelo->nombre ?? ''),
+                'tipo' => $equipo->tipoEquipo->nombre ?? 'Sin tipo',
+                'vida_util' => $equipo->vida_util
+            ];
+        })
+    ]);
+}
 
 
     public function prediccionPorEquipo($id, PrediccionEquipoService $predictor)

@@ -114,7 +114,7 @@ class EquipoController extends Controller
         // Solo validar número_serie y reposo si es equipo
         if ($tipo === 'equipo') {
             $rules['numero_serie'] = 'required|string|unique:equipos,numero_serie';
-            $rules['vida_util'] = 'nullable|integer|min:1';
+            $rules['vida_util'] = 'nullable|integer|min:0';
             $rules['reposo'] = 'nullable|integer|min:0'; // Nuevo campo
         } else {
             $rules['reposo'] = 'prohibited'; // No permitir para insumos

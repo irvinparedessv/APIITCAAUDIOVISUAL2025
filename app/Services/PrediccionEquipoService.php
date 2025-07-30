@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Equipo;
 use Phpml\Regression\LeastSquares;
 use Phpml\Regression\SVR;
 use Phpml\SupportVectorMachine\Kernel;
@@ -288,5 +289,176 @@ class PrediccionEquipoService
             ->get();
 
         return $this->procesarDatosHistoricos($reservasPorMes);
+    }
+
+
+
+
+
+
+
+
+
+    public function predecirVidaUtil(int $equipoId, int $mesesAPredecir = 12)
+    {
+        // Obtener datos del equipo
+        $equipo = Equipo::findOrFail($equipoId);
+        $vidaUtilTotal = $equipo->vida_util ?? 20000;
+
+        // Obtener datos históricos de horas usadas por mes
+        [$datosHistoricos, $primerMesReal] = $this->obtenerHorasUsoPorEquipo($equipoId);
+
+        if (count($datosHistoricos) < 3) {
+            throw new \Exception("No hay suficientes datos históricos para el equipo ID {$equipoId} (mínimo 3 meses requeridos)");
+        }
+
+        // Calcular vida útil acumulada
+        $vidaUtilRestante = $vidaUtilTotal;
+        $datosConVidaUtil = [];
+        $horasAcumuladas = 0;
+
+        foreach ($datosHistoricos as $mes => $data) {
+            $horasUsadas = $data['total_horas'];
+            $horasAcumuladas += $horasUsadas;
+            $vidaUtilRestante = max(0, $vidaUtilTotal - $horasAcumuladas);
+
+            $datosConVidaUtil[$mes] = [
+                'horas_usadas' => $horasUsadas,
+                'horas_acumuladas' => $horasAcumuladas,
+                'vida_util_restante' => $vidaUtilRestante,
+                'porcentaje_utilizado' => round(($horasAcumuladas / $vidaUtilTotal) * 100, 2),
+                'year' => $data['year'],
+                'month' => $data['month'],
+                'mes_nombre' => $data['mes_nombre'],
+                'tipo' => 'Histórico',
+                'cantidad_reservas' => $data['cantidad_reservas'] ?? 0
+            ];
+        }
+
+        // Preparar datos para entrenamiento (predicción de horas a usar)
+        $samples = [];
+        $targets = [];
+
+        foreach ($datosHistoricos as $mes => $data) {
+            $samples[] = [$mes];
+            $targets[] = $data['total_horas'];
+        }
+
+        // Entrenar modelos
+        $regresionLineal = new LeastSquares();
+        $regresionLineal->train($samples, $targets);
+
+        $usarSVR = count($samples) >= 6;
+        if ($usarSVR) {
+            $svr = new SVR(Kernel::RBF, 10.0, 0.001, 0.1, 0.001, 100);
+            $svr->train($samples, $targets);
+        }
+
+        // Generar predicciones
+        $ultimoMesEntrenado = max(array_keys($datosConVidaUtil));
+        $predicciones = [];
+        $horasAcumuladasPredichas = $horasAcumuladas;
+
+        for ($i = 1; $i <= $mesesAPredecir; $i++) {
+            $mesPrediccion = $ultimoMesEntrenado + $i;
+            $prediccionRL = max(0, $regresionLineal->predict([$mesPrediccion]));
+            $prediccionSVR = $usarSVR ? max(0, $svr->predict([$mesPrediccion])) : $prediccionRL;
+            $horasPredichas = ($prediccionRL + $prediccionSVR) / 2;
+
+            $horasAcumuladasPredichas += $horasPredichas;
+            $vidaUtilRestantePredicha = max(0, $vidaUtilTotal - $horasAcumuladasPredichas);
+
+            $predicciones[$mesPrediccion] = [
+                'horas_usadas' => round($horasPredichas),
+                'horas_acumuladas' => round($horasAcumuladasPredichas),
+                'vida_util_restante' => round($vidaUtilRestantePredicha),
+                'porcentaje_utilizado' => round(($horasAcumuladasPredichas / $vidaUtilTotal) * 100, 2),
+                'mes' => $this->convertirNumeroAMes($mesPrediccion, $primerMesReal),
+                'tipo' => 'Predicción',
+                'regresion_lineal' => round($prediccionRL),
+                'svr' => round($prediccionSVR),
+                'cantidad_reservas' => null // No aplica para predicciones
+            ];
+
+            if ($horasAcumuladasPredichas >= $vidaUtilTotal) {
+                break; // No predecir más allá de la vida útil
+            }
+        }
+
+        // Calcular precisión
+        $precision = $this->evaluarModelo($regresionLineal, $samples, $targets);
+
+        // Calcular fecha estimada de fin de vida útil
+        $mesesRestantes = count($predicciones);
+        $fechaFinVidaUtil = $mesesRestantes > 0
+            ? $primerMesReal->copy()->addMonths($ultimoMesEntrenado + $mesesRestantes)->format('M Y')
+            : 'Ya alcanzó su vida útil';
+
+        return [
+            'equipo' => [
+                'id' => $equipo->id,
+                'nombre' => $equipo->marca_modelo,
+                'numero_serie' => $equipo->numero_serie,
+                'vida_util_total' => $vidaUtilTotal,
+                'horas_acumuladas' => $horasAcumuladas,
+                'porcentaje_utilizado' => round(($horasAcumuladas / $vidaUtilTotal) * 100, 2),
+                'total_reservas' => array_sum(array_column($datosConVidaUtil, 'cantidad_reservas'))
+            ],
+            'historico' => array_values($datosConVidaUtil),
+            'predicciones' => array_values($predicciones),
+            'precision' => round($precision, 2),
+            'meses_restantes' => $mesesRestantes,
+            'fecha_fin_vida_util' => $fechaFinVidaUtil,
+        ];
+    }
+
+    protected function obtenerHorasUsoPorEquipo(int $equipoId): array
+    {
+        $fechaInicio = Carbon::now()->subMonths(24);
+        $fechaFin = Carbon::now();
+
+        $horasPorMes = ReservaEquipo::whereBetween('fecha_reserva', [$fechaInicio, $fechaFin])
+            ->whereIn('reserva_equipos.estado', ['Aprobado', 'Completado'])
+            ->join('equipo_reserva', 'reserva_equipos.id', '=', 'equipo_reserva.reserva_equipo_id')
+            ->where('equipo_reserva.equipo_id', $equipoId)
+            ->selectRaw(
+                'YEAR(fecha_reserva) as year, ' .
+                    'MONTH(fecha_reserva) as month, ' .
+                    'SUM(TIMESTAMPDIFF(HOUR, fecha_reserva, fecha_entrega)) as total_horas, ' .
+                    'COUNT(reserva_equipos.id) as cantidad_reservas'
+            )
+            ->groupBy('year', 'month')
+            ->orderBy('year')
+            ->orderBy('month')
+            ->get();
+
+        return $this->procesarDatosHistoricosHoras($horasPorMes, 'total_horas');
+    }
+
+    protected function procesarDatosHistoricosHoras($datosPorMes, $campoTotal = 'total_horas'): array
+    {
+        $datos = [];
+        $primerMes = null;
+        $primerMesReal = null;
+
+        foreach ($datosPorMes as $dato) {
+            $mesKey = $dato->year * 12 + ($dato->month - 1);
+
+            if ($primerMes === null) {
+                $primerMes = $mesKey;
+                $primerMesReal = Carbon::createFromDate($dato->year, $dato->month, 1);
+            }
+
+            $mesSecuencial = $mesKey - $primerMes;
+            $datos[$mesSecuencial] = [
+                $campoTotal => (int) $dato->{$campoTotal},
+                'year' => $dato->year,
+                'month' => $dato->month,
+                'mes_nombre' => $this->convertirNumeroAMes($mesSecuencial, $primerMesReal),
+                'cantidad_reservas' => $dato->cantidad_reservas ?? 0
+            ];
+        }
+
+        return [$datos, $primerMesReal];
     }
 }
