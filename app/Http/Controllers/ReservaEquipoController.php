@@ -811,17 +811,19 @@ class ReservaEquipoController extends Controller
         }
 
         // Formatear respuesta
-        $equipos = $reserva->equipos->map(function ($equipo) {
-            return [
-                'id' => $equipo->id,
-                'modelo_id' => $equipo->modelo_id,
-                'nombre_modelo' => $equipo->modelo->nombre ?? '',
-                'nombre_marca' => $equipo->marca->nombre ?? '',
-                'numero_serie' => $equipo->numero_serie,
-                'imagen_normal' => $equipo->imagen_normal,
-                'imagen_gbl' => $equipo->imagen_glb ?: ($equipo->modelo->imagen_glb ?? null),
-            ];
-        });
+        // Formatear respuesta
+        $equipos = $reserva->equipos()->where('es_componente', false)
+            ->get()->map(function ($equipo) {
+                return [
+                    'id' => $equipo->id,
+                    'modelo_id' => $equipo->modelo_id,
+                    'nombre_modelo' => $equipo->modelo->nombre ?? '',
+                    'nombre_marca' => $equipo->marca->nombre ?? '',
+                    'numero_serie' => $equipo->numero_serie,
+                    'imagen_normal' => $equipo->imagen_normal,
+                    'imagen_gbl' => $equipo->imagen_glb ?: ($equipo->modelo->imagen_glb ?? null),
+                ];
+            });
 
         return response()->json([
             'id' => $reserva->id,
