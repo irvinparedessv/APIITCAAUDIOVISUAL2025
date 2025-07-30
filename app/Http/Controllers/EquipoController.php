@@ -586,6 +586,9 @@ class EquipoController extends Controller
 
         return response()->json($paginador);
     }
+
+
+
     public function guardarObservacion(Request $request)
     {
         $validated = $request->validate([

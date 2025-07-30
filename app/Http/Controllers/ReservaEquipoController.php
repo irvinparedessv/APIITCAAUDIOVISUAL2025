@@ -27,6 +27,7 @@ use App\Notifications\NotificarResponsableReserva;
 use App\Notifications\NuevaReservaNotification;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -906,53 +907,75 @@ class ReservaEquipoController extends Controller
             ]
         ]);
     }
+    public function buscarSugerenciasModelo(Request $request)
+    {
+        $aulaId = $request->aula_id;
+        $equiposIds = $request->equipos_id; // array de modelo_id
 
+        // Busca todas las coincidencias, no solo una
+        $sugerencias = DB::table('vista_equipos_con_modelo_aula')
+            ->where('id_aula', $aulaId)
+            ->where(function ($q) use ($equiposIds) {
+                foreach ($equiposIds as $modeloId) {
+                    $q->orWhereJsonContains('modelos_id', $modeloId);
+                }
+            })
+            ->get();
+
+        if ($sugerencias->count() > 0) {
+            // Retorna todos los paths encontrados en un array
+            return response()->json([
+                $sugerencias->pluck('path_model')->all()
+            ]);
+        }
+        return response()->json([[]]);
+    }
     public function reservasDelDia(Request $request)
-{
-    $hoy = Carbon::today()->toDateString();
+    {
+        $hoy = Carbon::today()->toDateString();
 
-    $user = $request->user();
+        $user = $request->user();
 
-    if (!in_array($user->role->nombre, ['Administrador', 'Encargado'])) {
-        return response()->json(['message' => 'No autorizado'], 403);
-    }
+        if (!in_array($user->role->nombre, ['Administrador', 'Encargado'])) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
 
-    $perPage = $request->get('per_page', 15);
+        $perPage = $request->get('per_page', 15);
 
-    // Incluye todas las relaciones necesarias
-    $query = ReservaEquipo::with([
-        'user',
-        'equipos.modelo', // Asegúrate de incluir modelo si lo necesitas
-        'tipoReserva',
-        'codigoQr',
-        'aula' // ¡Esta es la relación faltante!
-    ])
-    ->whereDate('fecha_reserva', $hoy)
-    ->orderBy('created_at', 'DESC');
+        // Incluye todas las relaciones necesarias
+        $query = ReservaEquipo::with([
+            'user',
+            'equipos.modelo', // Asegúrate de incluir modelo si lo necesitas
+            'tipoReserva',
+            'codigoQr',
+            'aula' // ¡Esta es la relación faltante!
+        ])
+            ->whereDate('fecha_reserva', $hoy)
+            ->orderBy('created_at', 'DESC');
 
-    // Filtros opcionales (mantenidos igual)
-    if ($request->has('estado') && $request->estado !== 'Todos') {
-        $query->where('estado', $request->estado);
-    }
-    if ($request->has('tipo_reserva') && $request->tipo_reserva !== 'Todos') {
-        $tipoReserva = $request->tipo_reserva;
-        $query->whereHas('tipoReserva', function ($q) use ($tipoReserva) {
-            $q->where('nombre', $tipoReserva);
+        // Filtros opcionales (mantenidos igual)
+        if ($request->has('estado') && $request->estado !== 'Todos') {
+            $query->where('estado', $request->estado);
+        }
+        if ($request->has('tipo_reserva') && $request->tipo_reserva !== 'Todos') {
+            $tipoReserva = $request->tipo_reserva;
+            $query->whereHas('tipoReserva', function ($q) use ($tipoReserva) {
+                $q->where('nombre', $tipoReserva);
+            });
+        }
+
+        // Obtén los resultados sin transformar primero
+        $reservas = $query->paginate($perPage);
+
+        // Transformación segura que mantiene las relaciones
+        $reservas->getCollection()->transform(function ($reserva) {
+            $array = $reserva->toArray();
+            $array['documento_url'] = $reserva->documento_evento_url;
+            return $array;
         });
+
+        return response()->json($reservas);
     }
-
-    // Obtén los resultados sin transformar primero
-    $reservas = $query->paginate($perPage);
-
-    // Transformación segura que mantiene las relaciones
-    $reservas->getCollection()->transform(function ($reserva) {
-        $array = $reserva->toArray();
-        $array['documento_url'] = $reserva->documento_evento_url;
-        return $array;
-    });
-
-    return response()->json($reservas);
-}
 
     private function calcularPaginaReserva(int $reservaId, int $porPagina = 15): int
     {
