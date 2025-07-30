@@ -32,12 +32,18 @@ class TipoEquipoController extends Controller
     }
 
     public function obtenerTipo(Request $request)
-    {
-        $tiposEquipos = TipoEquipo::with(['categoria', 'caracteristicas'])
-            ->where('is_deleted', false)
-            ->paginate(10);
-        return response()->json($tiposEquipos);
+{
+    $query = TipoEquipo::with(['categoria', 'caracteristicas'])
+        ->where('is_deleted', false);
+
+    // Añade búsqueda si existe
+    if ($request->has('search') && !empty($request->search)) {
+        $searchTerm = strtolower($request->search);
+        $query->whereRaw('LOWER(nombre) LIKE ?', ["%{$searchTerm}%"]);
     }
+
+    return response()->json($query->paginate(10));
+}
 
     public function store(Request $request)
     {
