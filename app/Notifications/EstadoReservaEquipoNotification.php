@@ -19,7 +19,7 @@ class EstadoReservaEquipoNotification extends Notification implements ShouldQueu
     protected $reserva;
     protected $notifiableId;
     public $id;
-    public $pagina; 
+    public $pagina;
     protected $tipo;
 
     public function __construct(ReservaEquipo $reserva, $notifiableId, $pagina = 1, $tipo = 'estado')
@@ -69,12 +69,18 @@ class EstadoReservaEquipoNotification extends Notification implements ShouldQueu
             'reserva' => [
                 'id' => $this->reserva->id,
                 'pagina' => $this->pagina,
-                'aula' => $this->reserva->aula,
+                'aula' => $this->reserva->aula ? [
+                    'id' => $this->reserva->aula->id,
+                    'name' => $this->reserva->aula->name,
+                    'path_modelo' => $this->reserva->aula->path_modelo,
+                ] : null,
                 'tipo_reserva' => $this->reserva->tipoReserva?->nombre,
-                'equipos' => $this->reserva->equipos->map(function($equipo) {
+                'equipos' => $this->reserva->equipos->map(function ($equipo) {
                     return [
-                        'nombre' => $equipo->nombre,
+                        'id' => $equipo->id,
+                        'numero_serie' => $equipo->numero_serie,
                         'tipo_equipo' => $equipo->tipoEquipo?->nombre,
+                        'modelo' => $equipo->modelo?->nombre,
                     ];
                 })->toArray(),
                 'fecha_reserva' => is_object($fechaReserva) ? $fechaReserva->toDateTimeString() : $fechaReserva,

@@ -42,15 +42,24 @@ class CancelarReservaEquipoPrestamista extends Notification implements ShouldQue
             'reserva' => [
                 'id' => $this->reserva->id,
                 'pagina' => $this->pagina, // ✅ NUEVO
-                'aula' => $this->reserva->aula,
+                'aula' => $this->reserva->aula ? [
+                    'id' => $this->reserva->aula->id,
+                    'name' => $this->reserva->aula->name,
+                    'path_modelo' => $this->reserva->aula->path_modelo,
+                    'capacidad_maxima' => $this->reserva->aula->capacidad_maxima,
+                    'descripcion' => $this->reserva->aula->descripcion,
+                    'escala' => $this->reserva->aula->escala,
+                ] : null,
                 'tipo_reserva' => $this->reserva->tipoReserva?->nombre,
                 'usuario' => $this->reserva->user?->first_name . ' ' . $this->reserva->user?->last_name,
                 'fecha_reserva' => $this->reserva->fecha_reserva,
                 'fecha_entrega' => $this->reserva->fecha_entrega,
                 'equipos' => $this->reserva->equipos->map(function ($equipo) {
                     return [
-                        'nombre' => $equipo->nombre,
+                        'id' => $equipo->id,
+                        'numero_serie' => $equipo->numero_serie,
                         'tipo_equipo' => $equipo->tipoEquipo?->nombre,
+                        'modelo' => $equipo->modelo?->nombre,
                     ];
                 })->toArray(),
                 'comentario' => $this->reserva->comentario,

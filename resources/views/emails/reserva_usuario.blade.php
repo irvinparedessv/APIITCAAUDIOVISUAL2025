@@ -6,7 +6,7 @@ Gracias por realizar tu solicitud. Estos son los detalles:
 
 @component('mail::panel')
 <span style="color: rgb(139, 0, 0); font-weight: bold;">
-- Aula: {{ $reserva->aula }}<br>
+- Aula: {{ $reserva->aula['name'] ?? 'Sin aula' }}<br>
 - Fecha de inicio: {{ $reserva->fecha_reserva }}<br>
 - Fecha de entrega: {{ $reserva->fecha_entrega }}
 </span>
@@ -14,7 +14,7 @@ Gracias por realizar tu solicitud. Estos son los detalles:
 
 ### Equipos solicitados:
 @foreach ($reserva->equipos as $equipo)
-- {{ $equipo->nombre }}
+- {{ $equipo['modelo'] ?? $equipo['nombre'] ?? 'Sin modelo' }}
 @endforeach
 
 @slot('subcopy')

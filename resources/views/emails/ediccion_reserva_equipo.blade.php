@@ -2,7 +2,7 @@
 <style>
     h1 {
         font-family: 'Georgia', serif;
-        color: rgb(139, 0, 0); /* Color principal */
+        color: rgb(139, 0, 0);
     }
     p {
         font-family: 'Helvetica', 'Arial', sans-serif;
@@ -25,7 +25,7 @@ La reserva de equipo #{{ $reserva->id }} fue modificada con la siguiente informa
 
 @component('mail::panel')
 <span style="color: rgb(139, 0, 0); font-weight: bold;">
-- Aula: {{ $reserva->aula }}<br>
+- Aula: {{ $reserva->aula->name ?? 'Sin aula' }}<br>
 - Fecha Reserva: {{ $reserva->fecha_reserva }}<br>
 - Fecha Entrega: {{ $reserva->fecha_entrega }}<br>
 - Estado: {{ $reserva->estado }}

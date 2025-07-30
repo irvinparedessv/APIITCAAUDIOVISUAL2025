@@ -59,17 +59,26 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
                 'id' => $this->reserva->id,
                 'pagina' => $this->pagina,
                 'user' => $usuarioNombre,
-                'aula' => $this->reserva->aula?->nombre ?? $this->reserva->aula,
-                'fecha_reserva' => $this->reserva->fecha_reserva,
-                'fecha_entrega' => $this->reserva->fecha_entrega,
+                'aula' => $this->reserva->aula ? [
+                    'id' => $this->reserva->aula->id,
+                    'name' => $this->reserva->aula->name,
+                    'path_modelo' => $this->reserva->aula->path_modelo,
+                    'capacidad_maxima' => $this->reserva->aula->capacidad_maxima,
+                    'descripcion' => $this->reserva->aula->descripcion,
+                    'escala' => $this->reserva->aula->escala,
+                ] : null,
+                'fecha_reserva' => $this->reserva->fecha_reserva->toDateTimeString(),
+                'fecha_entrega' => $this->reserva->fecha_entrega->toDateTimeString(),
                 'estado' => $this->reserva->estado,
                 'tipo_reserva' => $this->reserva->tipoReserva?->nombre,
                 'equipos' => $this->reserva->equipos->map(function ($equipo) {
                     return [
-                        'nombre' => $equipo->nombre,
+                        'id' => $equipo->id,
+                        'numero_serie' => $equipo->numero_serie,
                         'tipo_equipo' => $equipo->tipoEquipo?->nombre,
+                        'modelo' => $equipo->modelo?->nombre,
                     ];
-                }),
+                })->toArray(),
             ]
         ];
     }
@@ -94,6 +103,7 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
         $esCreadorAdmin = $this->creadorId && $this->creadorId !== $this->reserva->user->id;
 
         return [
+            'type' => 'nueva_reserva',
             'title' => $esCreadorAdmin
                 ? 'Reserva de equipo realizada por administración'
                 : 'Nueva reserva de equipo recibida',
@@ -104,17 +114,26 @@ class NuevaReservaNotification extends Notification implements ShouldQueue, Shou
                 'id' => $this->reserva->id,
                 'pagina' => $this->pagina,
                 'user' => $usuarioNombre,
-                'aula' => $this->reserva->aula?->nombre ?? $this->reserva->aula,
-                'fecha_reserva' => $this->reserva->fecha_reserva,
-                'fecha_entrega' => $this->reserva->fecha_entrega,
+                'aula' => $this->reserva->aula ? [
+                    'id' => $this->reserva->aula->id,
+                    'name' => $this->reserva->aula->name,
+                    'path_modelo' => $this->reserva->aula->path_modelo,
+                    'capacidad_maxima' => $this->reserva->aula->capacidad_maxima,
+                    'descripcion' => $this->reserva->aula->descripcion,
+                    'escala' => $this->reserva->aula->escala,
+                ] : null,
+                'fecha_reserva' => $this->reserva->fecha_reserva->toDateTimeString(),
+                'fecha_entrega' => $this->reserva->fecha_entrega->toDateTimeString(),
                 'estado' => $this->reserva->estado,
                 'tipo_reserva' => $this->reserva->tipoReserva?->nombre,
                 'equipos' => $this->reserva->equipos->map(function ($equipo) {
                     return [
-                        'nombre' => $equipo->nombre,
+                        'id' => $equipo->id,
+                        'numero_serie' => $equipo->numero_serie,
                         'tipo_equipo' => $equipo->tipoEquipo?->nombre,
+                        'modelo' => $equipo->modelo?->nombre,
                     ];
-                }),
+                })->toArray(),
             ]
         ];
     }

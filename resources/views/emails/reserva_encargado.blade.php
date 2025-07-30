@@ -2,7 +2,7 @@
 <style>
     h1 {
         font-family: 'Georgia', serif;
-        color: rgb(139, 0, 0); /* Color principal */
+        color: rgb(139, 0, 0);
     }
     p {
         font-family: 'Helvetica', 'Arial', sans-serif;
@@ -19,18 +19,18 @@
 
 # 📝 Nueva reserva recibida
 
-**Usuario:** {{ $reserva->user->first_name }} {{ $reserva->user->last_name }}  
-**Aula:** {{ $reserva->aula }}  
-**Fecha de inicio:** {{ $reserva->fecha_reserva }}  
-**Fecha de entrega:** {{ $reserva->fecha_entrega }}
+**Usuario:** {{ $reserva['user'] }}  
+**Aula:** {{ $reserva['aula']['name'] ?? 'Sin aula' }}  
+**Fecha de inicio:** {{ $reserva['fecha_reserva'] }}  
+**Fecha de entrega:** {{ $reserva['fecha_entrega'] }}
 
 @component('mail::panel')
 <span style="color: rgb(139, 0, 0); font-weight: bold;">
 📦 Equipos reservados:
 </span>
 
-@foreach ($reserva->equipos as $equipo)
-- {{ $equipo->nombre }}
+@foreach ($reserva['equipos'] as $equipo)
+- {{ $equipo['modelo'] ?? 'Sin modelo' }} ({{ $equipo['tipo_equipo'] ?? 'Sin tipo' }})
 @endforeach
 @endcomponent
 
