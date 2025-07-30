@@ -596,28 +596,20 @@ class ReservaEquipoController extends Controller
 
         // Notifica al prestamista si la edición la hace un admin/encargado para otro
         if ($esAdminOEncargado && !$esMismaPersona) {
-            $reserva->user->notify(new NuevaReservaNotification($reserva, $reserva->user->id, $pagina, $usuarioAutenticado->id));
             Log::info("Notificación enviada al prestamista {$reserva->user->id}");
-            // Correo de edición
-            $reserva->user->notify(new EmailEdicionReservaAula($reservaAula)); // Usa la notificación/correo que prefieras
+            $reserva->user->notify(new EstadoReservaEquipoNotification($reserva, $reserva->user_id, $pagina, 'edicion'));
+            Mail::to($reserva->user->email)->queue(new ReservaEditadaMailable($reserva, false));
         } elseif (!$esAdminOEncargado) {
             // Si la edición la hace un prestamista, notifica a responsables
             foreach ($responsables as $responsable) {
-                $responsable->notify(new NuevaReservaNotification($reserva, $responsable->id, $pagina, $usuarioAutenticado->id));
-                Log::info("Notificación enviada a responsable {$responsable->id}");
-                // Enviar correo personalizado
-                $responsable->notify(new NotificarResponsableReserva($reserva));
+                $responsable->notify(new EstadoReservaEquipoNotification($reserva, $responsable->id, $pagina, 'edicion'));
+                Log::info("Notificación enviada a responsable {$responsable->id} tras edición del prestamista");
+                Mail::to($responsable->email)->queue(new ReservaEditadaMailable($reserva, true)); // true porque es para responsable
             }
         }
 
-        // Siempre notifica al usuario dueño (confirmación/correo)
-        $reserva->user->notify(new ConfirmarReservaUsuario($reserva));
-
         return response()->json(['message' => 'Reserva actualizada correctamente.'], 200);
     }
-
-
-
 
     public function actualizarEstado(Request $request, $id)
     {

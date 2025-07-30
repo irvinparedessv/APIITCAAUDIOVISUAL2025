@@ -16,7 +16,7 @@ class ReservaEditadaMailable extends Mailable
 
     public function __construct(ReservaEquipo $reserva, bool $esResponsable)
     {
-        $this->reserva = $reserva;
+        $this->reserva = $reserva->load('user', 'equipos.tipoEquipo');
         $this->esResponsable = $esResponsable;
     }
 
@@ -27,10 +27,13 @@ class ReservaEditadaMailable extends Mailable
             : 'Tu reserva de equipo ha sido modificada';
 
         $equipos = $this->reserva->equipos->map(function ($equipo) {
+            $modelo = $equipo->modelo?->nombre ?? '';
+            $tipo = $equipo->tipoEquipo?->nombre ?? '';
+            $cantidad = $equipo->pivot->cantidad ?? 1;
+
             return [
-                'nombre' => $equipo->nombre,
-                'tipo' => $equipo->tipoEquipo?->nombre,
-                'cantidad' => $equipo->pivot->cantidad,
+                'nombre_completo' => "{$tipo} {$modelo}",
+                'cantidad' => $cantidad,
             ];
         });
 
@@ -42,5 +45,4 @@ class ReservaEditadaMailable extends Mailable
                 'equipos' => $equipos, // ✅ aquí se pasa
             ]);
     }
-
 }

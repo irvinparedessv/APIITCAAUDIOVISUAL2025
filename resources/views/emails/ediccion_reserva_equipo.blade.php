@@ -34,7 +34,7 @@ La reserva de equipo #{{ $reserva->id }} fue modificada con la siguiente informa
 
 ### Equipos reservados:
 @foreach ($equipos as $equipo)
-- **{{ $equipo['nombre'] }}** ({{ $equipo['tipo'] }}) – Cantidad: {{ $equipo['cantidad'] }}
+- **{{ $equipo['nombre_completo'] }}** – Cantidad: {{ $equipo['cantidad'] }}
 @endforeach
 
 @slot('subcopy')
