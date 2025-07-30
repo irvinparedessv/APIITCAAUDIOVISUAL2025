@@ -11,6 +11,7 @@ class CreateFuturoMantenimientosTable extends Migration
         Schema::create('futuro_mantenimientos', function (Blueprint $table) {
             $table->id();
             $table->foreignId('equipo_id')->constrained('equipos')->onDelete('cascade');
+            $table->foreignId('tipo_mantenimiento_id')->constrained('tipo_mantenimientos')->onDelete('cascade');
             $table->date('fecha_mantenimiento');
             $table->time('hora_mantenimiento_inicio')->nullable();
             $table->time('hora_mantenimiento_final')->nullable();
