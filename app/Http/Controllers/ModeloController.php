@@ -138,19 +138,20 @@ class ModeloController extends Controller
 
 
 
-    public function mod_index(Request $request)
-    {
-        $search = $request->query('search');
-        $perPage = $request->query('perPage', 10);
+  public function mod_index(Request $request)
+{
+    $search = $request->query('search');
+    $perPage = $request->query('perPage', 10);
 
-        $query = Modelo::with('marca')->where('is_deleted', false);
+    $query = Modelo::with('marca')->where('is_deleted', false);
 
-        if ($search) {
-            $query->where('nombre', 'like', "%$search%");
-        }
-
-        return $query->paginate($perPage);
+    if (!empty($search)) {
+        $query->where('nombre', 'like', "%{$search}%");
     }
+
+    return response()->json($query->paginate($perPage));
+}
+
 
 
     public function mod_marcas()
