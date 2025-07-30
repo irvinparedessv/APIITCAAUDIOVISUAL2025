@@ -11,19 +11,32 @@ class FuturoMantenimientoController extends Controller
      * Listar todos los futuros mantenimientos con paginación.
      */
     public function index(Request $request)
-    {
-        $perPage = $request->input('perPage', 10);
+{
+    $perPage = $request->input('per_page', 10); // usa "per_page" para que coincida con el frontend
 
-        $query = FuturoMantenimiento::with(['equipo', 'tipoMantenimiento']);
+    $query = FuturoMantenimiento::with(['equipo', 'tipoMantenimiento']);
 
-        if ($request->filled('equipo_id')) {
-            $query->where('equipo_id', $request->equipo_id);
-        }
-
-        $futuros = $query->orderBy('fecha_mantenimiento', 'asc')->paginate($perPage);
-
-        return response()->json($futuros);
+    // Filtro por ID de equipo (opcional, ya lo tenías)
+    if ($request->filled('equipo_id')) {
+        $query->where('equipo_id', $request->equipo_id);
     }
+
+    // 🔍 Filtro por texto en equipo o tipo
+    if ($request->filled('search')) {
+        $search = $request->input('search');
+        $query->where(function ($q) use ($search) {
+            $q->whereHas('equipo', function ($q2) use ($search) {
+                $q2->where('numero_serie', 'like', "%{$search}%");
+            })->orWhereHas('tipoMantenimiento', function ($q3) use ($search) {
+                $q3->where('nombre', 'like', "%{$search}%");
+            });
+        });
+    }
+
+    $futuros = $query->orderBy('fecha_mantenimiento', 'asc')->paginate($perPage);
+
+    return response()->json($futuros);
+}
 
     /**
      * Mostrar un futuro mantenimiento específico.

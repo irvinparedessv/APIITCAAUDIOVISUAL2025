@@ -10,30 +10,54 @@ class MantenimientoController extends Controller
     /**
      * Listar todos los mantenimientos con paginación y relaciones.
      */
-    public function index(Request $request)
-    {
-        $perPage = $request->input('perPage', 10);
+   public function index(Request $request)
+{
+    $perPage = $request->input('perPage', 10);
 
-        $query = Mantenimiento::with([
-            'equipo.modelo.marca', 
-            'tipoMantenimiento', 
-            'usuario', 
-            'futuroMantenimiento'
-        ]);
+    $query = Mantenimiento::with([
+        'equipo.modelo.marca',
+        'tipoMantenimiento',
+        'usuario',
+        'futuroMantenimiento'
+    ]);
 
-        if ($request->filled('equipo_id')) {
-            $query->where('equipo_id', $request->equipo_id);
-        }
-
-        if ($request->filled('tipo_id')) {
-            $query->where('tipo_id', $request->tipo_id);
-        }
-
-        $mantenimientos = $query->orderBy('fecha_mantenimiento', 'desc')
-            ->paginate($perPage);
-
-        return response()->json($mantenimientos);
+    // Filtro por equipo_id (opcional)
+    if ($request->filled('equipo_id')) {
+        $query->where('equipo_id', $request->equipo_id);
     }
+
+    // Filtro por tipo_id (opcional)
+    if ($request->filled('tipo_id')) {
+        $query->where('tipo_id', $request->tipo_id);
+    }
+
+    // Filtro por búsqueda general en equipo, tipo y usuario
+    if ($request->filled('search')) {
+        $search = $request->input('search');
+
+        $query->where(function ($q) use ($search) {
+            // Buscar en el número de serie del equipo
+            $q->whereHas('equipo', function ($q2) use ($search) {
+                $q2->where('numero_serie', 'like', "%{$search}%");
+            })
+            // Buscar en nombre del tipo de mantenimiento
+            ->orWhereHas('tipoMantenimiento', function ($q3) use ($search) {
+                $q3->where('nombre', 'like', "%{$search}%");
+            })
+            // Buscar en nombre o apellido del usuario
+            ->orWhereHas('usuario', function ($q4) use ($search) {
+                $q4->where('first_name', 'like', "%{$search}%")
+                   ->orWhere('last_name', 'like', "%{$search}%");
+            });
+        });
+    }
+
+    $mantenimientos = $query->orderBy('fecha_mantenimiento', 'desc')
+        ->paginate($perPage);
+
+    return response()->json($mantenimientos);
+}
+
 
     /**
      * Mostrar un mantenimiento específico.
