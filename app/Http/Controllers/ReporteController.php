@@ -321,57 +321,68 @@ class ReporteController extends Controller
     }
 
     public function reporteHorariosSolicitados(Request $request)
-    {
-        $from = $request->input('from');
-        $to = $request->input('to');
-        $tipo = $request->input('tipo');
-        $aulaId = $request->input('aula_id');
-        $equipoId = $request->input('equipo_id');
+{
+    $request->validate([
+        'from' => 'nullable|date',
+        'to' => 'nullable|date|after_or_equal:from',
+        'tipo' => 'nullable|string|in:aula,equipo',
+        'aula_id' => 'nullable|integer|exists:aulas,id',
+        'equipo_id' => 'nullable|integer|exists:equipos,id',
+    ]);
 
-        // Aulas
-        $aulasQuery = DB::table('reserva_aulas as ra')
-            ->select(
-                'ra.horario',
-                DB::raw("'aula' as tipo"),
-                DB::raw('NULL as equipo_nombre'),
-                DB::raw('COUNT(*) as total')
-            )
-            ->when($from && $to, fn($q) => $q->whereBetween('ra.fecha', [$from, $to]))
-            ->when($tipo === 'aula' && $aulaId, fn($q) => $q->where('ra.aula_id', $aulaId))
-            ->groupBy('ra.horario');
+    $from = $request->input('from');
+    $to = $request->input('to');
+    $tipo = $request->input('tipo');
 
-        // Equipos
-        $equiposQuery = DB::table('reserva_equipos as re')
-            ->join('equipo_reserva as er', 'er.reserva_equipo_id', '=', 're.id')
-            ->join('equipos as e', 'e.id', '=', 'er.equipo_id')
-            ->select(
-                DB::raw("DATE_FORMAT(re.fecha_reserva, '%H:%i') as horario"),
-                DB::raw("'equipo' as tipo"),
-                'e.nombre as equipo_nombre',
-                DB::raw('COUNT(*) as total')
-            )
-            ->when($from && $to, fn($q) => $q->whereBetween(DB::raw('DATE(re.fecha_reserva)'), [$from, $to]))
-            ->when($tipo === 'equipo' && $equipoId, fn($q) => $q->where('e.id', $equipoId))
-            ->groupBy('horario', 'e.nombre');
+    // Consulta para Aulas (se mantiene igual)
+    $aulasQuery = DB::table('reserva_aulas as ra')
+        ->select(
+            'ra.horario',
+            DB::raw("'aula' as tipo"),
+            DB::raw('NULL as recurso_nombre'),
+            DB::raw('COUNT(*) as total')
+        )
+        ->when($from && $to, fn($q) => $q->whereBetween('ra.fecha', [$from, $to]))
+        ->when($tipo === 'aula' && $request->aula_id, fn($q) => $q->where('ra.aula_id', $request->aula_id))
+        ->groupBy('ra.horario');
 
-        // Condición para retornar
-        if ($tipo === 'aula') {
-            $result = $aulasQuery->orderBy('horario')->get();
-        } elseif ($tipo === 'equipo') {
-            $result = $equiposQuery->orderBy('horario')->get();
-        } else {
-            $unionSql = $aulasQuery->unionAll($equiposQuery)->toSql();
-            $bindings = array_merge($aulasQuery->getBindings(), $equiposQuery->getBindings());
+    // Consulta para Equipos (modificada)
+    $equiposQuery = DB::table('reserva_equipos as re')
+        ->join('equipo_reserva as er', 'er.reserva_equipo_id', '=', 're.id')
+        ->join('equipos as e', 'e.id', '=', 'er.equipo_id')
+        ->leftJoin('modelos as m', 'e.modelo_id', '=', 'm.id') // Join con modelos
+        ->select(
+            DB::raw("DATE_FORMAT(re.fecha_reserva, '%H:%i') as horario"),
+            DB::raw("'equipo' as tipo"),
+            DB::raw("CASE 
+                WHEN e.es_componente = 1 AND e.numero_serie IS NOT NULL 
+                THEN CONCAT(m.nombre, ' (S/N: ', e.numero_serie, ')')
+                ELSE m.nombre
+                END as recurso_nombre"),
+            DB::raw('COUNT(*) as total')
+        )
+        ->when($from && $to, fn($q) => $q->whereBetween(DB::raw('DATE(re.fecha_reserva)'), [$from, $to]))
+        ->when($tipo === 'equipo' && $request->equipo_id, fn($q) => $q->where('e.id', $request->equipo_id))
+        ->groupBy('horario', 'recurso_nombre');
 
-            $result = DB::table(DB::raw("($unionSql) as sub"))
-                ->setBindings($bindings)
-                ->orderBy('horario')
-                ->orderBy('tipo')
-                ->get();
-        }
+    // Lógica para combinar resultados
+    if ($tipo === 'aula') {
+        $result = $aulasQuery->orderBy('horario')->get();
+    } elseif ($tipo === 'equipo') {
+        $result = $equiposQuery->orderBy('horario')->get();
+    } else {
+        $unionSql = $aulasQuery->unionAll($equiposQuery)->toSql();
+        $bindings = array_merge($aulasQuery->getBindings(), $equiposQuery->getBindings());
 
-        return response()->json($result);
+        $result = DB::table(DB::raw("($unionSql) as sub"))
+            ->setBindings($bindings)
+            ->orderBy('horario')
+            ->orderBy('tipo')
+            ->get();
     }
+
+    return response()->json($result);
+}
 
 
     public function reporteInventarioEquipos(Request $request)
