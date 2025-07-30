@@ -915,20 +915,17 @@ class ReservaEquipoController extends Controller
         // Busca todas las coincidencias, no solo una
         $sugerencias = DB::table('vista_equipos_con_modelo_aula')
             ->where('id_aula', $aulaId)
-            ->where(function ($q) use ($equiposIds) {
-                foreach ($equiposIds as $modeloId) {
-                    $q->orWhereJsonContains('modelos_id', $modeloId);
-                }
-            })
-            ->get();
-
+            ->get()
+            ->filter(function ($row) use ($equiposIds) {
+                $idsVista = collect(explode(',', $row->modelos_id))->sort()->values()->all();
+                $idsBuscar = collect($equiposIds)->sort()->values()->all();
+                return $idsVista == $idsBuscar;
+            });
         if ($sugerencias->count() > 0) {
             // Retorna todos los paths encontrados en un array
-            return response()->json([
-                $sugerencias->pluck('path_model')->all()
-            ]);
+            return response()->json($sugerencias->pluck('path_model')->all());
         }
-        return response()->json([[]]);
+        return response()->json([]);
     }
     public function reservasDelDia(Request $request)
     {
