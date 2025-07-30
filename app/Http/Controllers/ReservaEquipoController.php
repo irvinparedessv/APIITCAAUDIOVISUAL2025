@@ -258,7 +258,7 @@ class ReservaEquipoController extends Controller
             $extension = $file->getClientOriginalExtension(); // .glb
             $uuidName = (string) Str::uuid() . '.' . $extension;
             $modelPath = $file->storeAs('models', $uuidName, 'public'); // guarda en storage/app/public/models
-            $modelPath = '/' . $modelPath;
+            $modelPath =  $modelPath;
         }
         $usuarioAutenticado = $request->user();
 
@@ -504,7 +504,7 @@ class ReservaEquipoController extends Controller
             }
             $file = $request->file('modelo_3d');
             $uuidName = Str::uuid() . '.' . $file->getClientOriginalExtension();
-            $reserva->path_model = '/' . $file->storeAs('models', $uuidName, 'public');
+            $reserva->path_model =  $file->storeAs('models', $uuidName, 'public');
             $cambios = true;
         }
 
@@ -715,6 +715,7 @@ class ReservaEquipoController extends Controller
                                 'nombre' => $equipo->model->nombre ?? null,
                             ],
                             'comentario' => $equipo->pivot->comentario ?? null,
+                            'es_componente' => $equipo->es_componente ?? null,
                         ];
                     })->toArray(),
                     'aula' => $reserva->aula,
@@ -724,6 +725,7 @@ class ReservaEquipoController extends Controller
                     'estado' => $reserva->estado,
                     'tipoReserva' => $reserva->tipoReserva->nombre ?? null,
                     'id'  => $reserva->id,
+                    'path_model'  => $reserva->path_model,
                     'isRoom' => false
                 ]);
             }
