@@ -17,7 +17,8 @@ class CreateViewResumenInventario extends Migration
                 m.nombre AS nombre_modelo,
                 COUNT(e.id) AS cantidad_total,
                 SUM(CASE WHEN est.nombre = 'Disponible' THEN 1 ELSE 0 END) AS cantidad_disponible,
-                SUM(CASE WHEN est.nombre = 'En reparación' THEN 1 ELSE 0 END) AS cantidad_mantenimiento,
+                SUM(CASE WHEN est.nombre = 'Mantenimiento' THEN 1 ELSE 0 END) AS cantidad_mantenimiento,
+                SUM(CASE WHEN est.nombre = 'No disponible' THEN 1 ELSE 0 END) AS cantidad_noDisponible,
                 SUM(CASE WHEN est.nombre = 'Dañado' THEN 1 ELSE 0 END) AS cantidad_eliminada,
                 CASE
                     WHEN c.nombre = 'Equipo' THEN (

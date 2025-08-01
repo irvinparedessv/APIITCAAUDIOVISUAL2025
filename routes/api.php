@@ -176,6 +176,21 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
         Route::delete('/marcas/{id}', [MarcaController::class, 'destroy']);
         Route::get('/marcas/{id}', [MarcaController::class, 'show']); // opcional
     });
+
+    // Obtener todos los mantenimientos
+    Route::get('/mantenimientos', [MantenimientoController::class, 'index']);
+
+    // Crear un nuevo mantenimiento
+    Route::post('/mantenimientos', [MantenimientoController::class, 'store']);
+
+    // Obtener un mantenimiento específico
+    Route::get('/mantenimientos/{id}', [MantenimientoController::class, 'show']);
+
+    // Actualizar un mantenimiento existente
+    Route::put('/mantenimientos/{id}', [MantenimientoController::class, 'update']);
+
+    // Eliminar un mantenimiento
+    Route::delete('/mantenimientos/{id}', [MantenimientoController::class, 'destroy']);
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador,Encargado'])->group(function () {
@@ -189,7 +204,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador,Encargad
     // RUTAS DE MANTENIMIENTO
     Route::apiResource('tipoMantenimiento', TipoMantenimientoController::class);
     Route::apiResource('futuroMantenimiento', FuturoMantenimientoController::class);
-    Route::apiResource('mantenimientos', MantenimientoController::class);
+    //Route::apiResource('mantenimientos', MantenimientoController::class);
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamista,EspacioEncargado'])->group(function () {

@@ -82,7 +82,7 @@ class Equipos3DSeeder extends Seeder
         }
 
         // -- Estados --
-        $estados = ['Disponible', 'En reparación', 'En reposo', 'Dañado'];
+        $estados = ['Disponible', 'Mantenimiento', 'En reposo', 'Dañado', 'No disponible'];
         foreach ($estados as $nombre) {
             Estado::updateOrCreate(['nombre' => $nombre], ['is_deleted' => false]);
         }

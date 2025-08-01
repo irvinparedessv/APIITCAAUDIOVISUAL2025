@@ -59,6 +59,7 @@ class Equipo extends Model
     {
         return $this->belongsTo(TipoReserva::class, 'tipo_reserva_id');
     }
+    
 
     public function reservas()
     {
