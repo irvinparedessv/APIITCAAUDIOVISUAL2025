@@ -44,31 +44,41 @@ class Equipos3DSeeder extends Seeder
         foreach ($marcas as $nombre) {
             Marca::updateOrCreate(['nombre' => $nombre], ['is_deleted' => false]);
         }
+
         $marcaGen3D = Marca::where('nombre', 'Generic 3D Models')->first();
 
-        // -- Modelos 3D con solo imagen glb --
+        // -- Modelos 3D --
         $modelos3D = [
-            ['nombre' => 'laptop_low-poly', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/laptop_low-poly.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 1.90],
-            ['nombre' => 'laptop_alienpredator', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/laptop_alienpredator.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 0.40],
-            ['nombre' => 'laptop_windows_menu', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/laptop_windows_menu.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 1.6],
-            ['nombre' => 'laptop_dell_g7', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/laptop_dell_g7.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 0.08],
-            ['nombre' => 'laptop_acer', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/laptop_acer.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 0.30],
+            ['nombre' => 'laptop_alienpredator', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/laptop_alienpredator.glb', 'is_deleted' => false, 'reposo' => 30],
+            ['nombre' => 'laptop_dell_latitude_5400', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/laptop_dell_latitude_5400.glb', 'is_deleted' => false, 'reposo' => 30],
+            ['nombre' => 'hp_14s-dq2622tu_laptop', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/hp_14s-dq2622tu_laptop.glb', 'is_deleted' => false, 'reposo' => 30],
+            ['nombre' => 'asus_laptop', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/asus_laptop.glb', 'is_deleted' => false, 'reposo' => 30],
 
-            ['nombre' => 'microfono', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/microfono.glb', 'is_deleted' => false, 'reposo' => 30],
-            ['nombre' => 'razer_seiren_x', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/razer_seiren_x.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 0.06],
-            ['nombre' => 'skp_pro_40_microphone', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/skp_pro_40_microphone.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 0.05],
-
-            ['nombre' => 'jbl_charge_3_speaker', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/jbl_charge_3_speaker.glb', 'is_deleted' => false, 'reposo' => 30],
-            ['nombre' => 'logitech_speaker', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/logitech_speaker.glb', 'is_deleted' => false, 'reposo' => 30],
-            ['nombre' => 'bluetooth_speaker', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/bluetooth_speaker.glb', 'is_deleted' => false, 'reposo' => 30],
-            ['nombre' => 'jbl_speaker', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/jbl_speaker.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 0.10],
-
-            ['nombre' => 'video_projector', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/video_projector.glb', 'is_deleted' => false, 'reposo' => 30],
+            ['nombre' => 'projector', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/projector.glb', 'is_deleted' => false, 'reposo' => 30],
             ['nombre' => 'generic_white_digital_projector', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/generic_white_digital_projector.glb', 'escala' => 0.12, 'is_deleted' => false, 'reposo' => 30],
+            ['nombre' => 'fix_projector', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/fix_projector.glb', 'is_deleted' => false, 'reposo' => 30],
+            ['nombre' => 'low_poly_projector_3d_model_created_with_blender', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/low_poly_projector_3d_model_created_with_blender.glb', 'is_deleted' => false, 'reposo' => 30],
 
+            ['nombre' => 'mouse_a4tech_x-710bk', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/mouse_a4tech_x-710bk.glb', 'is_deleted' => false, 'reposo' => 30],
+            ['nombre' => 'computer_mouse', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/computer_mouse.glb', 'is_deleted' => false, 'reposo' => 30],
             ['nombre' => 'pc_mouse_type-r', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/pc_mouse_type-r.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 0.04],
             ['nombre' => 'computer_mouse_a4tech_bloody_v7', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/computer_mouse_a4tech_bloody_v7.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 0.04],
+
+            ['nombre' => 'fgm-1_parlante', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/fgm-1_parlante.glb', 'is_deleted' => false, 'reposo' => 30],
+            ['nombre' => 'parlante2_-_paula_pinzon', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/parlante2_-_paula_pinzon.glb', 'is_deleted' => false, 'reposo' => 30],
+            ['nombre' => 'medium_and_high_frequency_speaker', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/medium_and_high_frequency_speaker.glb', 'is_deleted' => false, 'reposo' => 30],
+
+            ['nombre' => 'jbl_speaker', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/jbl_speaker.glb', 'is_deleted' => false, 'reposo' => 30, 'escala' => 0.10],
+            ['nombre' => 'logitech_speaker', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/logitech_speaker.glb', 'is_deleted' => false, 'reposo' => 30],
+            ['nombre' => 'computer_speaker', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/computer_speaker.glb', 'is_deleted' => false, 'reposo' => 30],
+
+            // Micrófonos agregados
+            ['nombre' => 'microphone', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/microphone.glb', 'is_deleted' => false, 'reposo' => 30],
+            ['nombre' => 'fredsters_microphone', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/fredsters_microphone.glb', 'is_deleted' => false, 'reposo' => 30],
+            ['nombre' => 'gooseneck_microphone_bended_version', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/gooseneck_microphone_bended_version.glb', 'is_deleted' => false, 'reposo' => 30],
+            ['nombre' => 'gart230_-_microphone', 'marca_id' => $marcaGen3D->id, 'imagen_glb' => 'models/gart230_-_microphone.glb', 'is_deleted' => false, 'reposo' => 30],
         ];
+
         foreach ($modelos3D as $mod) {
             Modelo::updateOrCreate(
                 ['nombre' => $mod['nombre'], 'marca_id' => $mod['marca_id']],
@@ -86,6 +96,7 @@ class Equipos3DSeeder extends Seeder
         foreach ($estados as $nombre) {
             Estado::updateOrCreate(['nombre' => $nombre], ['is_deleted' => false]);
         }
+
         $estadoDisponible = Estado::where('nombre', 'Disponible')->first();
 
         // -- Obtener tipos equipo para asignar a equipos 3D --
@@ -132,9 +143,6 @@ class Equipos3DSeeder extends Seeder
             $caracteristicas['Color']->id,
         ]);
 
-        // -- Tipo reserva --
-        $tipoReservaId = 3;
-
         // -- Obtener todos los modelos ya guardados en BD --
         $modelos = [];
         foreach ($modelos3D as $mod) {
@@ -142,61 +150,99 @@ class Equipos3DSeeder extends Seeder
         }
 
         // -- Crear un equipo 3D para cada modelo 3D --
+        // Para Laptop, Proyector y Mouse crear equipos con tipos de reserva 1, 2 y 3
+        $tiposReservaEspeciales = [1, 2, 3]; // Eventos, Reunión, Clase
+
         foreach ($modelos as $nombreModelo => $modelo) {
 
             // Detectar tipo equipo según nombre modelo (ejemplo rápido)
             if (str_contains($nombreModelo, 'laptop')) {
                 $tipoEquipo = $tipoLaptop;
-            } elseif (str_contains($nombreModelo, 'microfono') || str_contains($nombreModelo, 'microphone') || str_contains($nombreModelo, 'razer')) {
-                $tipoEquipo = $tipoMicrofono;
-            } elseif (str_contains($nombreModelo, 'speaker')) {
-                $tipoEquipo = $tipoParlante;
+                $tiposReserva = $tiposReservaEspeciales;
             } elseif (str_contains($nombreModelo, 'projector')) {
                 $tipoEquipo = $tipoProyector;
+                $tiposReserva = $tiposReservaEspeciales;
             } elseif (str_contains($nombreModelo, 'mouse')) {
                 $tipoEquipo = $tipoMouse;
+                $tiposReserva = $tiposReservaEspeciales;
+            } elseif (
+                str_contains($nombreModelo, 'microphone') ||
+                str_contains($nombreModelo, 'microfono') ||
+                str_contains($nombreModelo, 'fredsters_microphone') ||
+                str_contains($nombreModelo, 'gooseneck_microphone_bended_version') ||
+                str_contains($nombreModelo, 'gart230_-_microphone')
+            ) {
+                $tipoEquipo = $tipoMicrofono;
+                $tiposReserva = [1, 2]; // Solo Eventos y Reunión
+            } elseif (
+                in_array($nombreModelo, [
+                    'fgm-1_parlante',
+                    'parlante2_-_paula_pinzon',
+                    'medium_and_high_frequency_speaker',
+                ])
+            ) {
+                $tipoEquipo = $tipoParlante;
+                $tiposReserva = [1, 2]; // Eventos y Reunión
+            } elseif (
+                in_array($nombreModelo, [
+                    'jbl_speaker',
+                    'logitech_speaker',
+                    'computer_speaker',
+                ])
+            ) {
+                $tipoEquipo = $tipoParlante;
+                $tiposReserva = [3]; // Solo Clase
             } else {
-                // Default si no se reconoce
-                $tipoEquipo = $tipoLaptop;
+                $tipoEquipo = $tipoLaptop;  // Default tipo equipo
+                $tiposReserva = [3];
             }
 
-            for ($i = 1; $i <= 2; $i++) {
-                $numeroSerie = strtoupper("3D-" . str_replace('_', '-', $nombreModelo) . "-{$i}");
+            // Crear equipos para cada tipo de reserva asignado
+            foreach ($tiposReserva as $tipoReservaId) {
+                for ($i = 1; $i <= 2; $i++) {
+                    $numeroSerie = strtoupper("3D-" . str_replace('_', '-', $nombreModelo) . "-R{$tipoReservaId}-{$i}");
 
+                    $equipoData = [
+                        'tipo_equipo_id' => $tipoEquipo->id,
+                        'modelo_id' => $modelo->id,
+                        'estado_id' => $estadoDisponible->id,
+                        'tipo_reserva_id' => $tipoReservaId,
+                        'numero_serie' => $numeroSerie,
+                        'vida_util' => 300,
+                        'es_componente' => 0,
+                        'detalles' => 'Equipo 3D generado automáticamente para modelo ' . $nombreModelo,
+                        'fecha_adquisicion' => now()->toDateString(),
+                        'is_deleted' => false,
+                        'reposo' => 30,
+                    ];
 
-                $equipoData = [
-                    'tipo_equipo_id' => $tipoEquipo->id,
-                    'modelo_id' => $modelo->id,
-                    'estado_id' => $estadoDisponible->id,
-                    'tipo_reserva_id' => $tipoReservaId,
-                    'numero_serie' => $numeroSerie,
-                    'vida_util' => 300,  // Puedes ajustar valor por defecto
-                    'es_componente' => 0,
-                    'detalles' => 'Equipo 3D generado automáticamente para modelo ' . $nombreModelo,
-                    'fecha_adquisicion' => now()->toDateString(),
-                    'is_deleted' => false,
-                    'reposo' => 30,
-                ];
+                    $equipo = Equipo::updateOrCreate(
+                        ['numero_serie' => $numeroSerie],
+                        $equipoData
+                    );
 
-                $equipo = Equipo::updateOrCreate(
-                    ['numero_serie' => $numeroSerie],
-                    $equipoData
-                );
+                    // Solo estos logs:
+                    echo "Equipo creado o actualizado: {$numeroSerie}\n";
+                    echo "  Escala del modelo: {$modelo->escala}\n";
 
-                // Características por defecto (puedes ajustar si quieres valores distintos)
-                $caracteristicasPorDefecto = [
-                    'Peso (kg)' => 1.0,
-                    'Color' => 'Negro',
-                    'Resolución (px)' => 1080,
-                ];
+                    $tipoReserva = TipoReserva::find($equipo->tipo_reserva_id);
+                    echo "  Tipo de reserva asignado: " . ($tipoReserva ? $tipoReserva->nombre : 'No encontrado') . "\n";
 
-                foreach ($caracteristicasPorDefecto as $nombreCarac => $valor) {
-                    $carac = $caracteristicas[$nombreCarac] ?? null;
-                    if ($carac) {
-                        ValoresCaracteristica::updateOrCreate(
-                            ['equipo_id' => $equipo->id, 'caracteristica_id' => $carac->id],
-                            ['valor' => $valor]
-                        );
+                    // Características por defecto
+                    $caracteristicasPorDefecto = [
+                        'Peso (kg)' => 1.0,
+                        'Color' => 'Negro',
+                        'Resolución (px)' => 1080,
+                    ];
+
+                    foreach ($caracteristicasPorDefecto as $nombreCarac => $valor) {
+                        $carac = $caracteristicas[$nombreCarac] ?? null;
+                        if ($carac) {
+                            ValoresCaracteristica::updateOrCreate(
+                                ['equipo_id' => $equipo->id, 'caracteristica_id' => $carac->id],
+                                ['valor' => $valor]
+                            );
+                        }
                     }
                 }
             }
