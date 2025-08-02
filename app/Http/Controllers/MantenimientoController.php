@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Bitacora;
 use App\Models\Equipo;
+use App\Models\Estado;
 use App\Models\Mantenimiento;
+use App\Models\TipoMantenimiento;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -89,7 +93,6 @@ class MantenimientoController extends Controller
             'equipo_id' => ['required', 'exists:equipos,id'],
             'fecha_mantenimiento' => ['required', 'date', 'after_or_equal:today'],
             'hora_mantenimiento_inicio' => ['required', 'date_format:H:i'],
-            //'hora_mantenimiento_final' => ['required', 'date_format:H:i', 'after_or_equal:hora_mantenimiento_inicio'],
             'detalles' => ['nullable', 'string'],
             'tipo_id' => ['required', 'exists:tipo_mantenimientos,id'],
             'user_id' => ['required', 'exists:users,id'],
@@ -100,18 +103,36 @@ class MantenimientoController extends Controller
         DB::beginTransaction();
 
         try {
+            // Obtener información para bitácora antes de cambios
+            $equipo = Equipo::with('modelo.marca', 'estado')->find($validated['equipo_id']);
+            $tipoMantenimiento = TipoMantenimiento::find($validated['tipo_id']);
+            $estadoAnterior = $equipo->estado->nombre ?? 'Desconocido';
+
             // 1. Crear el mantenimiento
             $mantenimiento = Mantenimiento::create($validated);
 
-            // 2. Actualizar el equipo (versión más robusta)
-            $equipo = Equipo::withoutGlobalScopes()->find($validated['equipo_id']);
-            $equipo->estado_id = 2;
+            // 2. Actualizar estado del equipo
+            $equipo->estado_id = 2; // Asumiendo que 2 es "En Mantenimiento"
             $equipo->save();
+            $estadoNuevo = Estado::find(2)->nombre;
 
-            // 3. Forzar la carga fresca de relaciones
-            $mantenimiento->load(['equipo' => function ($query) {
-                $query->with('estado');
-            }]);
+            // Registrar en bitácora
+            $user = Auth::user();
+            $descripcion = ($user ? "{$user->first_name} {$user->last_name}" : 'Sistema') .
+                " creó un mantenimiento:\n" .
+                "Equipo: {$equipo->modelo->marca->nombre} {$equipo->modelo->nombre} (S/N: {$equipo->numero_serie})\n" .
+                "Tipo: {$tipoMantenimiento->nombre}\n" .
+                "Fecha: {$validated['fecha_mantenimiento']} a las {$validated['hora_mantenimiento_inicio']}\n" .
+                "Estado: {$estadoAnterior} → {$estadoNuevo}\n" .
+                "Detalles: " . ($validated['detalles'] ?? 'Ninguno');
+
+            Bitacora::create([
+                'user_id' => $user?->id,
+                'nombre_usuario' => $user ? "{$user->first_name} {$user->last_name}" : 'Sistema',
+                'accion' => 'Creación de mantenimiento',
+                'modulo' => 'Mantenimiento',
+                'descripcion' => $descripcion,
+            ]);
 
             DB::commit();
 
@@ -120,11 +141,12 @@ class MantenimientoController extends Controller
                 'message' => 'Mantenimiento creado correctamente',
                 'data' => [
                     'mantenimiento' => $mantenimiento,
-                    'equipo' => $equipo->fresh() // Retorna el equipo con estado actualizado
+                    'equipo' => $equipo->fresh()
                 ]
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Error al crear mantenimiento: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Error al procesar el mantenimiento',

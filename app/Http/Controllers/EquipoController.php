@@ -1008,41 +1008,62 @@ class EquipoController extends Controller
     }
 
     public function updateEstado(Equipo $equipo, Request $request)
-{
-    $request->validate([
-        'estado_id' => 'required|exists:estados,id',
-        'mantenimiento_id' => 'required|exists:mantenimientos,id'
-    ]);
-
-    DB::beginTransaction();
-    try {
-        // Registrar estado anterior para historial
-        $estadoAnterior = $equipo->estado_id;
-        
-        // Actualizar estado del equipo
-        $equipo->estado_id = $request->estado_id;
-        $equipo->save();
-
-        // Actualizar mantenimiento con hora de finalización
-        $mantenimiento = Mantenimiento::find($request->mantenimiento_id);
-        $mantenimiento->update([
-            'hora_mantenimiento_final' => now()->format('H:i'),
-            //'fecha_mantenimiento' => now()->format('Y-m-d')
+    {
+        $request->validate([
+            'estado_id' => 'required|exists:estados,id',
+            'mantenimiento_id' => 'required|exists:mantenimientos,id'
         ]);
 
+        DB::beginTransaction();
+        try {
+            // Cargar relaciones necesarias para la bitácora
+            $equipo->load('estado', 'modelo.marca');
+            $nuevoEstado = Estado::find($request->estado_id);
 
-        DB::commit();
+            // Guardar estado anterior para la bitácora
+            $estadoAnterior = $equipo->estado->nombre ?? 'Desconocido';
+            $estadoNuevo = $nuevoEstado->nombre;
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Estado del equipo actualizado correctamente'
-        ]);
-    } catch (\Exception $e) {
-        DB::rollBack();
-        return response()->json([
-            'success' => false,
-            'message' => 'Error al actualizar estado: ' . $e->getMessage()
-        ], 500);
+            // Actualizar estado del equipo
+            $equipo->estado_id = $request->estado_id;
+            $equipo->save();
+
+            // Actualizar mantenimiento con hora de finalización
+            $mantenimiento = Mantenimiento::with('tipoMantenimiento')->find($request->mantenimiento_id);
+            $horaFinalizacion = now()->format('H:i');
+            $mantenimiento->update([
+                'hora_mantenimiento_final' => $horaFinalizacion,
+            ]);
+
+            // Registrar en bitácora
+            $user = Auth::user();
+            $descripcion = ($user ? "{$user->first_name} {$user->last_name}" : 'Sistema') .
+                " actualizó el estado del equipo:\n" .
+                "Equipo: {$equipo->modelo->marca->nombre} {$equipo->modelo->nombre} (S/N: {$equipo->numero_serie})\n" .
+                "Estado: {$estadoAnterior} → {$estadoNuevo}\n" .
+                "Mantenimiento: {$mantenimiento->tipoMantenimiento->nombre} finalizado a las {$horaFinalizacion}";
+
+            Bitacora::create([
+                'user_id' => $user?->id,
+                'nombre_usuario' => $user ? "{$user->first_name} {$user->last_name}" : 'Sistema',
+                'accion' => 'Cambio de estado',
+                'modulo' => 'Mantenimiento',
+                'descripcion' => $descripcion,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Estado del equipo actualizado correctamente'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error al actualizar estado del equipo: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar estado: ' . $e->getMessage()
+            ], 500);
+        }
     }
-}
 }
