@@ -19,10 +19,12 @@ class MantenimientoController extends Controller
 
         $query = Mantenimiento::with([
             'equipo.modelo.marca',
+            'equipo.estado',
             'tipoMantenimiento',
             'usuario',
             'futuroMantenimiento'
         ]);
+
 
         // Filtro por equipo_id (opcional)
         if ($request->filled('equipo_id')) {
@@ -81,56 +83,55 @@ class MantenimientoController extends Controller
      * Crear un nuevo mantenimiento.
      */
 
-   public function store(Request $request)
-{
-    $validated = $request->validate([
-        'equipo_id' => ['required', 'exists:equipos,id'],
-        'fecha_mantenimiento' => ['required', 'date', 'after_or_equal:today'],
-        'hora_mantenimiento_inicio' => ['required', 'date_format:H:i:s'],
-        'hora_mantenimiento_final' => ['required', 'date_format:H:i:s', 'after_or_equal:hora_mantenimiento_inicio'],
-        'detalles' => ['nullable', 'string'],
-        'tipo_id' => ['required', 'exists:tipo_mantenimientos,id'],
-        'user_id' => ['required', 'exists:users,id'],
-        'futuro_mantenimiento_id' => ['nullable', 'exists:futuro_mantenimientos,id'],
-        'vida_util' => ['nullable', 'integer', 'min:0'],
-    ]);
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'equipo_id' => ['required', 'exists:equipos,id'],
+            'fecha_mantenimiento' => ['required', 'date', 'after_or_equal:today'],
+            'hora_mantenimiento_inicio' => ['required', 'date_format:H:i'],
+            //'hora_mantenimiento_final' => ['required', 'date_format:H:i', 'after_or_equal:hora_mantenimiento_inicio'],
+            'detalles' => ['nullable', 'string'],
+            'tipo_id' => ['required', 'exists:tipo_mantenimientos,id'],
+            'user_id' => ['required', 'exists:users,id'],
+            'futuro_mantenimiento_id' => ['nullable', 'exists:futuro_mantenimientos,id'],
+            'vida_util' => ['nullable', 'integer', 'min:0'],
+        ]);
 
-   DB::beginTransaction();
+        DB::beginTransaction();
 
-    try {
-        // 1. Crear el mantenimiento
-        $mantenimiento = Mantenimiento::create($validated);
-        
-        // 2. Actualizar el equipo (versión más robusta)
-        $equipo = Equipo::withoutGlobalScopes()->find($validated['equipo_id']);
-        $equipo->estado_id = 2;
-        $equipo->save();
-        
-        // 3. Forzar la carga fresca de relaciones
-        $mantenimiento->load(['equipo' => function($query) {
-            $query->with('estado');
-        }]);
+        try {
+            // 1. Crear el mantenimiento
+            $mantenimiento = Mantenimiento::create($validated);
 
-        DB::commit();
+            // 2. Actualizar el equipo (versión más robusta)
+            $equipo = Equipo::withoutGlobalScopes()->find($validated['equipo_id']);
+            $equipo->estado_id = 2;
+            $equipo->save();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Mantenimiento creado correctamente',
-            'data' => [
-                'mantenimiento' => $mantenimiento,
-                'equipo' => $equipo->fresh() // Retorna el equipo con estado actualizado
-            ]
-        ], 201);
+            // 3. Forzar la carga fresca de relaciones
+            $mantenimiento->load(['equipo' => function ($query) {
+                $query->with('estado');
+            }]);
 
-    } catch (\Exception $e) {
-        DB::rollBack();
-        return response()->json([
-            'success' => false,
-            'message' => 'Error al procesar el mantenimiento',
-            'error' => $e->getMessage()
-        ], 500);
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Mantenimiento creado correctamente',
+                'data' => [
+                    'mantenimiento' => $mantenimiento,
+                    'equipo' => $equipo->fresh() // Retorna el equipo con estado actualizado
+                ]
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al procesar el mantenimiento',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-}
 
 
 
@@ -144,8 +145,8 @@ class MantenimientoController extends Controller
         $validated = $request->validate([
             'equipo_id' => ['sometimes', 'required', 'exists:equipos,id'],
             'fecha_mantenimiento' => ['sometimes', 'required', 'date'],
-            'hora_mantenimiento_inicio' => ['sometimes', 'required', 'date_format:H:i:s'],
-            'hora_mantenimiento_final' => ['sometimes', 'required', 'date_format:H:i:s', 'after_or_equal:hora_mantenimiento_inicio'],
+            'hora_mantenimiento_inicio' => ['sometimes', 'required', 'date_format:H:i'],
+            //'hora_mantenimiento_final' => ['sometimes', 'required', 'date_format:H:i:s', 'after_or_equal:hora_mantenimiento_inicio'],
             'detalles' => ['nullable', 'string'],
             'tipo_id' => ['sometimes', 'required', 'exists:tipo_mantenimientos,id'],
             'user_id' => ['sometimes', 'required', 'exists:users,id'],

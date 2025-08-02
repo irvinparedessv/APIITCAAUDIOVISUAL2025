@@ -191,6 +191,9 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
 
     // Eliminar un mantenimiento
     Route::delete('/mantenimientos/{id}', [MantenimientoController::class, 'destroy']);
+
+    
+    Route::put('equipos/{equipo}/estado', [EquipoController::class, 'updateEstado']);
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador,Encargado'])->group(function () {
@@ -205,6 +208,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador,Encargad
     Route::apiResource('tipoMantenimiento', TipoMantenimientoController::class);
     Route::apiResource('futuroMantenimiento', FuturoMantenimientoController::class);
     //Route::apiResource('mantenimientos', MantenimientoController::class);
+
 });
 
 Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamista,EspacioEncargado'])->group(function () {

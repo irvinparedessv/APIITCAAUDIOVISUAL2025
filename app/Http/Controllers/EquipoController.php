@@ -10,6 +10,7 @@ use App\Models\Caracteristica;
 use App\Models\Equipo;
 use App\Models\EquipoReserva;
 use App\Models\Estado;
+use App\Models\Mantenimiento;
 use App\Models\Modelo;
 use App\Models\ReservaEquipo;
 use App\Models\TipoEquipo;
@@ -1005,4 +1006,43 @@ class EquipoController extends Controller
 
         return response()->json($detalleEquipo);
     }
+
+    public function updateEstado(Equipo $equipo, Request $request)
+{
+    $request->validate([
+        'estado_id' => 'required|exists:estados,id',
+        'mantenimiento_id' => 'required|exists:mantenimientos,id'
+    ]);
+
+    DB::beginTransaction();
+    try {
+        // Registrar estado anterior para historial
+        $estadoAnterior = $equipo->estado_id;
+        
+        // Actualizar estado del equipo
+        $equipo->estado_id = $request->estado_id;
+        $equipo->save();
+
+        // Actualizar mantenimiento con hora de finalización
+        $mantenimiento = Mantenimiento::find($request->mantenimiento_id);
+        $mantenimiento->update([
+            'hora_mantenimiento_final' => now()->format('H:i'),
+            //'fecha_mantenimiento' => now()->format('Y-m-d')
+        ]);
+
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Estado del equipo actualizado correctamente'
+        ]);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => 'Error al actualizar estado: ' . $e->getMessage()
+        ], 500);
+    }
+}
 }
