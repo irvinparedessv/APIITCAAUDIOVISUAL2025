@@ -23,7 +23,6 @@ class FuturoMantenimientoSeeder extends Seeder
                     'tipo_mantenimiento_id' => $tipos->random()->id,
                     'fecha_mantenimiento' => now()->addDays(rand(1, 30))->toDateString(),
                     'hora_mantenimiento_inicio' => '09:00:00',
-                    'hora_mantenimiento_final' => '11:00:00',
                 ]);
             }
         }

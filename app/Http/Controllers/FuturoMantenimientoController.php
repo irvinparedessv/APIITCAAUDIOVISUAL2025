@@ -33,7 +33,7 @@ class FuturoMantenimientoController extends Controller
             });
         }
 
-        $futuros = $query->orderBy('fecha_mantenimiento', 'asc')->paginate($perPage);
+        $futuros = $query->orderBy('id', 'Desc')->paginate($perPage);
 
         return response()->json($futuros);
     }
@@ -58,8 +58,7 @@ class FuturoMantenimientoController extends Controller
             'tipo_mantenimiento_id' => ['required', 'exists:tipo_mantenimientos,id'],
             'fecha_mantenimiento' => ['required', 'date'],
             'user_id' => ['required'],
-            'hora_mantenimiento_inicio' => ['required', 'date_format:H:i:s'],
-            'hora_mantenimiento_final' => ['required', 'date_format:H:i:s', 'after_or_equal:hora_mantenimiento_inicio'],
+            'hora_mantenimiento_inicio' => ['required', 'date_format:H:i']
         ]);
 
         $futuro = FuturoMantenimiento::create($validated);
@@ -82,8 +81,7 @@ class FuturoMantenimientoController extends Controller
             'tipo_mantenimiento_id' => ['sometimes', 'required', 'exists:tipo_mantenimientos,id'],
             'fecha_mantenimiento' => ['sometimes', 'required', 'date'],
             'user_id' => ['required'],
-            'hora_mantenimiento_inicio' => ['sometimes', 'required', 'date_format:H:i:s'],
-            'hora_mantenimiento_final' => ['sometimes', 'required', 'date_format:H:i:s', 'after_or_equal:hora_mantenimiento_inicio'],
+            'hora_mantenimiento_inicio' => ['sometimes', 'required', 'date_format:H:i'],
         ]);
 
         $futuro->update($validated);
