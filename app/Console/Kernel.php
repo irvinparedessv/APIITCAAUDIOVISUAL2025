@@ -14,7 +14,9 @@ class Kernel extends ConsoleKernel
         $schedule->command('equipos:revisar-vida-util')->dailyAt('00:05');
         $schedule->command('reservas:cancelar-vencidas')->dailyAt('00:05');
         $schedule->command('reservas:recordatorio-devolucion')->everyTenMinutes();
-        $schedule->command('mantenimientos:enviar-hoy')->dailyAt('07:00'); // O la hora que necesites
+        $schedule->command('mantenimientos:enviar-hoy')->dailyAt('07:00');
+        $schedule->command('mantenimientos:promover')->everyMinute();
+
 
     }
 

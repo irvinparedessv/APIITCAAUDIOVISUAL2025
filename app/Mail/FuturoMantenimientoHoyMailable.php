@@ -15,7 +15,7 @@ class FuturoMantenimientoHoyMailable extends Mailable
 
     public function __construct(FuturoMantenimiento $mantenimiento)
     {
-        $this->mantenimiento = $mantenimiento->load('equipo', 'tipoMantenimiento');
+        $this->mantenimiento = $mantenimiento->load('equipo', 'tipoMantenimiento', 'equipo.modelo', 'equipo.modelo.marca',);
     }
 
     public function build()

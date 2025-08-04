@@ -1,17 +1,20 @@
 @component('mail::message')
 # Mantenimiento programado para hoy
 
-Hola {{ $mantenimiento->user->name ?? 'usuario' }},
+Hola {{ $mantenimiento->user->first_name ?? 'usuario' }} {{ $mantenimiento->user->last_name }}
 
 Tienes un mantenimiento programado para hoy, estos son los detalles:
 
-- **Equipo:** {{ $mantenimiento->equipo->nombre ?? 'N/A' }} (ID: {{ $mantenimiento->equipo_id }})
+- **Equipo:** 
+  @if($mantenimiento->equipo->modelo && $mantenimiento->equipo->modelo->marca)
+    {{ $mantenimiento->equipo->modelo->marca->nombre }} {{ $mantenimiento->equipo->modelo->nombre }}
+  @else
+    {{ $mantenimiento->equipo->numero_serie ?? 'N/A' }} (sin modelo/marca)
+  @endif
 - **Tipo:** {{ $mantenimiento->tipoMantenimiento->nombre ?? 'N/A' }}
 - **Hora de inicio:** {{ $mantenimiento->hora_mantenimiento_inicio }}
-- **Hora final:** {{ $mantenimiento->hora_mantenimiento_final }}
 
 Por favor, realiza el mantenimiento según lo programado.
 
 Gracias,<br>
-{{ config('app.name') }}
 @endcomponent

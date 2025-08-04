@@ -194,9 +194,57 @@ class MantenimientoController extends Controller
      */
     public function destroy($id)
     {
-        $mantenimiento = Mantenimiento::findOrFail($id);
-        $mantenimiento->delete();
+        DB::beginTransaction();
 
-        return response()->json(['message' => 'Mantenimiento eliminado correctamente']);
+        try {
+            $mantenimiento = Mantenimiento::findOrFail($id);
+            $equipo = Equipo::find($mantenimiento->equipo_id);
+
+            // Guardar información para la bitácora antes de hacer cambios
+            $user = Auth::user();
+            $tipoMantenimiento = $mantenimiento->tipoMantenimiento;
+            $estadoAnterior = $equipo->estado->nombre ?? 'Desconocido';
+
+            // 1. Actualizar el estado del equipo a "Disponible" (ID 1)
+            $equipo->estado_id = 1; // Asumiendo que 1 es "Disponible"
+            $equipo->save();
+            $estadoNuevo = Estado::find(1)->nombre;
+
+            // 2. Eliminar el mantenimiento
+            $mantenimiento->delete();
+
+            // Registrar en bitácora
+            $descripcion = ($user ? "{$user->first_name} {$user->last_name}" : 'Sistema') .
+                " eliminó un mantenimiento:\n" .
+                "Equipo: {$equipo->modelo->marca->nombre} {$equipo->modelo->nombre} (S/N: {$equipo->numero_serie})\n" .
+                "Tipo: {$tipoMantenimiento->nombre}\n" .
+                "Estado: {$estadoAnterior} → {$estadoNuevo}";
+
+            Bitacora::create([
+                'user_id' => $user?->id,
+                'nombre_usuario' => $user ? "{$user->first_name} {$user->last_name}" : 'Sistema',
+                'accion' => 'Eliminación de mantenimiento',
+                'modulo' => 'Mantenimiento',
+                'descripcion' => $descripcion,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Mantenimiento eliminado correctamente y equipo marcado como disponible',
+                'data' => [
+                    'equipo' => $equipo->fresh()
+                ]
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error al eliminar mantenimiento: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar el mantenimiento',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }
