@@ -9,9 +9,11 @@ class Mantenimiento extends Model
     protected $fillable = [
         'equipo_id',
         'fecha_mantenimiento',
+        'fecha_mantenimiento_final',
         'hora_mantenimiento_inicio',
         'hora_mantenimiento_final',
         'detalles',
+        'comentario',
         'tipo_id',
         'user_id',
         'futuro_mantenimiento_id',

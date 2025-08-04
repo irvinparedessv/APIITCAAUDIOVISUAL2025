@@ -1011,7 +1011,9 @@ class EquipoController extends Controller
     {
         $request->validate([
             'estado_id' => 'required|exists:estados,id',
-            'mantenimiento_id' => 'required|exists:mantenimientos,id'
+            'mantenimiento_id' => 'required|exists:mantenimientos,id',
+            'comentario' => 'nullable|string',
+            'fecha_mantenimiento_final' => 'nullable|date',
         ]);
 
         DB::beginTransaction();
@@ -1019,20 +1021,29 @@ class EquipoController extends Controller
             // Cargar relaciones necesarias para la bitácora
             $equipo->load('estado', 'modelo.marca');
             $nuevoEstado = Estado::find($request->estado_id);
+            $mantenimiento = Mantenimiento::with('tipoMantenimiento')->find($request->mantenimiento_id);
 
             // Guardar estado anterior para la bitácora
             $estadoAnterior = $equipo->estado->nombre ?? 'Desconocido';
             $estadoNuevo = $nuevoEstado->nombre;
 
-            // Actualizar estado del equipo
+            // 1. Actualizar vida útil del equipo si el mantenimiento tiene vida_util
+            if ($mantenimiento->vida_util) {
+                $equipo->vida_util = ($equipo->vida_util ?? 0) + $mantenimiento->vida_util;
+            }
+
+            // 2. Actualizar estado del equipo
             $equipo->estado_id = $request->estado_id;
             $equipo->save();
 
-            // Actualizar mantenimiento con hora de finalización
-            $mantenimiento = Mantenimiento::with('tipoMantenimiento')->find($request->mantenimiento_id);
+            // 3. Actualizar mantenimiento
             $horaFinalizacion = now()->format('H:i');
+            $fechaFinalizacion = $request->input('fecha_mantenimiento_final', now()->toDateString());
+
             $mantenimiento->update([
                 'hora_mantenimiento_final' => $horaFinalizacion,
+                'fecha_mantenimiento_final' => $fechaFinalizacion,
+                'comentario' => $request->comentario,
             ]);
 
             // Registrar en bitácora
@@ -1042,6 +1053,12 @@ class EquipoController extends Controller
                 "Equipo: {$equipo->modelo->marca->nombre} {$equipo->modelo->nombre} (S/N: {$equipo->numero_serie})\n" .
                 "Estado: {$estadoAnterior} → {$estadoNuevo}\n" .
                 "Mantenimiento: {$mantenimiento->tipoMantenimiento->nombre} finalizado a las {$horaFinalizacion}";
+
+            // Agregar información de vida útil si aplica
+            if ($mantenimiento->vida_util) {
+                $descripcion .= "\nVida útil agregada: +{$mantenimiento->vida_util} horas";
+                $descripcion .= "\nVida útil total: {$equipo->vida_util} horas";
+            }
 
             Bitacora::create([
                 'user_id' => $user?->id,
@@ -1055,7 +1072,9 @@ class EquipoController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Estado del equipo actualizado correctamente'
+                'message' => 'Estado del equipo actualizado correctamente',
+                'vida_util_actualizada' => $mantenimiento->vida_util ? true : false,
+                'nueva_vida_util' => $equipo->vida_util
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
