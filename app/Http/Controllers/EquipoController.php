@@ -1052,7 +1052,7 @@ class EquipoController extends Controller
                 " actualizó el estado del equipo:\n" .
                 "Equipo: {$equipo->modelo->marca->nombre} {$equipo->modelo->nombre} (S/N: {$equipo->numero_serie})\n" .
                 "Estado: {$estadoAnterior} → {$estadoNuevo}\n" .
-                "Mantenimiento: {$mantenimiento->tipoMantenimiento->nombre} finalizado a las {$horaFinalizacion}";
+                "Mantenimiento: {$mantenimiento->tipoMantenimiento->nombre} finalizado el dia {$fechaFinalizacion} a las {$horaFinalizacion}";
 
             // Agregar información de vida útil si aplica
             if ($mantenimiento->vida_util) {

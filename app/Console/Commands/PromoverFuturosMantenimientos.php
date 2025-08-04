@@ -7,6 +7,7 @@ use App\Models\FuturoMantenimiento;
 use App\Models\Mantenimiento;
 use App\Models\Equipo;
 use App\Models\Bitacora;
+use App\Models\Estado;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -14,7 +15,7 @@ class PromoverFuturosMantenimientos extends Command
 {
     protected $signature = 'mantenimientos:promover';
 
-    protected $description = 'Convierte futuros mantenimientos en mantenimientos reales';
+    protected $description = 'Convierte futuros mantenimientos en mantenimientos activos';
 
     public function handle()
     {
@@ -42,6 +43,7 @@ class PromoverFuturosMantenimientos extends Command
                 'fecha_mantenimiento' => $futuro->fecha_mantenimiento,
                 'hora_mantenimiento_inicio' => $futuro->hora_mantenimiento_inicio,
                 'hora_mantenimiento_final' => $futuro->hora_mantenimiento_final,
+                'vida_util' => $futuro->vida_util,
                 'tipo_id' => $futuro->tipo_mantenimiento_id,
                 'user_id' => $futuro->user_id,
                 'futuro_mantenimiento_id' => $futuro->id,
@@ -51,10 +53,10 @@ class PromoverFuturosMantenimientos extends Command
             // Cambiar estado del equipo a "En Mantenimiento" (ID 2)
             $equipo->estado_id = 2; // Asumiendo que 2 es "En Mantenimiento"
             $equipo->save();
-            $estadoNuevo = $equipo->estado->nombre;
+            $estadoNuevo = Estado::find(2)->nombre;
 
             // Registrar en bitácora
-            $descripcion = "Sistema promovió un futuro mantenimiento a real:\n" .
+            $descripcion = "El sistema convirtió un mantenimiento programado en un mantenimiento activo.\n" .
                 "Equipo: {$equipo->modelo->marca->nombre} {$equipo->modelo->nombre} (S/N: {$equipo->numero_serie})\n" .
                 "Tipo: {$futuro->tipoMantenimiento->nombre}\n" .
                 "Fecha: {$futuro->fecha_mantenimiento}\n" .
@@ -63,7 +65,7 @@ class PromoverFuturosMantenimientos extends Command
             Bitacora::create([
                 'user_id' => null, // O usar un usuario sistema si tienes
                 'nombre_usuario' => 'Sistema Automático',
-                'accion' => 'Promoción de mantenimiento',
+                'accion' => 'Automatización de mantenimientos',
                 'modulo' => 'Mantenimiento',
                 'descripcion' => $descripcion,
             ]);

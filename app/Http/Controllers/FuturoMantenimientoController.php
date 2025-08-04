@@ -56,9 +56,22 @@ class FuturoMantenimientoController extends Controller
         $validated = $request->validate([
             'equipo_id' => ['required', 'exists:equipos,id'],
             'tipo_mantenimiento_id' => ['required', 'exists:tipo_mantenimientos,id'],
-            'fecha_mantenimiento' => ['required', 'date'],
+            'fecha_mantenimiento' => [
+                'required',
+                'date',
+                function ($attribute, $value, $fail) use ($request) {
+                    $existing = FuturoMantenimiento::where('equipo_id', $request->equipo_id)
+                        ->whereDate('fecha_mantenimiento', $value)
+                        ->exists();
+
+                    if ($existing) {
+                        $fail('Ya existe un mantenimiento programado para este equipo en la fecha seleccionada.');
+                    }
+                }
+            ],
             'user_id' => ['required'],
-            'hora_mantenimiento_inicio' => ['required', 'date_format:H:i']
+            'hora_mantenimiento_inicio' => ['required', 'date_format:H:i'],
+            'vida_util' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $futuro = FuturoMantenimiento::create($validated);
@@ -82,6 +95,7 @@ class FuturoMantenimientoController extends Controller
             'fecha_mantenimiento' => ['sometimes', 'required', 'date'],
             'user_id' => ['required'],
             'hora_mantenimiento_inicio' => ['sometimes', 'required', 'date_format:H:i'],
+            'vida_util' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $futuro->update($validated);
