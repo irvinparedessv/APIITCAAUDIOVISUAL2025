@@ -74,143 +74,143 @@ class PrediccionEquipoController extends Controller
     }
 
     public function buscarEquipos(Request $request)
-{
-    $request->validate([
-        'search' => 'sometimes|string|max:100',
-        'limit' => 'sometimes|integer|min:1|max:50'
-    ]);
+    {
+        $request->validate([
+            'search' => 'sometimes|string|max:100',
+            'limit' => 'sometimes|integer|min:1|max:50'
+        ]);
 
-    $query = Equipo::where('is_deleted', false)
-        ->where('estado_id', 1)
-        ->with(['modelo.marca', 'tipoEquipo'])
-        ->orderBy('numero_serie');
+        $query = Equipo::where('is_deleted', false)
+            ->where('estado_id', 1)
+            ->where('es_componente', false)
+            ->with(['modelo.marca', 'tipoEquipo'])
+            ->orderBy('numero_serie');
 
-    if ($request->has('search')) {
-        $searchTerm = $request->search;
-        $query->where(function ($q) use ($searchTerm) {
-            $q->where('numero_serie', 'like', '%' . $searchTerm . '%')
-                ->orWhereHas('modelo', function ($modeloQuery) use ($searchTerm) {
-                    $modeloQuery->where('nombre', 'like', '%' . $searchTerm . '%')
-                        ->orWhereHas('marca', function ($marcaQuery) use ($searchTerm) {
-                            $marcaQuery->where('nombre', 'like', '%' . $searchTerm . '%');
-                        });
-                });
-        });
-    }
+        if ($request->has('search')) {
+            $searchTerm = $request->search;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('numero_serie', 'like', '%' . $searchTerm . '%')
+                    ->orWhereHas('modelo', function ($modeloQuery) use ($searchTerm) {
+                        $modeloQuery->where('nombre', 'like', '%' . $searchTerm . '%')
+                            ->orWhereHas('marca', function ($marcaQuery) use ($searchTerm) {
+                                $marcaQuery->where('nombre', 'like', '%' . $searchTerm . '%');
+                            });
+                    });
+            });
+        }
 
-    // Agregar el return faltante
-    $equipos = $query->limit($request->input('limit', 10))->get();
-
-    return response()->json([
-        'success' => true,
-        'data' => $equipos->map(function ($equipo) {
-            return [
-                'id' => $equipo->id,
-                'numero_serie' => $equipo->numero_serie,
-                'marca' => $equipo->modelo->marca->nombre ?? 'Sin marca',
-                'modelo' => $equipo->modelo->nombre ?? 'Sin modelo',
-                'marca_modelo' => ($equipo->modelo->marca->nombre ?? '') . ' ' . ($equipo->modelo->nombre ?? ''),
-                'tipo' => $equipo->tipoEquipo->nombre ?? 'Sin tipo'
-            ];
-        })
-    ]);
-}
-
-    public function buscarEquiposVidaUtil(Request $request)
-{
-    Log::info('Request recibido en buscarEquiposVidaUtil', [
-        'params' => $request->all(),
-        'headers' => $request->headers->all()
-    ]);
-    $request->validate([
-        'search' => 'sometimes|string|max:100',
-        'limit' => 'sometimes|integer|min:1|max:50'
-    ]);
-
-    $query = Equipo::where('is_deleted', false)
-        ->where('estado_id', 1)
-        ->where('es_componente', 0)
-        ->where(function($q) {
-            $q->whereNotNull('vida_util')
-              ->where('vida_util', '>', 0);
-        })
-        ->with(['modelo.marca', 'tipoEquipo'])
-        ->orderBy('numero_serie');
-
-    if ($request->has('search')) {
-        $searchTerm = $request->search;
-        $query->where(function ($q) use ($searchTerm) {
-            $q->where('numero_serie', 'like', '%' . $searchTerm . '%')
-                ->orWhereHas('modelo', function ($modeloQuery) use ($searchTerm) {
-                    $modeloQuery->where('nombre', 'like', '%' . $searchTerm . '%')
-                        ->orWhereHas('marca', function ($marcaQuery) use ($searchTerm) {
-                            $marcaQuery->where('nombre', 'like', '%' . $searchTerm . '%');
-                        });
-                });
-        });
-    }
-
-    $equipos = $query->limit($request->input('limit', 10))->get();
-
-    // Asegúrate de retornar una respuesta JSON válida
-   return response()->json([
-    'success' => true,
-    'data' => $equipos->map(function ($equipo) {
-        $modelo = $equipo->modelo;
-        $marca = $modelo?->marca;
-
-        return [
-            'id' => $equipo->id,
-            'numero_serie' => $equipo->numero_serie,
-            'marca' => $marca->nombre ?? 'Sin marca',
-            'modelo' => $modelo->nombre ?? 'Sin modelo',
-            'marca_modelo' => ($marca->nombre ?? '') . ' ' . ($modelo->nombre ?? ''),
-            'tipo' => $equipo->tipoEquipo->nombre ?? 'Sin tipo',
-            'vida_util' => $equipo->vida_util
-        ];
-    })
-]);
-
-}
-
-public function vidaUtilPorEquipo($id, PrediccionEquipoService $predictor)
-{
-    try {
-        $equipoId = (int)$id;
-        $prediccion = $predictor->predecirVidaUtil($equipoId);
+        // Agregar el return faltante
+        $equipos = $query->limit($request->input('limit', 10))->get();
 
         return response()->json([
             'success' => true,
-            'data' => $prediccion,
+            'data' => $equipos->map(function ($equipo) {
+                return [
+                    'id' => $equipo->id,
+                    'numero_serie' => $equipo->numero_serie,
+                    'marca' => $equipo->modelo->marca->nombre ?? 'Sin marca',
+                    'modelo' => $equipo->modelo->nombre ?? 'Sin modelo',
+                    'marca_modelo' => ($equipo->modelo->marca->nombre ?? '') . ' ' . ($equipo->modelo->nombre ?? ''),
+                    'tipo' => $equipo->tipoEquipo->nombre ?? 'Sin tipo'
+                ];
+            })
         ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => $e->getMessage()
-        ], 400);
     }
-}
+
+    public function buscarEquiposVidaUtil(Request $request)
+    {
+        Log::info('Request recibido en buscarEquiposVidaUtil', [
+            'params' => $request->all(),
+            'headers' => $request->headers->all()
+        ]);
+        $request->validate([
+            'search' => 'sometimes|string|max:100',
+            'limit' => 'sometimes|integer|min:1|max:50'
+        ]);
+
+        $query = Equipo::where('is_deleted', false)
+            ->where('estado_id', 1)
+            ->where('es_componente', 0)
+            ->where(function ($q) {
+                $q->whereNotNull('vida_util')
+                    ->where('vida_util', '>', 0);
+            })
+            ->with(['modelo.marca', 'tipoEquipo'])
+            ->orderBy('numero_serie');
+
+        if ($request->has('search')) {
+            $searchTerm = $request->search;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('numero_serie', 'like', '%' . $searchTerm . '%')
+                    ->orWhereHas('modelo', function ($modeloQuery) use ($searchTerm) {
+                        $modeloQuery->where('nombre', 'like', '%' . $searchTerm . '%')
+                            ->orWhereHas('marca', function ($marcaQuery) use ($searchTerm) {
+                                $marcaQuery->where('nombre', 'like', '%' . $searchTerm . '%');
+                            });
+                    });
+            });
+        }
+
+        $equipos = $query->limit($request->input('limit', 10))->get();
+
+        // Asegúrate de retornar una respuesta JSON válida
+        return response()->json([
+            'success' => true,
+            'data' => $equipos->map(function ($equipo) {
+                $modelo = $equipo->modelo;
+                $marca = $modelo?->marca;
+
+                return [
+                    'id' => $equipo->id,
+                    'numero_serie' => $equipo->numero_serie,
+                    'marca' => $marca->nombre ?? 'Sin marca',
+                    'modelo' => $modelo->nombre ?? 'Sin modelo',
+                    'marca_modelo' => ($marca->nombre ?? '') . ' ' . ($modelo->nombre ?? ''),
+                    'tipo' => $equipo->tipoEquipo->nombre ?? 'Sin tipo',
+                    'vida_util' => $equipo->vida_util
+                ];
+            })
+        ]);
+    }
+
+    public function vidaUtilPorEquipo($id, PrediccionEquipoService $predictor)
+    {
+        try {
+            $equipoId = (int)$id;
+            $prediccion = $predictor->predecirVidaUtil($equipoId);
+
+            return response()->json([
+                'success' => true,
+                'data' => $prediccion,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
+        }
+    }
 
 
     public function prediccionPorEquipo($id, PrediccionEquipoService $predictor)
-{
-    try {
-        // Convertir el ID a entero
-        $equipoId = (int)$id;
-        $prediccion = $predictor->predecirReservasMensualesPorEquipo(6, $equipoId);
+    {
+        try {
+            // Convertir el ID a entero
+            $equipoId = (int)$id;
+            $prediccion = $predictor->predecirReservasMensualesPorEquipo(6, $equipoId);
 
-        return response()->json([
-            'success' => true,
-            'data' => $this->formatearParaFrontend($prediccion),
-            'equipo' => Equipo::findOrFail($equipoId)->only('id', 'nombre', 'codigo')
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => $e->getMessage()
-        ], 400);
+            return response()->json([
+                'success' => true,
+                'data' => $this->formatearParaFrontend($prediccion),
+                'equipo' => Equipo::findOrFail($equipoId)->only('id', 'nombre', 'codigo')
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
+        }
     }
-}
 
     protected function formatearParaFrontend(array $resultado): array
     {

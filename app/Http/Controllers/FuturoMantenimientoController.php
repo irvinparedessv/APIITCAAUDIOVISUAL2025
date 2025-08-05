@@ -14,7 +14,7 @@ class FuturoMantenimientoController extends Controller
     {
         $perPage = $request->input('per_page', 10); // usa "per_page" para que coincida con el frontend
 
-        $query = FuturoMantenimiento::with(['equipo', 'tipoMantenimiento']);
+        $query = FuturoMantenimiento::with(['equipo.modelo.marca', 'tipoMantenimiento']);
 
         // Filtro por ID de equipo (opcional, ya lo tenías)
         if ($request->filled('equipo_id')) {
@@ -43,7 +43,7 @@ class FuturoMantenimientoController extends Controller
      */
     public function show($id)
     {
-        $futuro = FuturoMantenimiento::with(['equipo', 'tipoMantenimiento', 'mantenimientos.tipoMantenimiento'])->findOrFail($id);
+        $futuro = FuturoMantenimiento::with(['equipo.modelo.marca', 'tipoMantenimiento', 'mantenimientos.tipoMantenimiento'])->findOrFail($id);
 
         return response()->json($futuro);
     }
