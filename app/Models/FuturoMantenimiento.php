@@ -12,7 +12,6 @@ class FuturoMantenimiento extends Model
         'fecha_mantenimiento',
         'hora_mantenimiento_inicio',
         'user_id',
-        'vida_util',
     ];
 
     public function equipo()

@@ -43,7 +43,6 @@ class PromoverFuturosMantenimientos extends Command
                 'fecha_mantenimiento' => $futuro->fecha_mantenimiento,
                 'hora_mantenimiento_inicio' => $futuro->hora_mantenimiento_inicio,
                 'hora_mantenimiento_final' => $futuro->hora_mantenimiento_final,
-                'vida_util' => $futuro->vida_util,
                 'tipo_id' => $futuro->tipo_mantenimiento_id,
                 'user_id' => $futuro->user_id,
                 'futuro_mantenimiento_id' => $futuro->id,
@@ -51,7 +50,7 @@ class PromoverFuturosMantenimientos extends Command
             ]);
 
             // Cambiar estado del equipo a "En Mantenimiento" (ID 2)
-            $equipo->estado_id = 2; // Asumiendo que 2 es "En Mantenimiento"
+            $equipo->estado_id = 2; 
             $equipo->save();
             $estadoNuevo = Estado::find(2)->nombre;
 
@@ -63,7 +62,7 @@ class PromoverFuturosMantenimientos extends Command
                 "Estado: {$estadoAnterior} → {$estadoNuevo}";
 
             Bitacora::create([
-                'user_id' => null, // O usar un usuario sistema si tienes
+                'user_id' => null, 
                 'nombre_usuario' => 'Sistema Automático',
                 'accion' => 'Automatización de mantenimientos',
                 'modulo' => 'Mantenimiento',

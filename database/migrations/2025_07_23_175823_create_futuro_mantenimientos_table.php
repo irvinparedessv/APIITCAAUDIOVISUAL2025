@@ -15,7 +15,6 @@ class CreateFuturoMantenimientosTable extends Migration
             $table->date('fecha_mantenimiento');
             $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
             $table->time('hora_mantenimiento_inicio')->nullable();
-            $table->integer('vida_util')->nullable();
             $table->timestamps();
         });
     }

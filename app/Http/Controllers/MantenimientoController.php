@@ -247,4 +247,68 @@ class MantenimientoController extends Controller
             ], 500);
         }
     }
+
+    public function updateVidaUtil($id, Request $request)
+    {
+        $request->validate([
+            'vida_util' => 'required|integer|min:0',
+            'comentario' => 'nullable|string|max:255'
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $mantenimiento = Mantenimiento::with('equipo')->findOrFail($id);
+
+            // Guardamos el valor original para el cálculo
+            $vidaUtilAnterior = $mantenimiento->vida_util ?? 0;
+            $vidaUtilNueva = $request->vida_util;
+
+            // 1. Actualizamos el mantenimiento
+            $mantenimiento->update([
+                'vida_util' => $vidaUtilNueva,
+                'comentario' => $request->comentario ?? $mantenimiento->comentario
+            ]);
+
+            // 2. Actualizamos el equipo (sumando la diferencia)
+            $equipo = $mantenimiento->equipo;
+            $equipo->vida_util = ($equipo->vida_util - $vidaUtilAnterior) + $vidaUtilNueva;
+            $equipo->save();
+
+            // 3. Registramos en bitácora
+            $user = Auth::user();
+            Bitacora::create([
+                'user_id' => $user->id,
+                'nombre_usuario' => $user->name,
+                'accion' => 'Actualización vida útil',
+                'modulo' => 'Mantenimiento',
+                'descripcion' => sprintf(
+                    "Se actualizó la vida útil del mantenimiento #%d para el equipo %s. " .
+                        "Vida útil anterior: %d horas, Nueva vida útil: %d horas. " .
+                        "Vida útil total del equipo: %d horas",
+                    $mantenimiento->id,
+                    $equipo->numero_serie,
+                    $vidaUtilAnterior,
+                    $vidaUtilNueva,
+                    $equipo->vida_util
+                )
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Vida útil actualizada correctamente',
+                'data' => [
+                    'vida_util_mantenimiento' => $vidaUtilNueva,
+                    'vida_util_equipo' => $equipo->vida_util
+                ]
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar vida útil: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

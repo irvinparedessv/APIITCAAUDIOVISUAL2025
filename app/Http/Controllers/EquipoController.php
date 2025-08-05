@@ -1056,6 +1056,7 @@ class EquipoController extends Controller
             'mantenimiento_id' => 'required|exists:mantenimientos,id',
             'comentario' => 'nullable|string',
             'fecha_mantenimiento_final' => 'nullable|date',
+            'vida_util' => ['nullable', 'integer', 'min:0'],
         ]);
 
         DB::beginTransaction();
@@ -1086,6 +1087,7 @@ class EquipoController extends Controller
                 'hora_mantenimiento_final' => $horaFinalizacion,
                 'fecha_mantenimiento_final' => $fechaFinalizacion,
                 'comentario' => $request->comentario,
+                'vida_util' => $request->vida_util,
             ]);
 
             // Registrar en bitácora

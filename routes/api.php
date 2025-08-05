@@ -192,6 +192,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     // Eliminar un mantenimiento
     Route::delete('/mantenimientos/{id}', [MantenimientoController::class, 'destroy']);
 
+    Route::put('/mantenimientos/{id}/vida-util', [MantenimientoController::class, 'updateVidaUtil']);
 
     Route::put('equipos/{equipo}/estado', [EquipoController::class, 'updateEstado']);
 });
