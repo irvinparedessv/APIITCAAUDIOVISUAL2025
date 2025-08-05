@@ -192,7 +192,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
     // Eliminar un mantenimiento
     Route::delete('/mantenimientos/{id}', [MantenimientoController::class, 'destroy']);
 
-    
+
     Route::put('equipos/{equipo}/estado', [EquipoController::class, 'updateEstado']);
 });
 
@@ -232,6 +232,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Administrador,Encargado,Prestamist
     Route::apiResource('equipos', EquipoController::class);
     Route::get('/modelosEquiposDisponibles', [ModeloController::class, 'modelosEquiposDisponibles']);
     Route::get('/detail/{id}', [ReservaEquipoController::class, 'detail']); // edit reserva
+    Route::get('equipo-detalle/{id}', [EquipoController::class, 'detalle']);
 
     Route::get('/reservas/{id}', [ReservaEquipoController::class, 'getByUser']); // Ver reservas de un usuario
     Route::get('/reservas-aula/{id}', [ReservaAulaController::class, 'show']);

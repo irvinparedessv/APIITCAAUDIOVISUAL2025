@@ -248,7 +248,49 @@ class EquipoController extends Controller
         }
     }
 
+    public function detalle($id)
+    {
+        $equipo = Equipo::with([
+            'modelo.marca',
+            'tipoEquipo',
+            'estado',
+            'tipoReserva',
+            'valoresCaracteristicas.caracteristica'
+        ])->find($id);
 
+        if (!$equipo) {
+            return response()->json(['message' => 'Equipo no encontrado'], 404);
+        }
+
+        // Armado de las características en formato clave-valor
+        $caracteristicas = $equipo->valoresCaracteristicas->map(function ($val) {
+            return [
+                'nombre' => $val->caracteristica->nombre ?? '',
+                'valor' => $val->valor,
+                'tipo_dato' => $val->caracteristica->tipo_dato ?? ''
+            ];
+        });
+
+        return response()->json([
+            'id' => $equipo->id,
+            'numero_serie' => $equipo->numero_serie,
+            'detalles' => $equipo->detalles,
+            'fecha_adquisicion' => $equipo->fecha_adquisicion,
+            'comentario' => $equipo->comentario,
+            'imagen_glb' => $equipo->imagen_glb,
+            'modelo' => [
+                'id' => $equipo->modelo->id ?? null,
+                'nombre' => $equipo->modelo->nombre ?? null,
+                'marca' => $equipo->modelo->marca->nombre ?? null,
+                'imagen_normal' => $equipo->modelo->imagen_normal ?? null,
+                'imagen_glb' => $equipo->modelo->imagen_glb ?? null,
+                'escala' => $equipo->modelo->escala ?? null
+            ],
+            'tipo_equipo' => $equipo->tipoEquipo->nombre ?? null,
+            'tipo_reserva' => $equipo->tipoReserva->nombre ?? null,
+            'caracteristicas' => $caracteristicas
+        ]);
+    }
 
 
 
