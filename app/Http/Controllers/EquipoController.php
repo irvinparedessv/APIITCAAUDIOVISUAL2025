@@ -824,6 +824,25 @@ class EquipoController extends Controller
             $query->where('nombre_marca', 'like', '%' . $request->marca . '%');
         }
 
+        if ($request->filled('estado_id')) {
+            $estadoId = $request->estado_id;
+            switch ($estadoId) {
+                case 1: // Disponible
+                    $query->where('cantidad_disponible', '>', 0);
+                    break;
+                case 2: // Mantenimiento
+                    $query->where('cantidad_mantenimiento', '>', 0);
+                    break;
+                case 4: // Dañado
+                    $query->where('cantidad_eliminada', '>', 0);
+                    break;
+                case 5: // No disponible
+                    $query->where('cantidad_noDisponible', '>', 0);
+                    break;
+            }
+        }
+
+
         // Filtro global de búsqueda (modelo, tipo, marca)
         if ($request->filled('search')) {
             $search = $request->search;
