@@ -19,7 +19,7 @@ class FuturoMantenimiento extends Model
         return $this->belongsTo(Equipo::class);
     }
     // Relación con el usuario responsable del mantenimiento
-    public function user()
+    public function usuario()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
