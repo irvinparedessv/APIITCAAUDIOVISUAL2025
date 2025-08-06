@@ -10,14 +10,27 @@ class TipoMantenimientoController extends Controller
     /**
      * Mostrar todos los tipos de mantenimiento.
      */
-    public function index()
-{
-    $tipos = TipoMantenimiento::orderBy('nombre')->get();
-    return response()->json([
-        'message' => 'Lista de tipos de mantenimiento',
-        'data' => $tipos,
-    ]);
-}
+    public function index(Request $request)
+    {
+        $query = TipoMantenimiento::query();
+        
+        // Aplicar búsqueda si se proporciona
+        if ($request->has('search')) {
+            $search = $request->input('search');
+            $query->where(function($q) use ($search) {
+                $q->where('nombre', 'like', "%{$search}%")
+                  ->orWhere('id', 'like', "%{$search}%");
+            });
+        }
+
+        $tipos = $query->orderBy('nombre')->get();
+        
+        return response()->json([
+            'message' => 'Lista de tipos de mantenimiento',
+            'data' => $tipos,
+        ]);
+    }
+
 
 
     /**
