@@ -29,35 +29,56 @@ class MantenimientoController extends Controller
             'futuroMantenimiento'
         ]);
 
-
         // Filtro por equipo_id (opcional)
         if ($request->filled('equipo_id')) {
             $query->where('equipo_id', $request->equipo_id);
         }
 
-        // Filtro por tipo_id (opcional)
+        // Filtro por tipo_id
         if ($request->filled('tipo_id')) {
             $query->where('tipo_id', $request->tipo_id);
         }
 
-        // Filtro por búsqueda general en equipo, tipo y usuario
+        // Filtro por estado_id del equipo
+        if ($request->filled('estado_id')) {
+            $query->whereHas('equipo', function ($q) use ($request) {
+                $q->where('estado_id', $request->estado_id);
+            });
+        }
+
+        // Filtro por rango de fechas
+        if ($request->filled('fecha_inicio')) {
+            $query->where('fecha_mantenimiento', '>=', $request->fecha_inicio);
+        }
+        if ($request->filled('fecha_fin')) {
+            $query->where('fecha_mantenimiento', '<=', $request->fecha_fin);
+        }
+
+        // Filtro por vida útil
+        if ($request->filled('vida_util_min')) {
+            $query->where('vida_util', '>=', $request->vida_util_min);
+        }
+        if ($request->filled('vida_util_max')) {
+            $query->where('vida_util', '<=', $request->vida_util_max);
+        }
+
+        // Filtro por búsqueda general
         if ($request->filled('search')) {
             $search = $request->input('search');
 
             $query->where(function ($q) use ($search) {
-                // Buscar en el número de serie del equipo
                 $q->whereHas('equipo', function ($q2) use ($search) {
                     $q2->where('numero_serie', 'like', "%{$search}%");
                 })
-                    // Buscar en nombre del tipo de mantenimiento
                     ->orWhereHas('tipoMantenimiento', function ($q3) use ($search) {
                         $q3->where('nombre', 'like', "%{$search}%");
                     })
-                    // Buscar en nombre o apellido del usuario
                     ->orWhereHas('usuario', function ($q4) use ($search) {
                         $q4->where('first_name', 'like', "%{$search}%")
                             ->orWhere('last_name', 'like', "%{$search}%");
-                    });
+                    })
+                    ->orWhere('comentario', 'like', "%{$search}%")
+                    ->orWhere('vida_util', 'like', "%{$search}%");
             });
         }
 
@@ -257,40 +278,40 @@ class MantenimientoController extends Controller
 
         DB::beginTransaction();
         try {
-            $mantenimiento = Mantenimiento::with('equipo')->findOrFail($id);
+            $mantenimiento = Mantenimiento::with(['equipo.modelo.marca', 'tipoMantenimiento'])->findOrFail($id);
+            $equipo = $mantenimiento->equipo;
 
-            // Guardamos el valor original para el cálculo
+            // Guardar valores anteriores para la bitácora
             $vidaUtilAnterior = $mantenimiento->vida_util ?? 0;
-            $vidaUtilNueva = $request->vida_util;
+            $vidaUtilEquipoAnterior = $equipo->vida_util;
+            $comentarioAnterior = $mantenimiento->comentario;
 
-            // 1. Actualizamos el mantenimiento
+            // 1. Actualizar el mantenimiento
             $mantenimiento->update([
-                'vida_util' => $vidaUtilNueva,
-                'comentario' => $request->comentario ?? $mantenimiento->comentario
+                'vida_util' => $request->vida_util,
+                'comentario' => $request->comentario ?? $comentarioAnterior
             ]);
 
-            // 2. Actualizamos el equipo (sumando la diferencia)
-            $equipo = $mantenimiento->equipo;
-            $equipo->vida_util = ($equipo->vida_util - $vidaUtilAnterior) + $vidaUtilNueva;
+            // 2. Actualizar el equipo (sumando la diferencia)
+            $equipo->vida_util = ($equipo->vida_util - $vidaUtilAnterior) + $request->vida_util;
             $equipo->save();
 
-            // 3. Registramos en bitácora
+            // Registrar en bitácora
             $user = Auth::user();
+            $descripcion = ($user ? "{$user->first_name} {$user->last_name}" : 'Sistema') .
+                " actualizó la vida útil del mantenimiento:\n" .
+                "Equipo: {$equipo->modelo->marca->nombre} {$equipo->modelo->nombre} (S/N: {$equipo->numero_serie})\n" .
+                "Tipo de mantenimiento: {$mantenimiento->tipoMantenimiento->nombre}\n" .
+                "Vida útil mantenimiento: {$vidaUtilAnterior} → {$request->vida_util} horas\n" .
+                "Vida útil equipo: {$vidaUtilEquipoAnterior} → {$equipo->vida_util} horas\n" .
+                "Comentario: " . ($request->comentario ?? ($comentarioAnterior ? "Sin cambios: $comentarioAnterior" : "Ninguno"));
+
             Bitacora::create([
-                'user_id' => $user->id,
-                'nombre_usuario' => $user->name,
-                'accion' => 'Actualización vida útil',
+                'user_id' => $user?->id,
+                'nombre_usuario' => $user ? "{$user->first_name} {$user->last_name}" : 'Sistema',
+                'accion' => 'Actualización de vida útil',
                 'modulo' => 'Mantenimiento',
-                'descripcion' => sprintf(
-                    "Se actualizó la vida útil del mantenimiento #%d para el equipo %s. " .
-                        "Vida útil anterior: %d horas, Nueva vida útil: %d horas. " .
-                        "Vida útil total del equipo: %d horas",
-                    $mantenimiento->id,
-                    $equipo->numero_serie,
-                    $vidaUtilAnterior,
-                    $vidaUtilNueva,
-                    $equipo->vida_util
-                )
+                'descripcion' => $descripcion,
             ]);
 
             DB::commit();
@@ -299,15 +320,17 @@ class MantenimientoController extends Controller
                 'success' => true,
                 'message' => 'Vida útil actualizada correctamente',
                 'data' => [
-                    'vida_util_mantenimiento' => $vidaUtilNueva,
-                    'vida_util_equipo' => $equipo->vida_util
+                    'mantenimiento' => $mantenimiento,
+                    'equipo' => $equipo
                 ]
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Error al actualizar vida útil: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error al actualizar vida útil: ' . $e->getMessage()
+                'message' => 'Error al actualizar vida útil',
+                'error' => $e->getMessage()
             ], 500);
         }
     }
