@@ -292,9 +292,15 @@ class MantenimientoController extends Controller
                 'comentario' => $request->comentario ?? $comentarioAnterior
             ]);
 
-            // 2. Actualizar el equipo (sumando la diferencia)
-            $equipo->vida_util = ($equipo->vida_util - $vidaUtilAnterior) + $request->vida_util;
+            if ($mantenimiento->fecha_mantenimiento_final) {
+                // Mantenimiento ya existía → ajustar contribución
+                $equipo->vida_util = ($equipo->vida_util - $vidaUtilAnterior) + $request->vida_util;
+            } else {
+                // Mantenimiento aún no registrado completamente → sumar directo
+                $equipo->vida_util += $request->vida_util;
+            }
             $equipo->save();
+
 
             // Registrar en bitácora
             $user = Auth::user();

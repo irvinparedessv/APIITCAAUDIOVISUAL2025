@@ -8,6 +8,7 @@ use App\Models\Equipo;
 use App\Models\TipoMantenimiento;
 use App\Models\User;
 use App\Models\FuturoMantenimiento;
+use Carbon\Carbon;
 
 class MantenimientoSeeder extends Seeder
 {
@@ -15,21 +16,27 @@ class MantenimientoSeeder extends Seeder
     {
         $equipos = Equipo::all();
         $tipos = TipoMantenimiento::all();
-        $usuarios = User::all();
+        $usuarios = User::whereIn('role_id', [1, 2])->get(); // Solo admins o encargados
 
         foreach ($equipos as $equipo) {
             $tipo = $tipos->random();
             $usuario = $usuarios->random();
 
-            // 50% probabilidad de tener un futuro mantenimiento relacionado
+            // Fecha aleatoria en el pasado
+            $fechaInicio = Carbon::now()->subDays(rand(1, 100));
+            $fechaFinal = (clone $fechaInicio)->addDays(rand(0, 3)); // puede ser el mismo día o unos días después
+
+            // Futuro mantenimiento relacionado (50% probabilidad)
             $futuro = FuturoMantenimiento::where('equipo_id', $equipo->id)->inRandomOrder()->first();
 
             Mantenimiento::create([
                 'equipo_id' => $equipo->id,
-                'fecha_mantenimiento' => now()->subDays(rand(1, 100))->toDateString(),
+                'fecha_mantenimiento' => $fechaInicio->toDateString(),
+                'fecha_mantenimiento_final' => $fechaFinal->toDateString(),
                 'hora_mantenimiento_inicio' => '08:00:00',
                 'hora_mantenimiento_final' => '12:00:00',
                 'detalles' => 'Mantenimiento realizado correctamente.',
+                'comentario' => 'El equipo fue revisado y se reemplazaron componentes menores.',
                 'tipo_id' => $tipo->id,
                 'user_id' => $usuario->id,
                 'futuro_mantenimiento_id' => $futuro ? $futuro->id : null,
