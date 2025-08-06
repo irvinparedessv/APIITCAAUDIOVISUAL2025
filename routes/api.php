@@ -177,6 +177,9 @@ Route::middleware(['auth:sanctum', 'checkrole:Encargado,Administrador,EspacioEnc
         Route::get('/marcas/{id}', [MarcaController::class, 'show']); // opcional
     });
 
+    Route::apiResource('tipoMantenimiento', TipoMantenimientoController::class);
+    Route::apiResource('futuroMantenimiento', FuturoMantenimientoController::class);
+
     // Obtener todos los mantenimientos
     Route::get('/mantenimientos', [MantenimientoController::class, 'index']);
 
@@ -206,8 +209,7 @@ Route::middleware(['auth:sanctum', 'checkrole:Prestamista,Administrador,Encargad
     //Route::post('/reservas', [ReservaAulaController::class, 'store']);
 
     // RUTAS DE MANTENIMIENTO
-    Route::apiResource('tipoMantenimiento', TipoMantenimientoController::class);
-    Route::apiResource('futuroMantenimiento', FuturoMantenimientoController::class);
+    
     //Route::apiResource('mantenimientos', MantenimientoController::class);
 
 });
