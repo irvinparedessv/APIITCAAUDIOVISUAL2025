@@ -194,7 +194,6 @@ class MantenimientoController extends Controller
             'tipo_id' => ['sometimes', 'required', 'exists:tipo_mantenimientos,id'],
             'user_id' => ['sometimes', 'required', 'exists:users,id'],
             'futuro_mantenimiento_id' => ['nullable', 'exists:futuro_mantenimientos,id'],
-            'vida_util' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $mantenimiento->update($validated);

@@ -1080,25 +1080,29 @@ class EquipoController extends Controller
 
         DB::beginTransaction();
         try {
-            // Cargar relaciones necesarias para la bitácora
             $equipo->load('estado', 'modelo.marca');
             $nuevoEstado = Estado::find($request->estado_id);
             $mantenimiento = Mantenimiento::with('tipoMantenimiento')->find($request->mantenimiento_id);
 
-            // Guardar estado anterior para la bitácora
             $estadoAnterior = $equipo->estado->nombre ?? 'Desconocido';
             $estadoNuevo = $nuevoEstado->nombre;
 
-            // 1. Actualizar vida útil del equipo si el mantenimiento tiene vida_util
-            if ($mantenimiento->vida_util) {
-                $equipo->vida_util = ($equipo->vida_util ?? 0) + $mantenimiento->vida_util;
+            // 1. Obtener el valor de vida_util del request (nuevo valor a sumar)
+            $vidaUtilAAgregar = (int)$request->vida_util;
+
+            // 2. Actualizar vida útil del equipo
+            if ($vidaUtilAAgregar > 0) {
+                $equipo->vida_util = ($equipo->vida_util ?? 0) + $vidaUtilAAgregar;
+
+                // También actualizar el valor en el mantenimiento
+                $mantenimiento->vida_util = $vidaUtilAAgregar;
             }
 
-            // 2. Actualizar estado del equipo
+            // 3. Actualizar estado del equipo
             $equipo->estado_id = $request->estado_id;
             $equipo->save();
 
-            // 3. Actualizar mantenimiento
+            // 4. Actualizar mantenimiento
             $horaFinalizacion = now()->format('H:i');
             $fechaFinalizacion = $request->input('fecha_mantenimiento_final', now()->toDateString());
 
@@ -1106,7 +1110,7 @@ class EquipoController extends Controller
                 'hora_mantenimiento_final' => $horaFinalizacion,
                 'fecha_mantenimiento_final' => $fechaFinalizacion,
                 'comentario' => $request->comentario,
-                'vida_util' => $request->vida_util,
+                // vida_util ya se actualizó arriba si era necesario
             ]);
 
             // Registrar en bitácora
@@ -1117,9 +1121,8 @@ class EquipoController extends Controller
                 "Estado: {$estadoAnterior} → {$estadoNuevo}\n" .
                 "Mantenimiento: {$mantenimiento->tipoMantenimiento->nombre} finalizado el dia {$fechaFinalizacion} a las {$horaFinalizacion}";
 
-            // Agregar información de vida útil si aplica
-            if ($mantenimiento->vida_util) {
-                $descripcion .= "\nVida útil agregada: +{$mantenimiento->vida_util} horas";
+            if ($vidaUtilAAgregar > 0) {
+                $descripcion .= "\nVida útil agregada: +{$vidaUtilAAgregar} horas";
                 $descripcion .= "\nVida útil total: {$equipo->vida_util} horas";
             }
 
@@ -1136,7 +1139,7 @@ class EquipoController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Estado del equipo actualizado correctamente',
-                'vida_util_actualizada' => $mantenimiento->vida_util ? true : false,
+                'vida_util_actualizada' => $vidaUtilAAgregar > 0,
                 'nueva_vida_util' => $equipo->vida_util
             ]);
         } catch (\Exception $e) {
