@@ -124,17 +124,25 @@ class MantenimientoController extends Controller
         DB::beginTransaction();
 
         try {
-            // Obtener información para bitácora antes de cambios
             $equipo = Equipo::with('modelo.marca', 'estado')->find($validated['equipo_id']);
             $tipoMantenimiento = TipoMantenimiento::find($validated['tipo_id']);
+
+            // Guardar el estado actual del equipo como estado inicial del nuevo mantenimiento
             $estadoAnterior = $equipo->estado->nombre ?? 'Desconocido';
+            $estadoAnteriorId = $equipo->estado_id;
 
-            // 1. Crear el mantenimiento
-            $mantenimiento = Mantenimiento::create($validated);
+            // 1. Crear el mantenimiento con el estado inicial actual del equipo
+            $mantenimiento = Mantenimiento::create([
+                ...$validated,
+                'estado_equipo_inicial' => $estadoAnteriorId,
+                'estado_equipo_final' => null // Aún no tiene estado final
+            ]);
 
-            // 2. Actualizar estado del equipo
-            $equipo->estado_id = 2; // Asumiendo que 2 es "En Mantenimiento"
-            $equipo->save();
+            // 2. Actualizar estado del equipo a "En Mantenimiento" (2) solo si no está ya en ese estado
+            if ($equipo->estado_id != 2) {
+                $equipo->estado_id = 2;
+                $equipo->save();
+            }
             $estadoNuevo = Estado::find(2)->nombre;
 
             // Registrar en bitácora
@@ -175,6 +183,7 @@ class MantenimientoController extends Controller
             ], 500);
         }
     }
+
 
 
 
@@ -225,10 +234,12 @@ class MantenimientoController extends Controller
             $tipoMantenimiento = $mantenimiento->tipoMantenimiento;
             $estadoAnterior = $equipo->estado->nombre ?? 'Desconocido';
 
-            // 1. Actualizar el estado del equipo a "Disponible" (ID 1)
-            $equipo->estado_id = 1; // Asumiendo que 1 es "Disponible"
-            $equipo->save();
-            $estadoNuevo = Estado::find(1)->nombre;
+            // 1. Restaurar el estado anterior del equipo (el que tenía antes del mantenimiento)
+            if ($mantenimiento->estado_equipo_inicial) {
+                $equipo->estado_id = $mantenimiento->estado_equipo_inicial;
+                $equipo->save();
+            }
+            $estadoNuevo = Estado::find($mantenimiento->estado_equipo_inicial)->nombre;
 
             // 2. Eliminar el mantenimiento
             $mantenimiento->delete();
@@ -252,7 +263,7 @@ class MantenimientoController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Mantenimiento eliminado correctamente y equipo marcado como disponible',
+                'message' => 'Mantenimiento eliminado correctamente y estado del equipo restaurado',
                 'data' => [
                     'equipo' => $equipo->fresh()
                 ]

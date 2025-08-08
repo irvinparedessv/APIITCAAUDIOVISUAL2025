@@ -41,6 +41,8 @@ class MantenimientoSeeder extends Seeder
                 'user_id' => $usuario->id,
                 'futuro_mantenimiento_id' => $futuro ? $futuro->id : null,
                 'vida_util' => rand(1, 12),
+                'estado_equipo_inicial' => 1,
+                'estado_equipo_final' => 1,
             ]);
         }
     }

@@ -1093,9 +1093,6 @@ class EquipoController extends Controller
             // 2. Actualizar vida útil del equipo
             if ($vidaUtilAAgregar > 0) {
                 $equipo->vida_util = ($equipo->vida_util ?? 0) + $vidaUtilAAgregar;
-
-                // También actualizar el valor en el mantenimiento
-                $mantenimiento->vida_util = $vidaUtilAAgregar;
             }
 
             // 3. Actualizar estado del equipo
@@ -1109,8 +1106,9 @@ class EquipoController extends Controller
             $mantenimiento->update([
                 'hora_mantenimiento_final' => $horaFinalizacion,
                 'fecha_mantenimiento_final' => $fechaFinalizacion,
+                'estado_equipo_final' => $request->estado_id, // Actualizar el estado final
                 'comentario' => $request->comentario,
-                // vida_util ya se actualizó arriba si era necesario
+                'vida_util' => $vidaUtilAAgregar > 0 ? $vidaUtilAAgregar : $mantenimiento->vida_util
             ]);
 
             // Registrar en bitácora
@@ -1140,7 +1138,8 @@ class EquipoController extends Controller
                 'success' => true,
                 'message' => 'Estado del equipo actualizado correctamente',
                 'vida_util_actualizada' => $vidaUtilAAgregar > 0,
-                'nueva_vida_util' => $equipo->vida_util
+                'nueva_vida_util' => $equipo->vida_util,
+                'mantenimiento' => $mantenimiento->fresh()
             ]);
         } catch (\Exception $e) {
             DB::rollBack();

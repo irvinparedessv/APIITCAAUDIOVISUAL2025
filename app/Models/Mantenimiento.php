@@ -18,6 +18,8 @@ class Mantenimiento extends Model
         'user_id',
         'futuro_mantenimiento_id',
         'vida_util',
+        'estado_equipo_inicial',
+        'estado_equipo_final',
     ];
 
     public function equipo()
@@ -38,5 +40,15 @@ class Mantenimiento extends Model
     public function futuroMantenimiento()
     {
         return $this->belongsTo(FuturoMantenimiento::class, 'futuro_mantenimiento_id');
+    }
+
+    public function estadoInicial()
+    {
+        return $this->belongsTo(Estado::class, 'estado_equipo_inicial');
+    }
+
+    public function estadoFinal()
+    {
+        return $this->belongsTo(Estado::class, 'estado_equipo_final');
     }
 }
