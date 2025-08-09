@@ -39,13 +39,16 @@ class MantenimientoController extends Controller
             $query->where('tipo_id', $request->tipo_id);
         }
 
-        // Filtro por estado_id del equipo
         if ($request->filled('estado_id')) {
-            $query->whereHas('equipo', function ($q) use ($request) {
-                $q->where('estado_id', $request->estado_id);
-            });
+            if ($request->estado_id == 2) {
+                // Mantenimientos en progreso (sin fecha final)
+                $query->whereNull('fecha_mantenimiento_final');
+            } else {
+                // Mantenimientos finalizados con estado específico
+                $query->where('estado_equipo_final', $request->estado_id)
+                    ->whereNotNull('fecha_mantenimiento_final');
+            }
         }
-
         // Filtro por rango de fechas
         if ($request->filled('fecha_inicio')) {
             $query->where('fecha_mantenimiento', '>=', $request->fecha_inicio);
