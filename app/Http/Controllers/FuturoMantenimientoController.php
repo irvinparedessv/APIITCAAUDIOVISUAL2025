@@ -93,6 +93,9 @@ class FuturoMantenimientoController extends Controller
             ],
             'user_id' => ['required'],
             'hora_mantenimiento_inicio' => ['required', 'date_format:H:i'],
+            'fecha_mantenimiento_final' => 'nullable|date',
+            'hora_mantenimiento_final' => ['required', 'date_format:H:i'],
+            'detalles' => ['nullable', 'string'],
         ]);
 
         $futuro = FuturoMantenimiento::create($validated);
@@ -116,6 +119,9 @@ class FuturoMantenimientoController extends Controller
             'fecha_mantenimiento' => ['sometimes', 'required', 'date'],
             'user_id' => ['required'],
             'hora_mantenimiento_inicio' => ['sometimes', 'required', 'date_format:H:i'],
+            'fecha_mantenimiento_final' => 'nullable|date',
+            'hora_mantenimiento_final' => ['required', 'date_format:H:i'],
+            'detalles' => ['nullable', 'string'],
         ]);
 
         $futuro->update($validated);

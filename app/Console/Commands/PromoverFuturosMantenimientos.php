@@ -42,11 +42,11 @@ class PromoverFuturosMantenimientos extends Command
                 'equipo_id' => $futuro->equipo_id,
                 'fecha_mantenimiento' => $futuro->fecha_mantenimiento,
                 'hora_mantenimiento_inicio' => $futuro->hora_mantenimiento_inicio,
-                'hora_mantenimiento_final' => $futuro->hora_mantenimiento_final,
+                'hora_mantenimiento_final' => null,
                 'tipo_id' => $futuro->tipo_mantenimiento_id,
                 'user_id' => $futuro->user_id,
                 'futuro_mantenimiento_id' => $futuro->id,
-                'detalles' => 'Mantenimiento generado automáticamente desde programación',
+                'detalles' => $futuro->detalles,
             ]);
 
             // Cambiar estado del equipo a "En Mantenimiento" (ID 2)
