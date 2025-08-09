@@ -10,6 +10,7 @@ use App\Models\Caracteristica;
 use App\Models\Equipo;
 use App\Models\EquipoReserva;
 use App\Models\Estado;
+use App\Models\FuturoMantenimiento;
 use App\Models\Mantenimiento;
 use App\Models\Modelo;
 use App\Models\ReservaEquipo;
@@ -583,17 +584,16 @@ class EquipoController extends Controller
             'search' => 'nullable|string'
         ]);
 
-        $page = $request->input('page', 1);
-        $limit = $request->input('limit', 5);
+        $page   = $request->input('page', 1);
+        $limit  = $request->input('limit', 5);
         $search = $request->input('search', '');
 
         $fechaInicio = $request->fecha . ' ' . $request->startTime;
-        $fechaFin = $request->fecha . ' ' . $request->endTime;
+        $fechaFin    = $request->fecha . ' ' . $request->endTime;
 
-        // Equipos reservados
+        // 1) Equipos reservados que traslapan el rango (SIN filtrar por tipo_reserva_id de la reserva)
         $equiposReservados = DB::table('reserva_equipos as re')
             ->join('equipo_reserva as er', 're.id', '=', 'er.reserva_equipo_id')
-            ->where('re.tipo_reserva_id', $request->tipo_reserva_id)
             ->whereIn('re.estado', ['Aprobada', 'Pendiente'])
             ->where(function ($query) use ($fechaInicio, $fechaFin) {
                 $query->whereBetween('re.fecha_reserva', [$fechaInicio, $fechaFin])
@@ -605,7 +605,7 @@ class EquipoController extends Controller
             })
             ->pluck('er.equipo_id');
 
-        // Equipos en reposo
+        // 2) Equipos en reposo (solo marcar)
         $equiposEnReposo = DB::table('equipo_reserva')
             ->where(function ($query) use ($fechaInicio, $fechaFin) {
                 $query->whereBetween('fecha_inicio_reposo', [$fechaInicio, $fechaFin])
@@ -617,11 +617,30 @@ class EquipoController extends Controller
             })
             ->pluck('equipo_id');
 
-        // Equipos disponibles (sin paginar todavía)
+        // 3) Equipos con FUTURO MANTENIMIENTO (inicio a fin = inicio + 5 horas) que traslapan el rango -> EXCLUIR
+        $maintStart = DB::raw("TIMESTAMP(fecha_mantenimiento, hora_mantenimiento_inicio)");
+        $maintEnd   = DB::raw("DATE_ADD(TIMESTAMP(fecha_mantenimiento, hora_mantenimiento_inicio), INTERVAL 5 HOUR)");
+
+        $equiposConMantenimientoFuturo = FuturoMantenimiento::query()
+            ->where(function ($q) use ($maintStart, $maintEnd, $fechaInicio, $fechaFin) {
+                $q->whereBetween($maintStart, [$fechaInicio, $fechaFin])          // empieza dentro
+                    ->orWhereBetween($maintEnd, [$fechaInicio, $fechaFin])          // termina dentro
+                    ->orWhere(function ($qq) use ($maintStart, $maintEnd, $fechaInicio, $fechaFin) { // cubre todo el rango
+                        $qq->where($maintStart, '<=', $fechaInicio)
+                            ->where($maintEnd, '>=', $fechaFin);
+                    });
+            })
+            ->distinct()
+            ->pluck('equipo_id');
+
+        // 4) Equipos disponibles:
+        //    - Filtrar por tipo_reserva_id del EQUIPO (no de la reserva)
+        //    - Excluir: reservados + con mantenimiento futuro
         $equiposDisponibles = VistaEquipo::query()
-            ->where('tipo_reserva_id', $request->tipo_reserva_id)
+            ->where('tipo_reserva_id', $request->tipo_reserva_id) // <-- filtro aplicado a equipos
             ->where('estado', 'Disponible')
             ->whereNotIn('equipo_id', $equiposReservados)
+            ->whereNotIn('equipo_id', $equiposConMantenimientoFuturo)
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($q2) use ($search) {
                     $q2->where('nombre_modelo', 'like', "%$search%")
@@ -630,7 +649,7 @@ class EquipoController extends Controller
             })
             ->get();
 
-        // Agrupar por modelo_id
+        // 5) Agrupar por modelo_id y marcar en_reposo
         $agrupados = $equiposDisponibles
             ->groupBy('modelo_id')
             ->map(function ($equipos, $modelo_id) use ($equiposEnReposo) {
@@ -638,33 +657,33 @@ class EquipoController extends Controller
 
                 $equiposFormateados = $equipos->map(function ($e) use ($equiposEnReposo) {
                     return [
-                        'equipo_id' => $e->equipo_id,
-                        'modelo_id' => $e->modelo_id,
-                        'numero_serie' => $e->numero_serie,
-                        'tipo_equipo' => $e->tipo_equipo,
-                        'imagen_glb' => $e->imagen_glb,
+                        'equipo_id'     => $e->equipo_id,
+                        'modelo_id'     => $e->modelo_id,
+                        'numero_serie'  => $e->numero_serie,
+                        'tipo_equipo'   => $e->tipo_equipo,
+                        'imagen_glb'    => $e->imagen_glb,
                         'imagen_normal' => $e->imagen_normal,
-                        'estado' => $e->estado,
-                        'escala' => $e->escala,
-                        'en_reposo' => $equiposEnReposo->contains($e->equipo_id),
+                        'estado'        => $e->estado,
+                        'escala'        => $e->escala,
+                        'en_reposo'     => $equiposEnReposo->contains($e->equipo_id),
                     ];
                 });
 
                 $enReposoCount = $equiposFormateados->where('en_reposo', true)->count();
 
                 return [
-                    'modelo_id' => $modelo_id,
+                    'modelo_id'     => $modelo_id,
                     'nombre_modelo' => $primer->nombre_modelo,
                     'imagen_normal' => $primer->imagen_normal,
-                    'imagen_glb' => $primer->imagen_glb,
-                    'nombre_marca' => $primer->nombre_marca,
-                    'en_reposo' => $enReposoCount, // cantidad de equipos con reposo en este grupo
-                    'equipos' => $equiposFormateados->values(),
+                    'imagen_glb'    => $primer->imagen_glb,
+                    'nombre_marca'  => $primer->nombre_marca,
+                    'en_reposo'     => $enReposoCount,
+                    'equipos'       => $equiposFormateados->values(),
                 ];
             })->values();
 
-        // Paginación manual de grupos
-        $total = $agrupados->count();
+        // 6) Paginación manual de grupos
+        $total      = $agrupados->count();
         $resultados = $agrupados->slice(($page - 1) * $limit, $limit)->values();
 
         $paginador = new LengthAwarePaginator(
@@ -677,8 +696,6 @@ class EquipoController extends Controller
 
         return response()->json($paginador);
     }
-
-
 
     public function guardarObservacion(Request $request)
     {
@@ -707,22 +724,23 @@ class EquipoController extends Controller
     {
         $request->validate([
             'tipo_equipo_id' => 'nullable|integer',
-            'modelo_id' => 'nullable|array',
-            'modelo_id.*' => 'integer',
-            'page' => 'nullable|integer|min:1',
-            'limit' => 'nullable|integer|min:1|max:100',
-            'fecha' => 'nullable|date',
-            'startTime' => 'nullable|string',
-            'endTime' => 'nullable|string',
+            'modelo_id'      => 'nullable|array',
+            'modelo_id.*'    => 'integer',
+            'page'           => 'nullable|integer|min:1',
+            'limit'          => 'nullable|integer|min:1|max:100',
+            'fecha'          => 'nullable|date',
+            'startTime'      => 'nullable|string',
+            'endTime'        => 'nullable|string',
         ]);
 
-        $page = $request->input('page', 1);
-        $limit = $request->input('limit', 5);
-        $modeloIds = $request->input('modelo_id', []);
+        $page       = $request->input('page', 1);
+        $limit      = $request->input('limit', 5);
+        $modeloIds  = $request->input('modelo_id', []);
 
         $fechaInicio = $request->filled(['fecha', 'startTime']) ? $request->fecha . ' ' . $request->startTime : null;
-        $fechaFin = $request->filled(['fecha', 'endTime']) ? $request->fecha . ' ' . $request->endTime : null;
+        $fechaFin    = $request->filled(['fecha', 'endTime'])   ? $request->fecha . ' ' . $request->endTime   : null;
 
+        // Reservas traslapadas
         $equiposReservados = collect();
         if ($fechaInicio && $fechaFin) {
             $equiposReservados = DB::table('reserva_equipos as re')
@@ -738,6 +756,8 @@ class EquipoController extends Controller
                 })
                 ->pluck('er.equipo_id');
         }
+
+        // Reposo traslapado (para marcar)
         $equiposEnReposo = collect();
         if ($fechaInicio && $fechaFin) {
             $equiposEnReposo = DB::table('equipo_reserva')
@@ -751,47 +771,81 @@ class EquipoController extends Controller
                 })
                 ->pluck('equipo_id');
         }
+
+        // FUTURO MANTENIMIENTO traslapado (inicio a fin = inicio + 5 horas) -> para excluir de disponibles y contar
+        $equiposConMantenimientoFuturo = collect();
+        if ($fechaInicio && $fechaFin) {
+            $maintStart = DB::raw("TIMESTAMP(fecha_mantenimiento, hora_mantenimiento_inicio)");
+            $maintEnd   = DB::raw("DATE_ADD(TIMESTAMP(fecha_mantenimiento, hora_mantenimiento_inicio), INTERVAL 5 HOUR)");
+
+            $equiposConMantenimientoFuturo = FuturoMantenimiento::query()
+                ->where(function ($q) use ($maintStart, $maintEnd, $fechaInicio, $fechaFin) {
+                    $q->whereBetween($maintStart, [$fechaInicio, $fechaFin])   // empieza dentro
+                        ->orWhereBetween($maintEnd, [$fechaInicio, $fechaFin])   // termina dentro
+                        ->orWhere(function ($qq) use ($maintStart, $maintEnd, $fechaInicio, $fechaFin) { // cubre todo
+                            $qq->where($maintStart, '<=', $fechaInicio)
+                                ->where($maintEnd, '>=', $fechaFin);
+                        });
+                })
+                ->distinct()
+                ->pluck('equipo_id');
+        }
+
+        // Traer equipos (catálogo)
         $todosEquipos = VistaEquipo::query()
             ->when($request->filled('tipo_equipo_id'), fn($q) => $q->where('tipo_equipo_id', $request->tipo_equipo_id))
             ->when(!empty($modeloIds), fn($q) => $q->whereIn('modelo_id', $modeloIds))
             ->get();
 
+        // Agrupar por modelo
         $agrupados = $todosEquipos
             ->groupBy('modelo_id')
-            ->map(function ($equipos, $modelo_id) use ($equiposReservados, $equiposEnReposo) {
+            ->map(function ($equipos, $modelo_id) use ($equiposReservados, $equiposEnReposo, $equiposConMantenimientoFuturo) {
                 $primer = $equipos->first();
 
+                // Disponibles: no reservados ni en futuro mantenimiento
                 $disponibles = $equipos->where('estado', 'Disponible')
-                    ->when($equiposReservados->isNotEmpty(), fn($q) => $q->whereNotIn('equipo_id', $equiposReservados))
+                    ->when($equiposReservados->isNotEmpty(), fn($c) => $c->whereNotIn('equipo_id', $equiposReservados))
+                    ->when($equiposConMantenimientoFuturo->isNotEmpty(), fn($c) => $c->whereNotIn('equipo_id', $equiposConMantenimientoFuturo))
                     ->count();
 
-                $mantenimiento = $equipos->where('estado', 'Mantenimiento')->count();
+                // Mantenimiento actual y programado
+                $mantenimientoActual   = $equipos->where('estado', 'Mantenimiento')->count();
+                $mantenimientoProgramado = $equipos->whereIn('equipo_id', $equiposConMantenimientoFuturo)->count();
+                $mantenimientoTotal    = $mantenimientoActual + $mantenimientoProgramado;
+
                 $reservados = $equipos->whereIn('equipo_id', $equiposReservados)->count();
-                $enReposo = $equipos->whereIn('equipo_id', $equiposEnReposo)->count();
+                $enReposo   = $equipos->whereIn('equipo_id', $equiposEnReposo)->count();
 
                 return [
-                    'modelo_id' => $modelo_id,
-                    'nombre_modelo' => $primer->nombre_modelo,
-                    'imagen_normal' => $primer->imagen_normal,
-                    'imagen_glb' => $primer->imagen_glb,
-                    'nombre_marca' => $primer->nombre_marca,
-                    'disponibles' => $disponibles,
-                    'en_reposo' => $enReposo,
-                    'mantenimiento' => $mantenimiento,
-                    'reservados' => $reservados,
-                    'equipos' => $equipos->map(fn($e) => [
-                        'equipo_id' => $e->equipo_id,
-                        'modelo_id' => $e->modelo_id,
-                        'numero_serie' => $e->numero_serie,
-                        'tipo_equipo' => $e->tipo_equipo,
-                        'imagen_glb' => $e->imagen_glb,
-                        'imagen_normal' => $e->imagen_normal,
-                        'estado' => $e->estado,
-                    ])->values(),
+                    'modelo_id'              => $modelo_id,
+                    'nombre_modelo'          => $primer->nombre_modelo,
+                    'imagen_normal'          => $primer->imagen_normal,
+                    'imagen_glb'             => $primer->imagen_glb,
+                    'nombre_marca'           => $primer->nombre_marca,
+                    'disponibles'            => $disponibles,
+                    'en_reposo'              => $enReposo,
+                    'mantenimiento'          => $mantenimientoTotal,       // total (actual + programado)
+                    'mantenimiento_actual'   => $mantenimientoActual,      // opcional: detalle
+                    'futuro_mantenimiento'   => $mantenimientoProgramado,  // opcional: detalle
+                    'reservados'             => $reservados,
+                    'equipos' => $equipos->map(function ($e) use ($equiposConMantenimientoFuturo, $equiposEnReposo) {
+                        return [
+                            'equipo_id'            => $e->equipo_id,
+                            'modelo_id'            => $e->modelo_id,
+                            'numero_serie'         => $e->numero_serie,
+                            'tipo_equipo'          => $e->tipo_equipo,
+                            'imagen_glb'           => $e->imagen_glb,
+                            'imagen_normal'        => $e->imagen_normal,
+                            'estado'               => $e->estado,
+                            'en_reposo'            => $equiposEnReposo->contains($e->equipo_id),
+                            'futuro_mantenimiento' => $equiposConMantenimientoFuturo->contains($e->equipo_id),
+                        ];
+                    })->values(),
                 ];
             })->values();
 
-        $total = $agrupados->count();
+        $total      = $agrupados->count();
         $resultados = $agrupados->slice(($page - 1) * $limit, $limit)->values();
 
         return response()->json(new LengthAwarePaginator(
@@ -802,8 +856,6 @@ class EquipoController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         ));
     }
-
-
 
 
 
