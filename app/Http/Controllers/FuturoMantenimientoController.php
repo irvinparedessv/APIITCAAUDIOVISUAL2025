@@ -38,12 +38,13 @@ class FuturoMantenimientoController extends Controller
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
-                $q->whereHas('equipo', function ($q2) use ($search) {
-                    $q2->where('numero_serie', 'like', "%{$search}%")
-                        ->orWhereHas('modelo', function ($q3) use ($search) {
-                            $q3->where('nombre', 'like', "%{$search}%");
-                        });
-                })
+                $q->where('detalles', 'like', "%{$search}%")
+                    ->orWhereHas('equipo', function ($q2) use ($search) {
+                        $q2->where('numero_serie', 'like', "%{$search}%")
+                            ->orWhereHas('modelo', function ($q3) use ($search) {
+                                $q3->where('nombre', 'like', "%{$search}%");
+                            });
+                    })
                     ->orWhereHas('tipoMantenimiento', function ($q4) use ($search) {
                         $q4->where('nombre', 'like', "%{$search}%");
                     })
@@ -94,7 +95,7 @@ class FuturoMantenimientoController extends Controller
             'user_id' => ['required'],
             'hora_mantenimiento_inicio' => ['required', 'date_format:H:i'],
             'fecha_mantenimiento_final' => 'nullable|date',
-            'hora_mantenimiento_final' => ['required', 'date_format:H:i'],
+            'hora_mantenimiento_final' => ['nullable', 'date_format:H:i'],
             'detalles' => ['nullable', 'string'],
         ]);
 
@@ -120,7 +121,7 @@ class FuturoMantenimientoController extends Controller
             'user_id' => ['required'],
             'hora_mantenimiento_inicio' => ['sometimes', 'required', 'date_format:H:i'],
             'fecha_mantenimiento_final' => 'nullable|date',
-            'hora_mantenimiento_final' => ['required', 'date_format:H:i'],
+            'hora_mantenimiento_final' => ['nullable', 'date_format:H:i'],
             'detalles' => ['nullable', 'string'],
         ]);
 
