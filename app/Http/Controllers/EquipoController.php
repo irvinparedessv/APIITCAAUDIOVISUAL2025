@@ -1163,6 +1163,13 @@ class EquipoController extends Controller
                 'vida_util' => $vidaUtilAAgregar > 0 ? $vidaUtilAAgregar : $mantenimiento->vida_util
             ]);
 
+            FuturoMantenimiento::where('equipo_id', $equipo->id)
+            ->where('tipo_mantenimiento_id', $mantenimiento->tipo_mantenimiento_id)
+            ->update([
+                'fecha_mantenimiento_final' => $fechaFinalizacion,
+                'hora_mantenimiento_final' => $horaFinalizacion
+            ]);
+
             // Registrar en bitácora
             $user = Auth::user();
             $descripcion = ($user ? "{$user->first_name} {$user->last_name}" : 'Sistema') .
