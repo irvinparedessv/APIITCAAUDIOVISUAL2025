@@ -16,8 +16,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('reservas:recordatorio-devolucion')->everyTenMinutes();
         $schedule->command('mantenimientos:enviar-hoy')->dailyAt('07:00');
         $schedule->command('mantenimientos:promover')->everyMinute();
-
-
+        $schedule->command('equipos:cambiar-estado')->everyMinute();
     }
 
     protected function commands()
