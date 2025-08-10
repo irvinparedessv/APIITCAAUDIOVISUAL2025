@@ -122,6 +122,8 @@ class MantenimientoController extends Controller
             'user_id' => ['required', 'exists:users,id'],
             'futuro_mantenimiento_id' => ['nullable', 'exists:futuro_mantenimientos,id'],
             'vida_util' => ['nullable', 'integer', 'min:0'],
+            'fecha_mantenimiento_final' => 'nullable|date',
+            'hora_mantenimiento_final' => ['nullable', 'date_format:H:i'],
         ]);
 
         DB::beginTransaction();
