@@ -2,8 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Bitacora;
+use App\Models\Equipo;
 use App\Models\FuturoMantenimiento;
+use App\Models\TipoMantenimiento;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class FuturoMantenimientoController extends Controller
 {
@@ -79,59 +86,291 @@ class FuturoMantenimientoController extends Controller
         $validated = $request->validate([
             'equipo_id' => ['required', 'exists:equipos,id'],
             'tipo_mantenimiento_id' => ['required', 'exists:tipo_mantenimientos,id'],
-            'fecha_mantenimiento' => [
-                'required',
-                'date',
-                function ($attribute, $value, $fail) use ($request) {
-                    $existing = FuturoMantenimiento::where('equipo_id', $request->equipo_id)
-                        ->whereDate('fecha_mantenimiento', $value)
-                        ->exists();
-
-                    if ($existing) {
-                        $fail('Ya existe un mantenimiento programado para este equipo en la fecha seleccionada.');
-                    }
-                }
-            ],
-            'user_id' => ['required'],
+            'fecha_mantenimiento' => ['required', 'date', 'after_or_equal:today'],
             'hora_mantenimiento_inicio' => ['required', 'date_format:H:i'],
-            'fecha_mantenimiento_final' => 'nullable|date',
-            'hora_mantenimiento_final' => ['nullable', 'date_format:H:i'],
+            'fecha_mantenimiento_final' => ['required', 'date', 'after_or_equal:fecha_mantenimiento'],
+            'hora_mantenimiento_final' => ['required', 'date_format:H:i'],
+            'user_id' => ['required', 'exists:users,id'],
             'detalles' => ['nullable', 'string'],
+        ], [
+            'fecha_mantenimiento_final.after_or_equal' => 'La fecha final debe ser igual o posterior a la fecha de inicio',
+            'hora_mantenimiento_final.required' => 'La hora final es requerida cuando se especifica fecha final'
         ]);
 
-        $futuro = FuturoMantenimiento::create($validated);
+        // Validar que la fecha/hora final sea mayor que la inicial
+        $fechaInicio = Carbon::parse($validated['fecha_mantenimiento'] . ' ' . $validated['hora_mantenimiento_inicio']);
+        $fechaFin = Carbon::parse($validated['fecha_mantenimiento_final'] . ' ' . $validated['hora_mantenimiento_final']);
 
-        return response()->json([
-            'message' => 'Futuro mantenimiento creado correctamente',
-            'data' => $futuro->load(['equipo', 'tipoMantenimiento']),
-        ], 201);
+        if ($fechaFin <= $fechaInicio) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La fecha/hora final debe ser posterior a la fecha/hora de inicio'
+            ], 422);
+        }
+
+        // 1. Validar que no exista otro futuro mantenimiento en el mismo rango
+        $mantenimientoExistente = FuturoMantenimiento::where('equipo_id', $validated['equipo_id'])
+            ->where(function ($query) use ($fechaInicio, $fechaFin) {
+                $query->whereBetween(DB::raw("TIMESTAMP(fecha_mantenimiento, hora_mantenimiento_inicio)"), [$fechaInicio, $fechaFin])
+                    ->orWhereBetween(DB::raw("TIMESTAMP(fecha_mantenimiento_final, hora_mantenimiento_final)"), [$fechaInicio, $fechaFin])
+                    ->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
+                        $q->where(DB::raw("TIMESTAMP(fecha_mantenimiento, hora_mantenimiento_inicio)"), '<=', $fechaInicio)
+                            ->where(DB::raw("TIMESTAMP(fecha_mantenimiento_final, hora_mantenimiento_final)"), '>=', $fechaFin);
+                    });
+            })
+            ->exists();
+
+        if ($mantenimientoExistente) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ya existe un mantenimiento programado para este equipo en el rango de fechas seleccionado'
+            ], 409);
+        }
+
+        // 2. Validar contra reservas existentes
+        $reservasConflictivas = DB::table('reserva_equipos as re')
+            ->join('equipo_reserva as er', 're.id', '=', 'er.reserva_equipo_id')
+            ->where('er.equipo_id', $validated['equipo_id'])
+            ->whereIn('re.estado', ['Aprobada', 'Pendiente'])
+            ->where(function ($query) use ($fechaInicio, $fechaFin) {
+                $query->whereBetween('re.fecha_reserva', [$fechaInicio, $fechaFin])
+                    ->orWhereBetween('re.fecha_entrega', [$fechaInicio, $fechaFin])
+                    ->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
+                        $q->where('re.fecha_reserva', '<=', $fechaInicio)
+                            ->where('re.fecha_entrega', '>=', $fechaFin);
+                    });
+            })
+            ->exists();
+
+        if ($reservasConflictivas) {
+            $reservaInfo = DB::table('reserva_equipos as re')
+                ->join('equipo_reserva as er', 're.id', '=', 'er.reserva_equipo_id')
+                ->join('users', 're.user_id', '=', 'users.id')
+                ->where('er.equipo_id', $validated['equipo_id'])
+                ->whereIn('re.estado', ['Aprobada', 'Pendiente'])
+                ->where(function ($query) use ($fechaInicio, $fechaFin) {
+                    $query->whereBetween('re.fecha_reserva', [$fechaInicio, $fechaFin])
+                        ->orWhereBetween('re.fecha_entrega', [$fechaInicio, $fechaFin])
+                        ->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
+                            $q->where('re.fecha_reserva', '<=', $fechaInicio)
+                                ->where('re.fecha_entrega', '>=', $fechaFin);
+                        });
+                })
+                ->select('re.fecha_reserva', 're.fecha_entrega', 'users.first_name', 'users.last_name')
+                ->first();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'El equipo está reservado durante el período solicitado',
+                'conflict_info' => [
+                    'fecha_inicio' => $reservaInfo->fecha_reserva,
+                    'fecha_fin' => $reservaInfo->fecha_entrega,
+                    'reservado_por' => $reservaInfo->first_name . ' ' . $reservaInfo->last_name
+                ]
+            ], 409);
+        }
+
+        // 3. Validar contra mantenimientos activos
+        $mantenimientoActivo = DB::table('mantenimientos')
+            ->where('equipo_id', $validated['equipo_id'])
+            ->whereNull('fecha_mantenimiento_final')
+            ->exists();
+
+        if ($mantenimientoActivo) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El equipo se encuentra actualmente en mantenimiento'
+            ], 409);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            // Crear el futuro mantenimiento
+            $futuro = FuturoMantenimiento::create($validated);
+
+            // Registrar en bitácora
+            $equipo = Equipo::with('modelo.marca')->find($validated['equipo_id']);
+            $tipoMantenimiento = TipoMantenimiento::find($validated['tipo_mantenimiento_id']);
+            $user = User::find($validated['user_id']);
+
+            Bitacora::create([
+                'user_id' => $user->id,
+                'nombre_usuario' => $user->first_name . ' ' . $user->last_name,
+                'accion' => 'Programación de futuro mantenimiento',
+                'modulo' => 'Mantenimiento',
+                'descripcion' => "Se programó un mantenimiento futuro para el equipo: " .
+                    "{$equipo->modelo->marca->nombre} {$equipo->modelo->nombre} (S/N: {$equipo->numero_serie}) " .
+                    "desde {$validated['fecha_mantenimiento']} {$validated['hora_mantenimiento_inicio']} " .
+                    "hasta {$validated['fecha_mantenimiento_final']} {$validated['hora_mantenimiento_final']}. " .
+                    "Tipo: {$tipoMantenimiento->nombre}"
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Futuro mantenimiento programado correctamente',
+                'data' => $futuro->load(['equipo', 'tipoMantenimiento'])
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error al programar futuro mantenimiento: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al programar el mantenimiento futuro',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-
     /**
      * Actualizar un futuro mantenimiento existente.
      */
     public function update(Request $request, $id)
-    {
-        $futuro = FuturoMantenimiento::findOrFail($id);
+{
+    $futuro = FuturoMantenimiento::findOrFail($id);
 
-        $validated = $request->validate([
-            'equipo_id' => ['sometimes', 'required', 'exists:equipos,id'],
-            'tipo_mantenimiento_id' => ['sometimes', 'required', 'exists:tipo_mantenimientos,id'],
-            'fecha_mantenimiento' => ['sometimes', 'required', 'date'],
-            'user_id' => ['required'],
-            'hora_mantenimiento_inicio' => ['sometimes', 'required', 'date_format:H:i'],
-            'fecha_mantenimiento_final' => 'nullable|date',
-            'hora_mantenimiento_final' => ['nullable', 'date_format:H:i'],
-            'detalles' => ['nullable', 'string'],
-        ]);
+    $validated = $request->validate([
+        'equipo_id' => ['sometimes', 'required', 'exists:equipos,id'],
+        'tipo_mantenimiento_id' => ['sometimes', 'required', 'exists:tipo_mantenimientos,id'],
+        'fecha_mantenimiento' => ['sometimes', 'required', 'date', 'after_or_equal:today'],
+        'hora_mantenimiento_inicio' => ['sometimes', 'required', 'date_format:H:i'],
+        'fecha_mantenimiento_final' => ['required', 'date', 'after_or_equal:fecha_mantenimiento'],
+        'hora_mantenimiento_final' => ['required', 'date_format:H:i'],
+        'user_id' => ['required', 'exists:users,id'],
+        'detalles' => ['nullable', 'string'],
+    ], [
+        'fecha_mantenimiento_final.after_or_equal' => 'La fecha final debe ser igual o posterior a la fecha de inicio',
+        'hora_mantenimiento_final.required' => 'La hora final es requerida cuando se especifica fecha final'
+    ]);
 
-        $futuro->update($validated);
+    // Validar que la fecha/hora final sea mayor que la inicial
+    $fechaInicio = Carbon::parse($validated['fecha_mantenimiento'] . ' ' . $validated['hora_mantenimiento_inicio']);
+    $fechaFin = Carbon::parse($validated['fecha_mantenimiento_final'] . ' ' . $validated['hora_mantenimiento_final']);
+
+    if ($fechaFin <= $fechaInicio) {
+        return response()->json([
+            'success' => false,
+            'message' => 'La fecha/hora final debe ser posterior a la fecha/hora de inicio'
+        ], 422);
+    }
+
+    // 1. Validar que no exista otro futuro mantenimiento en el mismo rango (excluyendo el actual)
+    $mantenimientoExistente = FuturoMantenimiento::where('equipo_id', $validated['equipo_id'])
+        ->where('id', '!=', $id)
+        ->where(function ($query) use ($fechaInicio, $fechaFin) {
+            $query->whereBetween(DB::raw("TIMESTAMP(fecha_mantenimiento, hora_mantenimiento_inicio)"), [$fechaInicio, $fechaFin])
+                ->orWhereBetween(DB::raw("TIMESTAMP(fecha_mantenimiento_final, hora_mantenimiento_final)"), [$fechaInicio, $fechaFin])
+                ->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
+                    $q->where(DB::raw("TIMESTAMP(fecha_mantenimiento, hora_mantenimiento_inicio)"), '<=', $fechaInicio)
+                        ->where(DB::raw("TIMESTAMP(fecha_mantenimiento_final, hora_mantenimiento_final)"), '>=', $fechaFin);
+                });
+        })
+        ->exists();
+
+    if ($mantenimientoExistente) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Ya existe un mantenimiento programado para este equipo en el rango de fechas seleccionado'
+        ], 409);
+    }
+
+    // 2. Validar contra reservas existentes
+    $reservasConflictivas = DB::table('reserva_equipos as re')
+        ->join('equipo_reserva as er', 're.id', '=', 'er.reserva_equipo_id')
+        ->where('er.equipo_id', $validated['equipo_id'])
+        ->whereIn('re.estado', ['Aprobada', 'Pendiente'])
+        ->where(function ($query) use ($fechaInicio, $fechaFin) {
+            $query->whereBetween('re.fecha_reserva', [$fechaInicio, $fechaFin])
+                ->orWhereBetween('re.fecha_entrega', [$fechaInicio, $fechaFin])
+                ->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
+                    $q->where('re.fecha_reserva', '<=', $fechaInicio)
+                        ->where('re.fecha_entrega', '>=', $fechaFin);
+                });
+        })
+        ->exists();
+
+    if ($reservasConflictivas) {
+        $reservaInfo = DB::table('reserva_equipos as re')
+            ->join('equipo_reserva as er', 're.id', '=', 'er.reserva_equipo_id')
+            ->join('users', 're.user_id', '=', 'users.id')
+            ->where('er.equipo_id', $validated['equipo_id'])
+            ->whereIn('re.estado', ['Aprobada', 'Pendiente'])
+            ->where(function ($query) use ($fechaInicio, $fechaFin) {
+                $query->whereBetween('re.fecha_reserva', [$fechaInicio, $fechaFin])
+                    ->orWhereBetween('re.fecha_entrega', [$fechaInicio, $fechaFin])
+                    ->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
+                        $q->where('re.fecha_reserva', '<=', $fechaInicio)
+                            ->where('re.fecha_entrega', '>=', $fechaFin);
+                    });
+            })
+            ->select('re.fecha_reserva', 're.fecha_entrega', 'users.first_name', 'users.last_name')
+            ->first();
 
         return response()->json([
-            'message' => 'Futuro mantenimiento actualizado correctamente',
-            'data' => $futuro->load(['equipo', 'tipoMantenimiento']),
-        ]);
+            'success' => false,
+            'message' => 'El equipo está reservado durante el período solicitado',
+            'conflict_info' => [
+                'fecha_inicio' => $reservaInfo->fecha_reserva,
+                'fecha_fin' => $reservaInfo->fecha_entrega,
+                'reservado_por' => $reservaInfo->first_name . ' ' . $reservaInfo->last_name
+            ]
+        ], 409);
     }
+
+    // 3. Validar contra mantenimientos activos
+    $mantenimientoActivo = DB::table('mantenimientos')
+        ->where('equipo_id', $validated['equipo_id'])
+        ->whereNull('fecha_mantenimiento_final')
+        ->exists();
+
+    if ($mantenimientoActivo) {
+        return response()->json([
+            'success' => false,
+            'message' => 'El equipo se encuentra actualmente en mantenimiento'
+        ], 409);
+    }
+
+    DB::beginTransaction();
+
+    try {
+        // Actualizar el futuro mantenimiento
+        $futuro->update($validated);
+
+        // Registrar en bitácora
+        $equipo = Equipo::with('modelo.marca')->find($validated['equipo_id']);
+        $tipoMantenimiento = TipoMantenimiento::find($validated['tipo_mantenimiento_id']);
+        $user = User::find($validated['user_id']);
+
+        Bitacora::create([
+            'user_id' => $user->id,
+            'nombre_usuario' => $user->first_name . ' ' . $user->last_name,
+            'accion' => 'Actualización de futuro mantenimiento',
+            'modulo' => 'Mantenimiento',
+            'descripcion' => "Se actualizó el mantenimiento futuro para el equipo: " .
+                "{$equipo->modelo->marca->nombre} {$equipo->modelo->nombre} (S/N: {$equipo->numero_serie}) " .
+                "desde {$validated['fecha_mantenimiento']} {$validated['hora_mantenimiento_inicio']} " .
+                "hasta {$validated['fecha_mantenimiento_final']} {$validated['hora_mantenimiento_final']}. " .
+                "Tipo: {$tipoMantenimiento->nombre}"
+        ]);
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Futuro mantenimiento actualizado correctamente',
+            'data' => $futuro->load(['equipo', 'tipoMantenimiento'])
+        ]);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Error al actualizar futuro mantenimiento: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Error al actualizar el mantenimiento futuro',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
 
     /**
      * Eliminar un futuro mantenimiento.
