@@ -208,7 +208,6 @@ class InsumosSeeder extends Seeder
                 $numeroSerieIns = $equipo->numero_serie . '-ACC-' . Str::substr($insumoData['modelo']->nombre, 0, 3);
 
                 $insumoEquipo = Equipo::updateOrCreate(
-                    ['numero_serie' => $numeroSerieIns],
                     [
                         'modelo_id' => $insumoData['modelo']->id,
                         'tipo_equipo_id' => $insumoData['tipo_equipo']->id,
@@ -240,9 +239,6 @@ class InsumosSeeder extends Seeder
             for ($i = 1; $i <= 3; $i++) {
                 Equipo::updateOrCreate(
                     [
-                        'numero_serie' => "STOCK-CL-" . Str::substr($nombre, 0, 3) . "-" . str_pad($i, 3, '0', STR_PAD_LEFT)
-                    ],
-                    [
                         'modelo_id' => $insumoData['modelo']->id,
                         'tipo_equipo_id' => $insumoData['tipo_equipo']->id,
                         'estado_id' => $estadoDisponible->id,
@@ -258,9 +254,6 @@ class InsumosSeeder extends Seeder
             if (in_array($insumoData['tipo_equipo']->nombre, ['Cable', 'Control'])) {
                 for ($i = 1; $i <= 2; $i++) {
                     Equipo::updateOrCreate(
-                        [
-                            'numero_serie' => "STOCK-EV-" . Str::substr($nombre, 0, 3) . "-" . str_pad($i, 3, '0', STR_PAD_LEFT)
-                        ],
                         [
                             'modelo_id' => $insumoData['modelo']->id,
                             'tipo_equipo_id' => $insumoData['tipo_equipo']->id,
