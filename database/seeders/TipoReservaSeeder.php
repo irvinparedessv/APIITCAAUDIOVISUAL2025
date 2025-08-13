@@ -10,8 +10,8 @@ class TipoReservaSeeder extends Seeder
     public function run(): void
     {
         DB::table('tipo_reservas')->insert([
-            ['nombre' => 'Eventos'],
-            ['nombre' => 'Reunión'],
+            ['nombre' => 'Evento'],
+            //['nombre' => 'Reunión'],
             ['nombre' => 'Clase'],
         ]);
     }

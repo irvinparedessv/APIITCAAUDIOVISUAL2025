@@ -263,62 +263,66 @@ class ReporteController extends Controller
 
 
 
-    public function reporteUsoEquipos(Request $request)
-    {
-        $request->validate([
-            'from' => 'nullable|date',
-            'to' => 'nullable|date|after_or_equal:from',
-            'tipo_equipo' => 'nullable|string',
-        ]);
+   public function reporteUsoEquipos(Request $request)
+{
+    $request->validate([
+        'from' => 'nullable|date',
+        'to' => 'nullable|date|after_or_equal:from',
+        'tipo_equipo' => 'nullable|string',
+        'per_page' => 'nullable|integer',
+        'page' => 'nullable|integer',
+    ]);
 
-        $query = DB::table('equipo_reserva')
-            ->join('reserva_equipos', 'equipo_reserva.reserva_equipo_id', '=', 'reserva_equipos.id')
-            ->join('equipos', 'equipo_reserva.equipo_id', '=', 'equipos.id')
-            ->join('tipo_equipos', 'equipos.tipo_equipo_id', '=', 'tipo_equipos.id')
-            ->leftJoin('modelos', 'equipos.modelo_id', '=', 'modelos.id') // Join con modelos
-            ->select(
-                'equipos.id',
-                'modelos.nombre as modelo', // Nombre del modelo
-                'equipos.numero_serie',
-                'equipos.es_componente',
-                'tipo_equipos.nombre as tipo_equipo',
-                DB::raw('SUM(equipo_reserva.cantidad) as total_cantidad')
-            )
-            ->where('equipos.estado_id', 1) // Equipos activos
-            ->groupBy('equipos.id', 'modelos.nombre', 'equipos.numero_serie', 'equipos.es_componente', 'tipo_equipos.nombre')
-            ->orderByDesc('total_cantidad');
+    $query = DB::table('equipo_reserva')
+        ->join('reserva_equipos', 'equipo_reserva.reserva_equipo_id', '=', 'reserva_equipos.id')
+        ->join('equipos', 'equipo_reserva.equipo_id', '=', 'equipos.id')
+        ->join('tipo_equipos', 'equipos.tipo_equipo_id', '=', 'tipo_equipos.id')
+        ->leftJoin('modelos', 'equipos.modelo_id', '=', 'modelos.id')
+        ->select(
+            'equipos.id',
+            'modelos.nombre as modelo',
+            'equipos.numero_serie',
+            'equipos.es_componente',
+            'tipo_equipos.nombre as tipo_equipo',
+            DB::raw('SUM(equipo_reserva.cantidad) as total_cantidad')
+        )
+        ->where('equipos.estado_id', 1)
+        ->groupBy('equipos.id', 'modelos.nombre', 'equipos.numero_serie', 'equipos.es_componente', 'tipo_equipos.nombre')
+        ->orderByDesc('total_cantidad');
 
-        // Filtros
-        if ($request->filled('from') && $request->filled('to')) {
-            $query->whereBetween('reserva_equipos.fecha_reserva', [$request->from, $request->to]);
-        }
-
-        if ($request->filled('tipo_equipo')) {
-            $query->where('tipo_equipos.nombre', $request->tipo_equipo);
-        }
-
-        $resultados = $query->get();
-
-        // Transformar los resultados para mostrar la información combinada
-        $resultadosTransformados = $resultados->map(function ($item) {
-            $nombreEquipo = $item->modelo ?? 'Sin modelo';
-
-            if ($item->es_componente && $item->numero_serie) {
-                $nombreEquipo .= ' (S/N: ' . $item->numero_serie . ')';
-            }
-
-            return [
-                'equipo_id' => $item->id,
-                'equipo' => $nombreEquipo,
-                'tipo_equipo' => $item->tipo_equipo,
-                'total_cantidad' => $item->total_cantidad,
-                'es_componente' => $item->es_componente,
-                'numero_serie' => $item->numero_serie
-            ];
-        });
-
-        return response()->json($resultadosTransformados);
+    // Filtros
+    if ($request->filled('from') && $request->filled('to')) {
+        $query->whereBetween('reserva_equipos.fecha_reserva', [$request->from, $request->to]);
     }
+
+    if ($request->filled('tipo_equipo')) {
+        $query->where('tipo_equipos.nombre', $request->tipo_equipo);
+    }
+
+    // Paginación
+    $perPage = $request->per_page ?? 10;
+    $resultados = $query->paginate($perPage);
+
+    // Transformar los resultados
+    $resultados->getCollection()->transform(function ($item) {
+        $nombreEquipo = $item->modelo ?? 'Sin modelo';
+
+        if ($item->es_componente && $item->numero_serie) {
+            $nombreEquipo .= ' (S/N: ' . $item->numero_serie . ')';
+        }
+
+        return [
+            'equipo_id' => $item->id,
+            'equipo' => $nombreEquipo,
+            'tipo_equipo' => $item->tipo_equipo,
+            'total_cantidad' => $item->total_cantidad,
+            'es_componente' => $item->es_componente,
+            'numero_serie' => $item->numero_serie
+        ];
+    });
+
+    return response()->json($resultados);
+}
 
     public function reporteHorariosSolicitados(Request $request)
 {
@@ -448,7 +452,7 @@ class ReporteController extends Controller
         }
 
         // Paginación
-        $equipos = $query->orderBy('equipos.created_at', 'desc')->paginate($perPage);
+        $equipos = $query->orderBy('equipos.created_at', 'asc')->paginate($perPage);
 
         $equipos->getCollection()->transform(function ($equipo) {
             $valores = DB::table('valores_caracteristicas')

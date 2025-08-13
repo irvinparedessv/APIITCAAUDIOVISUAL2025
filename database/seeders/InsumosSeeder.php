@@ -12,210 +12,267 @@ use App\Models\TipoReserva;
 use App\Models\ModeloAccesorio;
 use App\Models\EquipoAccesorio;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class InsumosSeeder extends Seeder
 {
     public function run()
     {
-        // -- Categoría Insumo --
+        // 1. Configuración inicial - Crear entidades básicas si no existen
+        $this->crearEntidadesBasicas();
+
+        // 2. Crear modelos de insumos
+        $modelosInsumo = $this->crearModelosInsumos();
+
+        // 3. Asociar insumos a equipos existentes
+        $this->asociarInsumosAEquipos($modelosInsumo);
+
+        // 4. Crear stock adicional de insumos
+        $this->crearStockAdicional($modelosInsumo);
+    }
+
+    protected function crearEntidadesBasicas()
+    {
+        // Categoría Insumo
         $categoriaInsumo = Categoria::updateOrCreate(
             ['nombre' => 'Insumo'],
             ['is_deleted' => false]
         );
 
-        // -- Tipos de Insumo --
-        $tiposInsumoData = [
-            ['nombre' => 'Cable', 'categoria_id' => $categoriaInsumo->id, 'is_deleted' => false],
-            ['nombre' => 'Control', 'categoria_id' => $categoriaInsumo->id, 'is_deleted' => false],
-        ];
-        foreach ($tiposInsumoData as $tipo) {
-            TipoEquipo::updateOrCreate(['nombre' => $tipo['nombre']], $tipo);
-        }
-        $tipoCable = TipoEquipo::where('nombre', 'Cable')->first();
-        $tipoControl = TipoEquipo::where('nombre', 'Control')->first();
+        // Tipos de reserva (asegurarse que existan)
+        TipoReserva::updateOrCreate(
+            ['nombre' => 'Clase'],
+            ['is_deleted' => false]
+        );
+        TipoReserva::updateOrCreate(
+            ['nombre' => 'Evento'],
+            ['is_deleted' => false]
+        );
 
-        // -- Marca genérica 3D --
-        $marcaGen3D = Marca::where('nombre', 'Generic 3D Models')->first();
+        // Tipos de Insumo
+        TipoEquipo::updateOrCreate(
+            ['nombre' => 'Cable'],
+            ['categoria_id' => $categoriaInsumo->id, 'is_deleted' => false]
+        );
+        TipoEquipo::updateOrCreate(
+            ['nombre' => 'Adaptador'],
+            ['categoria_id' => $categoriaInsumo->id, 'is_deleted' => false]
+        );
+        TipoEquipo::updateOrCreate(
+            ['nombre' => 'Control'],
+            ['categoria_id' => $categoriaInsumo->id, 'is_deleted' => false]
+        );
 
-        // -- Estado Disponible --
-        $estadoDisponible = Estado::where('nombre', 'Disponible')->first();
-
-        // -- Tipo Reserva fijo --
-        $tipoReservaId = 3;
-
-        // -- Modelos reales (Seeder 1) --
-        $modelos3D = [
-            ['nombre' => 'Acer Predator Helios 300', 'imagen_glb' => 'models/laptop_alienpredator.glb', 'tipo' => 'laptop'],
-            ['nombre' => 'Dell Latitude 5400', 'imagen_glb' => 'models/laptop_dell_latitude_5400.glb', 'tipo' => 'laptop'],
-            ['nombre' => 'HP 14s-dq2622TU', 'imagen_glb' => 'models/hp_14s-dq2622tu_laptop.glb', 'tipo' => 'laptop'],
-            ['nombre' => 'ASUS VivoBook 15', 'imagen_glb' => 'models/asus_laptop.glb', 'tipo' => 'laptop'],
-            ['nombre' => 'Epson PowerLite X49', 'imagen_glb' => 'models/projector.glb', 'tipo' => 'proyector'],
-            ['nombre' => 'BenQ MS550', 'imagen_glb' => 'models/generic_white_digital_projector.glb', 'tipo' => 'proyector'],
-            ['nombre' => 'ViewSonic PA503W', 'imagen_glb' => 'models/fix_projector.glb', 'tipo' => 'proyector'],
-            ['nombre' => 'Canon LV-WX300 (estilo genérico)', 'imagen_glb' => 'models/low_poly_projector_3d_model_created_with_blender.glb', 'tipo' => 'proyector'],
-            ['nombre' => 'A4Tech X-710BK', 'imagen_glb' => 'models/mouse_a4tech_x-710bk.glb', 'tipo' => 'mouse'],
-            ['nombre' => 'Logitech M90', 'imagen_glb' => 'models/computer_mouse.glb', 'tipo' => 'mouse'],
-            ['nombre' => 'Redragon M601 CENTROPHORUS', 'imagen_glb' => 'models/pc_mouse_type-r.glb', 'tipo' => 'mouse'],
-            ['nombre' => 'A4Tech Bloody V7', 'imagen_glb' => 'models/computer_mouse_a4tech_bloody_v7.glb', 'tipo' => 'mouse'],
-            ['nombre' => 'Sony SRS-XB13', 'imagen_glb' => 'models/fgm-1_parlante.glb', 'tipo' => 'parlante'],
-            ['nombre' => 'JBL Flip 5', 'imagen_glb' => 'models/parlante2_-_paula_pinzon.glb', 'tipo' => 'parlante'],
-            ['nombre' => 'Behringer Eurolive B205D', 'imagen_glb' => 'models/medium_and_high_frequency_speaker.glb', 'tipo' => 'parlante'],
-            ['nombre' => 'JBL GO 3', 'imagen_glb' => 'models/jbl_speaker.glb', 'tipo' => 'parlante'],
-            ['nombre' => 'Logitech Z313', 'imagen_glb' => 'models/logitech_speaker.glb', 'tipo' => 'parlante'],
-            ['nombre' => 'Creative Pebble 2.0', 'imagen_glb' => 'models/computer_speaker.glb', 'tipo' => 'parlante'],
-            ['nombre' => 'Samson Q2U', 'imagen_glb' => 'models/microphone.glb', 'tipo' => 'microfono'],
-            ['nombre' => 'Audio-Technica AT2020', 'imagen_glb' => 'models/fredsters_microphone.glb', 'tipo' => 'microfono'],
-            ['nombre' => 'Shure MX412 Gooseneck', 'imagen_glb' => 'models/gooseneck_microphone_bended_version.glb', 'tipo' => 'microfono'],
-            ['nombre' => 'Blue Yeti Nano', 'imagen_glb' => 'models/gart230_-_microphone.glb', 'tipo' => 'microfono'],
-        ];
-
-        // Crear/Actualizar modelos equipo
-        $modelosEquipo = [];
-        foreach ($modelos3D as $mod) {
-            $modelo = Modelo::updateOrCreate(
-                ['nombre' => $mod['nombre'], 'marca_id' => $marcaGen3D->id],
-                [
-                    'imagen_glb' => $mod['imagen_glb'],
-                    'is_deleted' => false,
-                    'reposo' => 30,
-                    'escala' => $mod['escala'] ?? 1,
-                ]
-            );
-            $modelosEquipo[$mod['nombre']] = ['modelo' => $modelo, 'tipo' => $mod['tipo']];
+        // Marcas para insumos
+        $marcasInsumos = ['Belkin', 'UGreen', 'Amazon Basics', 'Startech', 'Anker', 'Epson', 'Logitech'];
+        foreach ($marcasInsumos as $nombre) {
+            Marca::updateOrCreate(['nombre' => $nombre], ['is_deleted' => false]);
         }
 
-        // Insumos base (nombre, glb, tipo)
+        // Estado Disponible
+        Estado::updateOrCreate(
+            ['nombre' => 'Disponible'],
+            ['is_deleted' => false]
+        );
+    }
+
+    protected function crearModelosInsumos()
+    {
+        $modelosInsumo = [];
+
         $insumosBase = [
-            ['nombre' => 'cable_hdmi', 'imagen_glb' => 'models/cable_hdmi.glb', 'tipo' => 'Cable'],
-            ['nombre' => 'cable_vga', 'imagen_glb' => 'models/cable_vga.glb', 'tipo' => 'Cable'],
-            ['nombre' => 'adaptador_usb_c', 'imagen_glb' => 'models/adaptador_usb_c.glb', 'tipo' => 'Cable'],
-            ['nombre' => 'extensor_hdmi', 'imagen_glb' => 'models/extensor_hdmi.glb', 'tipo' => 'Cable'],
-            ['nombre' => 'control_remoto', 'imagen_glb' => 'models/control_remoto.glb', 'tipo' => 'Control'],
-            ['nombre' => 'control_bluetooth', 'imagen_glb' => 'models/control_bluetooth.glb', 'tipo' => 'Control'],
-            ['nombre' => 'cable_usb', 'imagen_glb' => 'models/cable_usb.glb', 'tipo' => 'Cable'], // agregado para mouse y micrófono
+            // Cables HDMI
+            [
+                'nombre' => 'Cable HDMI Ultra HD 2m',
+                'marca' => 'UGreen',
+                'tipo' => 'Cable',
+                'imagen_glb' => 'models/cables/hdmi_ugreen.glb',
+                'asignar_a' => ['Laptop', 'Proyector']
+            ],
+            [
+                'nombre' => 'Cable HDMI Premium 3m',
+                'marca' => 'Belkin',
+                'tipo' => 'Cable',
+                'imagen_glb' => 'models/cables/hdmi_belkin.glb',
+                'asignar_a' => ['Proyector']
+            ],
+            
+            // Cables VGA
+            [
+                'nombre' => 'Cable VGA 3m',
+                'marca' => 'Amazon Basics',
+                'tipo' => 'Cable',
+                'imagen_glb' => 'models/cables/vga_amazon.glb',
+                'asignar_a' => ['Proyector']
+            ],
+            
+            // Adaptadores
+            [
+                'nombre' => 'Adaptador USB-C a HDMI',
+                'marca' => 'Anker',
+                'tipo' => 'Adaptador',
+                'imagen_glb' => 'models/adaptadores/usbc_hdmi_anker.glb',
+                'asignar_a' => ['Laptop']
+            ],
+            [
+                'nombre' => 'Extensor HDMI 10m',
+                'marca' => 'Startech',
+                'tipo' => 'Adaptador',
+                'imagen_glb' => 'models/adaptadores/extensor_hdmi.glb',
+                'asignar_a' => ['Proyector']
+            ],
+            
+            // Controles
+            [
+                'nombre' => 'Control Remoto Proyector',
+                'marca' => 'Epson',
+                'tipo' => 'Control',
+                'imagen_glb' => 'models/controles/epsom_remote.glb',
+                'asignar_a' => ['Proyector']
+            ],
+            [
+                'nombre' => 'Control Bluetooth Presentador',
+                'marca' => 'Logitech',
+                'tipo' => 'Control',
+                'imagen_glb' => 'models/controles/logitech_presenter.glb',
+                'asignar_a' => ['Laptop']
+            ],
+            
+            // Cables de alimentación
+            [
+                'nombre' => 'Cable de alimentación universal',
+                'marca' => 'Belkin',
+                'tipo' => 'Cable',
+                'imagen_glb' => 'models/cables/power_belkin.glb',
+                'asignar_a' => ['Parlante', 'Micrófono']
+            ],
+            
+            // Cables USB
+            [
+                'nombre' => 'Cable USB 3.0',
+                'marca' => 'Startech',
+                'tipo' => 'Cable',
+                'imagen_glb' => 'models/cables/usb_startech.glb',
+                'asignar_a' => ['Mouse', 'Micrófono']
+            ]
         ];
 
-        // Crear modelos insumos base
-        $modelosInsumoBase = [];
         foreach ($insumosBase as $insumo) {
-            $modeloInsumo = Modelo::updateOrCreate(
-                ['nombre' => $insumo['nombre'], 'marca_id' => $marcaGen3D->id],
+            $marca = Marca::where('nombre', $insumo['marca'])->first();
+            $tipoEquipo = TipoEquipo::where('nombre', $insumo['tipo'])->first();
+            
+            if (!$marca || !$tipoEquipo) {
+                continue;
+            }
+            
+            $modelo = Modelo::updateOrCreate(
+                ['nombre' => $insumo['nombre'], 'marca_id' => $marca->id],
                 [
                     'imagen_glb' => $insumo['imagen_glb'],
                     'is_deleted' => false,
                     'reposo' => 0,
-                    'escala' => 1,
+                    'escala' => 1
                 ]
             );
-            $modelosInsumoBase[$insumo['nombre']] = ['modelo' => $modeloInsumo, 'tipo' => $insumo['tipo']];
+            
+            $modelosInsumo[$insumo['nombre']] = [
+                'modelo' => $modelo,
+                'tipo_equipo' => $tipoEquipo,
+                'asignar_a' => $insumo['asignar_a']
+            ];
         }
 
-        // Asignación de insumos lógicos por tipo de equipo
-        $insumosPorTipo = [
-            'laptop' => ['cable_hdmi', 'adaptador_usb_c'],
-            'proyector' => ['cable_hdmi', 'cable_vga', 'control_remoto'],
-            'mouse' => ['cable_usb', 'control_bluetooth'],
-            'parlante' => ['cable_usb', 'control_bluetooth'],
-            'microfono' => ['cable_usb', 'control_bluetooth'],
-        ];
+        return $modelosInsumo;
+    }
 
-        // Función para elegir dos insumos por modelo, evitando repeticiones exactas (roto con índice)
-        function elegirInsumosValidos($modeloNombre, $insumosValidos)
-        {
-            $hash = crc32($modeloNombre);
-            srand($hash);
-            shuffle($insumosValidos);
-            srand();
+    protected function asociarInsumosAEquipos($modelosInsumo)
+    {
+        $estadoDisponible = Estado::where('nombre', 'Disponible')->first();
+        $equipos = Equipo::with('modelo', 'tipoEquipo')->get();
 
-            return array_slice($insumosValidos, 0, 2);
-        }
-
-        // Asociar insumos por modelo equipo
-        foreach ($modelosEquipo as $nombreModelo => $data) {
-            $modeloEquipo = $data['modelo'];
-            $tipoEquipo = $data['tipo'];
-
-            $insumosValidos = $insumosPorTipo[$tipoEquipo] ?? [];
-
-            if (count($insumosValidos) === 0) {
-                continue; // no insumos definidos para este tipo
+        foreach ($equipos as $equipo) {
+            if (!$equipo->tipoEquipo) {
+                continue;
             }
 
-            $insumosSeleccionados = elegirInsumosValidos($nombreModelo, $insumosValidos);
+            $insumosParaEsteTipo = array_filter($modelosInsumo, function($insumo) use ($equipo) {
+                return in_array($equipo->tipoEquipo->nombre, $insumo['asignar_a']);
+            });
 
-            foreach ($insumosSeleccionados as $insumoNombre) {
-                $insumoBase = $modelosInsumoBase[$insumoNombre];
-                $modeloInsumo = Modelo::updateOrCreate(
-                    ['nombre' => strtolower(str_replace([' ', '(', ')'], ['_', '', ''], $nombreModelo)) . '_' . $insumoNombre, 'marca_id' => $marcaGen3D->id],
+            foreach (array_slice($insumosParaEsteTipo, 0, 2) as $insumoData) {
+                ModeloAccesorio::updateOrCreate([
+                    'modelo_equipo_id' => $equipo->modelo_id,
+                    'modelo_insumo_id' => $insumoData['modelo']->id,
+                ]);
+
+                $numeroSerieIns = $equipo->numero_serie . '-ACC-' . Str::substr($insumoData['modelo']->nombre, 0, 3);
+
+                $insumoEquipo = Equipo::updateOrCreate(
+                    ['numero_serie' => $numeroSerieIns],
                     [
-                        'imagen_glb' => $insumoBase['modelo']->imagen_glb,
+                        'modelo_id' => $insumoData['modelo']->id,
+                        'tipo_equipo_id' => $insumoData['tipo_equipo']->id,
+                        'serie_asociada' => $equipo->numero_serie,
+                        'es_componente' => true,
+                        'estado_id' => $estadoDisponible->id,
+                        'tipo_reserva_id' => $equipo->tipo_reserva_id,
+                        'fecha_adquisicion' => now(),
                         'is_deleted' => false,
-                        'reposo' => 0,
-                        'escala' => 1,
                     ]
                 );
 
-                ModeloAccesorio::updateOrCreate([
-                    'modelo_equipo_id' => $modeloEquipo->id,
-                    'modelo_insumo_id' => $modeloInsumo->id,
+                EquipoAccesorio::updateOrCreate([
+                    'equipo_id' => $equipo->id,
+                    'insumo_id' => $insumoEquipo->id,
                 ]);
+            }
+        }
+    }
 
-                // Equipos físicos
-                $equipos = Equipo::where('modelo_id', $modeloEquipo->id)->get();
+    protected function crearStockAdicional($modelosInsumo)
+    {
+        $estadoDisponible = Estado::where('nombre', 'Disponible')->first();
+        $tipoReservaClase = TipoReserva::where('nombre', 'Clase')->first();
+        $tipoReservaEvento = TipoReserva::where('nombre', 'Evento')->first();
 
-                foreach ($equipos as $equipo) {
-                    $tipoEquipoId = $insumoBase['tipo'] === 'Control' ? $tipoControl->id : $tipoCable->id;
-
-                    $numeroSerieIns = $equipo->numero_serie . '-ACC-' . strtoupper(substr($insumoNombre, 0, 3));
-
-                    $insumoEquipo = Equipo::updateOrCreate(
-                        ['numero_serie' => $numeroSerieIns],
+        foreach ($modelosInsumo as $nombre => $insumoData) {
+            // Stock para clases
+            for ($i = 1; $i <= 3; $i++) {
+                Equipo::updateOrCreate(
+                    [
+                        'numero_serie' => "STOCK-CL-" . Str::substr($nombre, 0, 3) . "-" . str_pad($i, 3, '0', STR_PAD_LEFT)
+                    ],
+                    [
+                        'modelo_id' => $insumoData['modelo']->id,
+                        'tipo_equipo_id' => $insumoData['tipo_equipo']->id,
+                        'estado_id' => $estadoDisponible->id,
+                        'tipo_reserva_id' => $tipoReservaClase->id,
+                        'es_componente' => true,
+                        'fecha_adquisicion' => now(),
+                        'is_deleted' => false,
+                    ]
+                );
+            }
+            
+            // Stock para eventos (solo cables y controles)
+            if (in_array($insumoData['tipo_equipo']->nombre, ['Cable', 'Control'])) {
+                for ($i = 1; $i <= 2; $i++) {
+                    Equipo::updateOrCreate(
                         [
-                            'modelo_id' => $modeloInsumo->id,
-                            'serie_asociada' => $equipo->numero_serie,
-                            'es_componente' => true,
-                            'tipo_equipo_id' => $tipoEquipoId,
+                            'numero_serie' => "STOCK-EV-" . Str::substr($nombre, 0, 3) . "-" . str_pad($i, 3, '0', STR_PAD_LEFT)
+                        ],
+                        [
+                            'modelo_id' => $insumoData['modelo']->id,
+                            'tipo_equipo_id' => $insumoData['tipo_equipo']->id,
                             'estado_id' => $estadoDisponible->id,
-                            'tipo_reserva_id' => $tipoReservaId,
-                            'detalles' => "Insumo asociado a {$equipo->numero_serie}",
+                            'tipo_reserva_id' => $tipoReservaEvento->id,
+                            'es_componente' => true,
                             'fecha_adquisicion' => now(),
                             'is_deleted' => false,
                         ]
                     );
-
-                    EquipoAccesorio::updateOrCreate([
-                        'equipo_id' => $equipo->id,
-                        'insumo_id' => $insumoEquipo->id,
-                    ]);
                 }
             }
-        }
-
-        // Insumos independientes
-        $insumosIndependientes = ['cable_vga', 'extensor_hdmi', 'control_bluetooth'];
-
-        foreach ($insumosIndependientes as $insumoNombre) {
-            if (!isset($modelosInsumoBase[$insumoNombre])) continue;
-
-            $modeloInsumo = $modelosInsumoBase[$insumoNombre]['modelo'];
-            $tipoEquipoId = $modelosInsumoBase[$insumoNombre]['tipo'] === 'Control' ? $tipoControl->id : $tipoCable->id;
-
-            Equipo::updateOrCreate(
-                [
-                    'modelo_id' => $modeloInsumo->id,
-                    'serie_asociada' => null,
-                    'es_componente' => true,
-                ],
-                [
-                    'tipo_equipo_id' => $tipoEquipoId,
-                    'estado_id' => $estadoDisponible->id,
-                    'tipo_reserva_id' => $tipoReservaId,
-                    'numero_serie' => strtoupper($insumoNombre) . '-' . uniqid(),
-                    'detalles' => "Insumo independiente",
-                    'fecha_adquisicion' => now(),
-                    'is_deleted' => false,
-                ]
-            );
         }
     }
 }

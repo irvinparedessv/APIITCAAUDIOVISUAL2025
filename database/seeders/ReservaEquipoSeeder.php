@@ -37,7 +37,7 @@ class ReservaEquipoSeeder extends Seeder
                 $horaInicio = $fecha->copy()->setTime(rand(7, 20), [0, 15, 30, 45][rand(0, 3)]);
                 $horaFin = $horaInicio->copy()->addHours(rand(1, 3));
                 $aula =  $ubicaciones->random()->id;
-                $tipoReserva = rand(1, 3);
+                $tipoReserva = rand(1, 2);
 
                 $reserva = ReservaEquipo::create([
                     'user_id' => $usuarios->random()->id,
