@@ -581,17 +581,22 @@ class EquipoController extends Controller
             'endTime' => 'required',
             'page' => 'nullable|integer|min:1',
             'limit' => 'nullable|integer|min:1|max:100',
-            'search' => 'nullable|string'
+            'search' => 'nullable|string',
+            // filtros opcionales directos por id
+            'tipo_equipo_id' => 'nullable|integer',
+            'marca_id' => 'nullable|integer',
         ]);
 
-        $page   = $request->input('page', 1);
-        $limit  = $request->input('limit', 5);
-        $search = $request->input('search', '');
+        $page        = (int) $request->input('page', 1);
+        $limit       = (int) $request->input('limit', 5);
+        $search      = trim((string) $request->input('search', ''));
+        $tipoEqId    = $request->input('tipo_equipo_id');
+        $marcaId     = $request->input('marca_id');
 
         $fechaInicio = $request->fecha . ' ' . $request->startTime;
         $fechaFin    = $request->fecha . ' ' . $request->endTime;
 
-        // 1) Equipos reservados que traslapan el rango (SIN filtrar por tipo_reserva_id de la reserva)
+        // 1) Equipos reservados que traslapan el rango
         $equiposReservados = DB::table('reserva_equipos as re')
             ->join('equipo_reserva as er', 're.id', '=', 'er.reserva_equipo_id')
             ->whereIn('re.estado', ['Aprobada', 'Pendiente'])
@@ -617,15 +622,15 @@ class EquipoController extends Controller
             })
             ->pluck('equipo_id');
 
-        // 3) Equipos con FUTURO MANTENIMIENTO (inicio a fin = inicio + 5 horas) que traslapan el rango -> EXCLUIR
+        // 3) Futuros mantenimientos (excluir)
         $maintStart = DB::raw("TIMESTAMP(fecha_mantenimiento, hora_mantenimiento_inicio)");
         $maintEnd   = DB::raw("DATE_ADD(TIMESTAMP(fecha_mantenimiento, hora_mantenimiento_inicio), INTERVAL 5 HOUR)");
 
         $equiposConMantenimientoFuturo = FuturoMantenimiento::query()
             ->where(function ($q) use ($maintStart, $maintEnd, $fechaInicio, $fechaFin) {
-                $q->whereBetween($maintStart, [$fechaInicio, $fechaFin])          // empieza dentro
-                    ->orWhereBetween($maintEnd, [$fechaInicio, $fechaFin])          // termina dentro
-                    ->orWhere(function ($qq) use ($maintStart, $maintEnd, $fechaInicio, $fechaFin) { // cubre todo el rango
+                $q->whereBetween($maintStart, [$fechaInicio, $fechaFin])
+                    ->orWhereBetween($maintEnd, [$fechaInicio, $fechaFin])
+                    ->orWhere(function ($qq) use ($maintStart, $maintEnd, $fechaInicio, $fechaFin) {
                         $qq->where($maintStart, '<=', $fechaInicio)
                             ->where($maintEnd, '>=', $fechaFin);
                     });
@@ -633,19 +638,24 @@ class EquipoController extends Controller
             ->distinct()
             ->pluck('equipo_id');
 
-        // 4) Equipos disponibles:
-        //    - Filtrar por tipo_reserva_id del EQUIPO (no de la reserva)
-        //    - Excluir: reservados + con mantenimiento futuro
+        // 4) Query base de disponibles (en la VISTA)
         $equiposDisponibles = VistaEquipo::query()
-            ->where('tipo_reserva_id', $request->tipo_reserva_id) // <-- filtro aplicado a equipos
+            ->where('tipo_reserva_id', $request->tipo_reserva_id)     // filtro por tipo de reserva del equipo
             ->where('estado', 'Disponible')
+            ->when($tipoEqId, fn($q) => $q->where('tipo_equipo_id', $tipoEqId)) // <-- filtro directo por tipo de equipo (si la vista tiene la columna)
+            ->when($marcaId, fn($q) => $q->where('marca_id', $marcaId))         // <-- filtro directo por marca (si la vista tiene la columna)
             ->whereNotIn('equipo_id', $equiposReservados)
             ->whereNotIn('equipo_id', $equiposConMantenimientoFuturo)
-            ->when($search, function ($q) use ($search) {
-                $q->where(function ($q2) use ($search) {
-                    $q2->where('nombre_modelo', 'like', "%$search%")
-                        ->orWhere('nombre_marca', 'like', "%$search%");
-                });
+            // Búsqueda por texto: tipo_equipo, nombre_marca, nombre_modelo
+            ->when($search !== '', function ($q) use ($search) {
+                $terms = preg_split('/\s+/', $search, -1, PREG_SPLIT_NO_EMPTY);
+                foreach ($terms as $t) {
+                    $q->where(function ($q2) use ($t) {
+                        $q2->where('tipo_equipo', 'like', "%{$t}%")
+                            ->orWhere('nombre_marca', 'like', "%{$t}%")
+                            ->orWhere('nombre_modelo', 'like', "%{$t}%");
+                    });
+                }
             })
             ->get();
 
@@ -677,6 +687,7 @@ class EquipoController extends Controller
                     'imagen_normal' => $primer->imagen_normal,
                     'imagen_glb'    => $primer->imagen_glb,
                     'nombre_marca'  => $primer->nombre_marca,
+                    'tipo_equipo'   => $primer->tipo_equipo,
                     'en_reposo'     => $enReposoCount,
                     'equipos'       => $equiposFormateados->values(),
                 ];
@@ -696,6 +707,7 @@ class EquipoController extends Controller
 
         return response()->json($paginador);
     }
+
 
     public function guardarObservacion(Request $request)
     {
