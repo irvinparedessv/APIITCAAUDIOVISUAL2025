@@ -752,39 +752,31 @@ class EquipoController extends Controller
         $fechaInicio = $request->filled(['fecha', 'startTime']) ? $request->fecha . ' ' . $request->startTime : null;
         $fechaFin    = $request->filled(['fecha', 'endTime'])   ? $request->fecha . ' ' . $request->endTime   : null;
 
-        // Reservas traslapadas
+        // Reservas traslapadas [inicio, fin)
         $equiposReservados = collect();
         if ($fechaInicio && $fechaFin) {
             $equiposReservados = DB::table('reserva_equipos as re')
                 ->join('equipo_reserva as er', 're.id', '=', 'er.reserva_equipo_id')
                 ->whereIn('re.estado', ['Aprobada', 'Pendiente'])
-                ->where(function ($query) use ($fechaInicio, $fechaFin) {
-                    $query->whereBetween('re.fecha_reserva', [$fechaInicio, $fechaFin])
-                        ->orWhereBetween('re.fecha_entrega', [$fechaInicio, $fechaFin])
-                        ->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
-                            $q->where('re.fecha_reserva', '<=', $fechaInicio)
-                                ->where('re.fecha_entrega', '>=', $fechaFin);
-                        });
+                ->where(function ($q) use ($fechaInicio, $fechaFin) {
+                    $q->where('re.fecha_reserva', '<', $fechaFin)
+                        ->where('re.fecha_entrega', '>', $fechaInicio);
                 })
                 ->pluck('er.equipo_id');
         }
 
-        // Reposo traslapado (para marcar)
+        // Reposo traslapado [inicio, fin) (para marcar y EXCLUIR de disponibles)
         $equiposEnReposo = collect();
         if ($fechaInicio && $fechaFin) {
             $equiposEnReposo = DB::table('equipo_reserva')
-                ->where(function ($query) use ($fechaInicio, $fechaFin) {
-                    $query->whereBetween('fecha_inicio_reposo', [$fechaInicio, $fechaFin])
-                        ->orWhereBetween('fecha_fin_reposo', [$fechaInicio, $fechaFin])
-                        ->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
-                            $q->where('fecha_inicio_reposo', '<=', $fechaInicio)
-                                ->where('fecha_fin_reposo', '>=', $fechaFin);
-                        });
+                ->where(function ($q) use ($fechaInicio, $fechaFin) {
+                    $q->where('fecha_inicio_reposo', '<', $fechaFin)
+                        ->where('fecha_fin_reposo',   '>', $fechaInicio);
                 })
                 ->pluck('equipo_id');
         }
 
-        // FUTURO MANTENIMIENTO traslapado (inicio a fin = inicio + 5 horas) -> para excluir de disponibles y contar
+        // Futuro mantenimiento traslapado (inicio a fin = inicio + 5h) -> excluir de disponibles y contar
         $equiposConMantenimientoFuturo = collect();
         if ($fechaInicio && $fechaFin) {
             $maintStart = DB::raw("TIMESTAMP(fecha_mantenimiento, hora_mantenimiento_inicio)");
@@ -792,22 +784,24 @@ class EquipoController extends Controller
 
             $equiposConMantenimientoFuturo = FuturoMantenimiento::query()
                 ->where(function ($q) use ($maintStart, $maintEnd, $fechaInicio, $fechaFin) {
-                    $q->whereBetween($maintStart, [$fechaInicio, $fechaFin])   // empieza dentro
-                        ->orWhereBetween($maintEnd, [$fechaInicio, $fechaFin])   // termina dentro
-                        ->orWhere(function ($qq) use ($maintStart, $maintEnd, $fechaInicio, $fechaFin) { // cubre todo
+                    $q->whereBetween($maintStart, [$fechaInicio, $fechaFin])
+                        ->orWhereBetween($maintEnd,   [$fechaInicio, $fechaFin])
+                        ->orWhere(function ($qq) use ($maintStart, $maintEnd, $fechaInicio, $fechaFin) {
                             $qq->where($maintStart, '<=', $fechaInicio)
-                                ->where($maintEnd, '>=', $fechaFin);
+                                ->where($maintEnd,   '>=', $fechaFin);
                         });
                 })
                 ->distinct()
                 ->pluck('equipo_id');
         }
 
-        // Traer equipos (catálogo)
+        // Traer equipos (catálogo) y evitar duplicados por joins de la vista
         $todosEquipos = VistaEquipo::query()
             ->when($request->filled('tipo_equipo_id'), fn($q) => $q->where('tipo_equipo_id', $request->tipo_equipo_id))
             ->when(!empty($modeloIds), fn($q) => $q->whereIn('modelo_id', $modeloIds))
-            ->get();
+            ->get()
+            ->unique('equipo_id')
+            ->values();
 
         // Agrupar por modelo
         $agrupados = $todosEquipos
@@ -815,16 +809,17 @@ class EquipoController extends Controller
             ->map(function ($equipos, $modelo_id) use ($equiposReservados, $equiposEnReposo, $equiposConMantenimientoFuturo) {
                 $primer = $equipos->first();
 
-                // Disponibles: no reservados ni en futuro mantenimiento
+                // Disponibles: no reservados, no futuro mantenimiento, y NO en reposo
                 $disponibles = $equipos->where('estado', 'Disponible')
                     ->when($equiposReservados->isNotEmpty(), fn($c) => $c->whereNotIn('equipo_id', $equiposReservados))
                     ->when($equiposConMantenimientoFuturo->isNotEmpty(), fn($c) => $c->whereNotIn('equipo_id', $equiposConMantenimientoFuturo))
+                    ->when($equiposEnReposo->isNotEmpty(), fn($c) => $c->whereNotIn('equipo_id', $equiposEnReposo)) // <-- clave
                     ->count();
 
                 // Mantenimiento actual y programado
-                $mantenimientoActual   = $equipos->where('estado', 'Mantenimiento')->count();
-                $mantenimientoProgramado = $equipos->whereIn('equipo_id', $equiposConMantenimientoFuturo)->count();
-                $mantenimientoTotal    = $mantenimientoActual + $mantenimientoProgramado;
+                $mantenimientoActual      = $equipos->where('estado', 'Mantenimiento')->count();
+                $mantenimientoProgramado  = $equipos->whereIn('equipo_id', $equiposConMantenimientoFuturo)->count();
+                $mantenimientoTotal       = $mantenimientoActual + $mantenimientoProgramado;
 
                 $reservados = $equipos->whereIn('equipo_id', $equiposReservados)->count();
                 $enReposo   = $equipos->whereIn('equipo_id', $equiposEnReposo)->count();
@@ -837,9 +832,9 @@ class EquipoController extends Controller
                     'nombre_marca'           => $primer->nombre_marca,
                     'disponibles'            => $disponibles,
                     'en_reposo'              => $enReposo,
-                    'mantenimiento'          => $mantenimientoTotal,       // total (actual + programado)
-                    'mantenimiento_actual'   => $mantenimientoActual,      // opcional: detalle
-                    'futuro_mantenimiento'   => $mantenimientoProgramado,  // opcional: detalle
+                    'mantenimiento'          => $mantenimientoTotal,
+                    'mantenimiento_actual'   => $mantenimientoActual,
+                    'futuro_mantenimiento'   => $mantenimientoProgramado,
                     'reservados'             => $reservados,
                     'equipos' => $equipos->map(function ($e) use ($equiposConMantenimientoFuturo, $equiposEnReposo) {
                         return [
